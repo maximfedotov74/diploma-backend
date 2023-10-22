@@ -61,6 +61,15 @@ func (h *Handler) registration(ctx *fiber.Ctx) error {
 	return ctx.Status(201).JSON(model.RegistrationResponse{Id: *id})
 }
 
+// @Summary Get user by id
+// @Description Get user by id
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path int true "id parameter"
+// @Router /api/user/:id [get]
+// @Success 201 {object} model.User
+// @Failure 400 {array} lib.AppErr
 func (h *Handler) getUserById(ctx *fiber.Ctx) error {
 	id, err := ctx.ParamsInt("id")
 	if err != nil {
@@ -76,6 +85,15 @@ func (h *Handler) getUserById(ctx *fiber.Ctx) error {
 
 }
 
+// @Summary Login
+// @Description Login to an account with account data
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param dto body model.LoginDto true "login in account"
+// @Router /api/user/login [post]
+// @Success 201 {object} model.LoginResponse
+// @Failure 400 {array} lib.AppErr
 func (h *Handler) login(ctx *fiber.Ctx) error {
 
 	var dto model.LoginDto

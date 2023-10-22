@@ -15,6 +15,90 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/user/:id": {
+            "get": {
+                "description": "Get user by id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get user by id",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "id parameter",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/lib.AppErr"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/user/login": {
+            "post": {
+                "description": "Login to an account with account data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Login",
+                "parameters": [
+                    {
+                        "description": "login in account",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.LoginDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/lib.AppErr"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/user/registration": {
             "post": {
                 "description": "Create user by body arguments",
@@ -60,6 +144,19 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "lib.AppErr": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "some error"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 500
+                }
+            }
+        },
         "lib.ValidationError": {
             "type": "object",
             "properties": {
@@ -107,12 +204,102 @@ const docTemplate = `{
                 }
             }
         },
+        "model.LoginDto": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "makc@mail.ru"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 6,
+                    "example": "sdfsdfs222"
+                }
+            }
+        },
+        "model.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Role"
+                    }
+                },
+                "tokens": {
+                    "$ref": "#/definitions/token.Tokens"
+                },
+                "user_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
         "model.RegistrationResponse": {
             "type": "object",
             "properties": {
                 "id": {
                     "type": "integer",
                     "example": 1
+                }
+            }
+        },
+        "model.Role": {
+            "type": "object",
+            "properties": {
+                "role_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "title": {
+                    "type": "string",
+                    "example": "ADMIN"
+                }
+            }
+        },
+        "model.User": {
+            "type": "object",
+            "required": [
+                "email",
+                "password_hash"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "makc@mail.ru"
+                },
+                "password_hash": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 6,
+                    "example": "sdfsdfs222"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Role"
+                    }
+                },
+                "user_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "token.Tokens": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "refresh_token": {
+                    "type": "string"
                 }
             }
         }
