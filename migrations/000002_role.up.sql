@@ -1,0 +1,5 @@
+CREATE TABLE public.role
+(
+  role_id SERIAL PRIMARY KEY,
+  title VARCHAR(100) NOT NULL UNIQUE
+);

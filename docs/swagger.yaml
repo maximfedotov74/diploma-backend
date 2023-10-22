@@ -1,0 +1,72 @@
+definitions:
+  lib.ValidationError:
+    properties:
+      errors:
+        items:
+          $ref: '#/definitions/lib.validationErrorItem'
+        type: array
+      status:
+        example: 400
+        type: integer
+    type: object
+  lib.validationErrorItem:
+    properties:
+      key:
+        example: email
+        type: string
+      message:
+        example: email is invalid
+        type: string
+    type: object
+  model.CreateUserDto:
+    properties:
+      email:
+        example: makc@mail.ru
+        type: string
+      password:
+        example: sdfsdfs222
+        maxLength: 100
+        minLength: 6
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  model.RegistrationResponse:
+    properties:
+      id:
+        example: 1
+        type: integer
+    type: object
+info:
+  contact: {}
+paths:
+  /api/user/registration:
+    post:
+      consumes:
+      - application/json
+      description: Create user by body arguments
+      parameters:
+      - description: create user with body dto
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateUserDto'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.RegistrationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            items:
+              $ref: '#/definitions/lib.ValidationError'
+            type: array
+      summary: Create user
+      tags:
+      - users
+swagger: "2.0"

@@ -1,0 +1,22 @@
+package handler
+
+import (
+	"github.com/gofiber/fiber/v2"
+	"github.com/maximfedotov74/fiber-psql/internal/cfg"
+	"github.com/maximfedotov74/fiber-psql/internal/service"
+)
+
+type Handler struct {
+	services *service.Services
+}
+
+func New(services *service.Services) *Handler {
+	return &Handler{
+		services: services,
+	}
+}
+
+func (h *Handler) Init(cfg *cfg.Config, router fiber.Router) {
+	h.initUsersRoutes(router)
+	h.initRoleRoutes(router)
+}

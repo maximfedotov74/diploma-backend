@@ -1,0 +1,8 @@
+.env
+.prod.env
+bin
+*.log
+.DS_Store
+.vscode/
+.idea/
+pgdata
