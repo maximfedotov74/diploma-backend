@@ -5,9 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"github.com/go-co-op/gocron"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -16,6 +14,7 @@ import (
 	"github.com/maximfedotov74/fiber-psql/internal/cfg"
 	"github.com/maximfedotov74/fiber-psql/internal/handler"
 	"github.com/maximfedotov74/fiber-psql/internal/repository"
+	"github.com/maximfedotov74/fiber-psql/internal/scheduler"
 	"github.com/maximfedotov74/fiber-psql/internal/service"
 	"github.com/maximfedotov74/fiber-psql/pkg/db"
 	fiberSwagger "github.com/swaggo/fiber-swagger"
@@ -39,7 +38,6 @@ func Start() {
 	app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
 	db_client := db.NewClient(config.DatabaseUrl)
-	cron := gocron.NewScheduler(time.UTC)
 
 	repositories := repository.New(db_client)
 	services := service.New(service.Deps{Repos: repositories, Config: config})
@@ -48,7 +46,9 @@ func Start() {
 	router := app.Group("/api")
 
 	handler.Init(config, router)
-	handler.SetupCronJobs(cron)
+
+	scheduler := scheduler.New(handler)
+	scheduler.Start()
 
 	PORT := config.Port
 
@@ -66,6 +66,6 @@ func Start() {
 	}
 
 	log.Info("Cleaning")
-	cron.Stop()
+	scheduler.Shutdown()
 	db_client.Close()
 }

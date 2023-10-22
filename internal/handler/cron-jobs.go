@@ -5,7 +5,6 @@ import (
 )
 
 func (h *Handler) SetupCronJobs(cron *gocron.Scheduler) {
-
 	// cron.Every(5).Seconds().Do(func() {
 	// 	fmt.Println("assss")
 	// })
