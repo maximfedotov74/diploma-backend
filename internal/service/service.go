@@ -5,14 +5,16 @@ import (
 	"github.com/maximfedotov74/fiber-psql/internal/model"
 	"github.com/maximfedotov74/fiber-psql/internal/repository"
 	"github.com/maximfedotov74/fiber-psql/pkg/lib"
+	"github.com/maximfedotov74/fiber-psql/pkg/mail"
 	"github.com/maximfedotov74/fiber-psql/pkg/token"
 )
 
 type User interface {
 	GetAll()
-	Create(dto model.CreateUserDto) (int, lib.Error)
+	Create(dto model.CreateUserDto) (*int, lib.Error)
 	Login(dto model.LoginDto) (*model.LoginResponse, lib.Error)
 	GetUserById(id int) (*model.User, lib.Error)
+	Activate()
 }
 
 type Role interface {
@@ -25,6 +27,7 @@ type Services struct {
 	UserService  User
 	TokenService token.Token
 	RoleService  Role
+	MailService  mail.Mail
 }
 
 type Deps struct {
@@ -33,10 +36,10 @@ type Deps struct {
 }
 
 func New(deps Deps) *Services {
-
+	mailService := mail.New(deps.Config.SmtpKey, deps.Config.SmtpMail, deps.Config.SmtpHost, deps.Config.SmtpPort, deps.Config.AppLink)
 	tokenService := token.New(deps.Config)
 	roleService := NewRoleService(deps.Repos.RoleRepository)
-	userService := NewUserService(deps.Repos.UserRepository, tokenService)
+	userService := NewUserService(deps.Repos.UserRepository, tokenService, mailService)
 	return &Services{
 		UserService:  userService,
 		TokenService: tokenService,

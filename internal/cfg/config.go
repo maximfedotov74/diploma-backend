@@ -17,6 +17,11 @@ type Config struct {
 	AccessTokenExp     int
 	RefreshTokenSecret string
 	AccessTokenSecret  string
+	SmtpKey            string
+	SmtpHost           string
+	SmtpPort           int
+	SmtpMail           string
+	AppLink            string
 }
 
 func createPanicMessage(key string) string {
@@ -41,6 +46,11 @@ func GetCfg() *Config {
 			AccessTokenExp:     getEnvAsInt("ACCESS_TOKEN_EXP"),
 			RefreshTokenSecret: getEnv("REFRESH_TOKEN_SECRET"),
 			AccessTokenSecret:  getEnv("ACCESS_TOKEN_SECRET"),
+			SmtpKey:            getEnv("SMTP_KEY"),
+			SmtpPort:           getEnvAsInt("SMTP_PORT"),
+			SmtpHost:           getEnv("SMTP_HOST"),
+			SmtpMail:           getEnv("SMTP_MAIl"),
+			AppLink:            getEnv("APP_LINK"),
 		}
 	})
 	return config

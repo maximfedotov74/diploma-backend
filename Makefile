@@ -1,9 +1,9 @@
 ENV_PATH = $(PWD)/.env
 include $(ENV_PATH)
 
-DOWN ?= def
-UP ?= def
-FORCE ?=def
+DOWN =
+UP =
+FORCE =
 
 run-dev:
 	go run cmd/main.go

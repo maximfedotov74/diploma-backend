@@ -4,40 +4,53 @@ import (
 	"github.com/maximfedotov74/fiber-psql/internal/model"
 	"github.com/maximfedotov74/fiber-psql/internal/repository"
 	"github.com/maximfedotov74/fiber-psql/pkg/lib"
+	"github.com/maximfedotov74/fiber-psql/pkg/mail"
 	"github.com/maximfedotov74/fiber-psql/pkg/token"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService struct {
 	repo         repository.User
-	tokenService *token.TokenService
+	tokenService token.Token
+	mailService  mail.Mail
 }
 
-func NewUserService(repo repository.User, tokenService *token.TokenService) *UserService {
+func NewUserService(repo repository.User, tokenService token.Token, mailService mail.Mail) *UserService {
 	return &UserService{
 		repo:         repo,
 		tokenService: tokenService,
+		mailService:  mailService,
 	}
 }
 
 func (us *UserService) GetAll() {}
-func (us *UserService) Create(dto model.CreateUserDto) (int, lib.Error) {
+func (us *UserService) Create(dto model.CreateUserDto) (*int, lib.Error) {
 
 	hash, err := us.hashPassword(dto.Password)
 
 	if err != nil {
-		return 0, lib.NewErr(err.Error(), 500)
+		return nil, lib.NewErr(err.Error(), 500)
 	}
 
 	dto.Password = hash
 
-	id, err := us.repo.Create(dto)
+	response, err := us.repo.Create(dto)
 
 	if err != nil {
-		return id, lib.NewErr(err.Error(), 500)
+		return &response.Id, lib.NewErr(err.Error(), 500)
 	}
 
-	return id, nil
+	go us.mailService.SendActivationEmail(dto.Email, "Активация аккаутна", response.ActivationAccountLink)
+
+	// if err != nil {
+	// 	return nil, lib.NewErr("Ошибка при отправке письма подтверждения на эл. почту!", 500)
+	// }
+
+	return &response.Id, nil
+}
+
+func (us *UserService) Activate() {
+
 }
 
 func (us *UserService) GetUserById(id int) (*model.User, lib.Error) {

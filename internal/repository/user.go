@@ -20,7 +20,7 @@ func (ur *UserRepository) GetAll() error {
 	return nil
 }
 
-func (ur *UserRepository) Create(dto model.CreateUserDto) (int, error) {
+func (ur *UserRepository) Create(dto model.CreateUserDto) (*UserRepoResponse, error) {
 	var id int
 
 	txCtx := context.Background()
@@ -35,7 +35,7 @@ func (ur *UserRepository) Create(dto model.CreateUserDto) (int, error) {
 	}()
 
 	if err != nil {
-		return id, nil
+		return nil, nil
 	}
 
 	query := "INSERT INTO public.user (email, password_hash) VALUES ($1, $2) RETURNING user_id;"
@@ -44,14 +44,7 @@ func (ur *UserRepository) Create(dto model.CreateUserDto) (int, error) {
 
 	err = row.Scan(&id)
 	if err != nil {
-		return 0, err
-	}
-
-	query = "INSERT INTO user_settings (auth_provider, user_id, activation_account_link) VALUES ($1, $2, uuid_generate_v4());"
-
-	_, err = tx.Exec(txCtx, query, "credentials", id)
-	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	role := model.Role{}
@@ -60,16 +53,24 @@ func (ur *UserRepository) Create(dto model.CreateUserDto) (int, error) {
 	err = rowrole.Scan(&role.Id, &role.Title)
 
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	_, err = tx.Exec(txCtx, addRoleToUser, id, role.Id)
 
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	return id, nil
+	query = "INSERT INTO public.user_settings (auth_provider, user_id, activation_account_link) VALUES ($1, $2, uuid_generate_v4()) RETURNING activation_account_link;"
+	row = tx.QueryRow(txCtx, query, "credentials", id)
+	var link string
+	err = row.Scan(&link)
+	if err != nil {
+		return nil, err
+	}
+
+	return &UserRepoResponse{Id: id, ActivationAccountLink: link}, nil
 }
 
 func (ur *UserRepository) findByIdOrEmail(field string, value any) (*model.User, error) {

@@ -7,7 +7,7 @@ import (
 
 type User interface {
 	GetAll() error
-	Create(dto model.CreateUserDto) (int, error)
+	Create(dto model.CreateUserDto) (*UserRepoResponse, error)
 	GetUserById(id int) (*model.User, error)
 	GetUserByEmail(email string) (*model.User, error)
 }

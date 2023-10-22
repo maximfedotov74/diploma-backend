@@ -58,7 +58,7 @@ func (h *Handler) registration(ctx *fiber.Ctx) error {
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
-	return ctx.Status(201).JSON(model.RegistrationResponse{Id: id})
+	return ctx.Status(201).JSON(model.RegistrationResponse{Id: *id})
 }
 
 func (h *Handler) getUserById(ctx *fiber.Ctx) error {

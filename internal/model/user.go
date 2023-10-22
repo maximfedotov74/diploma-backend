@@ -1,6 +1,8 @@
 package model
 
-import "github.com/maximfedotov74/fiber-psql/pkg/token"
+import (
+	"github.com/maximfedotov74/fiber-psql/pkg/token"
+)
 
 type User struct {
 	Id           int    `json:"user_id" db:"user_id" example:"1"`
