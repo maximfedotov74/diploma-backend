@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -14,11 +15,11 @@ func (h *Handler) initUsersRoutes(router fiber.Router) {
 	{
 		user.Post("/registration", h.registration)
 		user.Post("/login", h.login)
-		user.Post("/test", h.authGuard, func(c *fiber.Ctx) error {
-			fmt.Println(c.Locals("userId"))
-			return c.SendString("ALL good!")
-		})
 		user.Get("/:id", h.getUserById)
+		user.Get("/activate/:activationLink", h.activate)
+		user.Get("/lk", func(c *fiber.Ctx) error {
+			return c.Status(200).SendString("Личный кабинет")
+		})
 	}
 }
 
@@ -32,7 +33,7 @@ func (h *Handler) initUsersRoutes(router fiber.Router) {
 // @Success 201 {object} model.RegistrationResponse
 // @Failure 400 {array} lib.ValidationError
 func (h *Handler) registration(ctx *fiber.Ctx) error {
-	var dto model.CreateUserDto
+	dto := model.CreateUserDto{}
 
 	err := ctx.BodyParser(&dto)
 
@@ -136,4 +137,16 @@ func (h *Handler) login(ctx *fiber.Ctx) error {
 
 	return ctx.Status(201).JSON(resp)
 
+}
+
+func (h *Handler) activate(ctx *fiber.Ctx) error {
+	activationLink := ctx.Params("activationLink")
+	log.Println(activationLink)
+	activated, err := h.services.UserService.Activate(activationLink)
+
+	if err != nil || !activated {
+		return ctx.Status(err.Status()).JSON(err)
+	}
+
+	return ctx.Redirect(fmt.Sprintf("%s/api/user/lk", h.cfg.AppLink), 302)
 }

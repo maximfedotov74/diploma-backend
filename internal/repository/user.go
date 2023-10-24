@@ -2,10 +2,12 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/maximfedotov74/fiber-psql/internal/model"
+	"github.com/maximfedotov74/fiber-psql/pkg/messages"
 )
 
 type UserRepository struct {
@@ -21,7 +23,6 @@ func (ur *UserRepository) GetAll() error {
 }
 
 func (ur *UserRepository) Create(dto model.CreateUserDto) (*UserRepoResponse, error) {
-	var id int
 
 	txCtx := context.Background()
 
@@ -41,6 +42,7 @@ func (ur *UserRepository) Create(dto model.CreateUserDto) (*UserRepoResponse, er
 	query := "INSERT INTO public.user (email, password_hash) VALUES ($1, $2) RETURNING user_id;"
 
 	row := tx.QueryRow(context.Background(), query, dto.Email, dto.Password)
+	var id int
 
 	err = row.Scan(&id)
 	if err != nil {
@@ -86,11 +88,16 @@ func (ur *UserRepository) findByIdOrEmail(field string, value any) (*model.User,
 	}
 	defer rows.Close()
 
-	user := model.User{}
+	if !rows.Next() {
+		return nil, errors.New(messages.USER_NOT_FOUND)
+	}
+
+	var user model.User
 
 	for rows.Next() {
 		role := model.Role{}
 		err := rows.Scan(&user.Id, &user.Email, &user.PasswordHash, &role.Title, &role.Id)
+
 		if err != nil {
 			return nil, err
 		}
@@ -121,4 +128,31 @@ func (ur *UserRepository) GetUserByEmail(email string) (*model.User, error) {
 	}
 
 	return user, nil
+}
+
+func (ur *UserRepository) FindActivationLink(link string) (*int, error) {
+	query := `SELECT "public"."user_settings".user_id FROM "public"."user_settings"
+	WHERE "public".user_settings.activation_account_link = $1;`
+	row := ur.db.QueryRow(context.Background(), query, link)
+	var id int
+	err := row.Scan(&id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &id, nil
+}
+
+func (ur *UserRepository) ActivateUser(id *int) (bool, error) {
+	query := `UPDATE "public".user_settings
+	SET activation_account_link = NULL,
+	is_activated = TRUE
+	WHERE "public".user_settings.user_id = $1;`
+
+	_, err := ur.db.Exec(context.Background(), query, id)
+	if err != nil {
+		return false, errors.New(messages.ACTIVATION_ERROR)
+	}
+
+	return true, nil
 }

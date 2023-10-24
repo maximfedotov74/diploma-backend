@@ -14,13 +14,13 @@ type User interface {
 	Create(dto model.CreateUserDto) (*int, lib.Error)
 	Login(dto model.LoginDto) (*model.LoginResponse, lib.Error)
 	GetUserById(id int) (*model.User, lib.Error)
-	Activate()
+	Activate(activationLink string) (bool, lib.Error)
 }
 
 type Role interface {
-	Create(dto model.CreateRoleDto) (*model.Role, error)
-	AddRoleToUser(title string, userId int) (bool, error)
-	RemoveRoleFromUser(title string, userId int) (bool, error)
+	Create(dto model.CreateRoleDto) (*model.Role, lib.Error)
+	AddRoleToUser(title string, userId int) (bool, lib.Error)
+	RemoveRoleFromUser(title string, userId int) (bool, lib.Error)
 }
 
 type Services struct {

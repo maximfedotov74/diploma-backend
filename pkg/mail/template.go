@@ -3,7 +3,7 @@ package mail
 import "fmt"
 
 func (m *MailService) CreateActivationTemplate(link string, email string) string {
-	l := fmt.Sprintf("%s/api/user/api/activate/%s", m.appLink, link)
+	l := m.appLink + link
 	return fmt.Sprintf(`
   <!DOCTYPE html>
 <html lang="en">

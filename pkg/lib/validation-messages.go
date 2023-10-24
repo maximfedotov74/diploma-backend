@@ -1,6 +1,9 @@
 package lib
 
-import "github.com/go-playground/validator/v10"
+import (
+	"github.com/go-playground/validator/v10"
+	"github.com/maximfedotov74/fiber-psql/pkg/messages"
+)
 
 type validationErrorItem struct {
 	Key     string `json:"key" example:"email"`
@@ -19,13 +22,13 @@ func NewValidErr(e []validationErrorItem) ValidationError {
 func error_message(fe validator.FieldError) string {
 	switch fe.Tag() {
 	case "required":
-		return "Это обязательное поле"
+		return messages.VALIDATION_REQUIRED
 	case "email":
-		return "Некорректный адрес электронной почты!"
+		return messages.VALIDATION_EMAIL
 	case "min":
-		return "Значение меньше минимального предела"
+		return messages.VALIDATION_MIN
 	case "max":
-		return "Значение больше максимального предела"
+		return messages.VALIDATION_MAX
 	}
 
 	return fe.Error()

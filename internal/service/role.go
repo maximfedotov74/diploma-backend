@@ -3,6 +3,8 @@ package service
 import (
 	"github.com/maximfedotov74/fiber-psql/internal/model"
 	"github.com/maximfedotov74/fiber-psql/internal/repository"
+	"github.com/maximfedotov74/fiber-psql/pkg/lib"
+	"github.com/maximfedotov74/fiber-psql/pkg/messages"
 )
 
 type RoleService struct {
@@ -15,45 +17,56 @@ func NewRoleService(repo repository.Role) *RoleService {
 	}
 }
 
-func (rs *RoleService) Create(dto model.CreateRoleDto) (*model.Role, error) {
+func (rs *RoleService) Create(dto model.CreateRoleDto) (*model.Role, lib.Error) {
+
+	oldRole, err := rs.repo.FindRoleByTitle(dto.Title)
+
+	if err != nil {
+		return nil, lib.NewErr(err.Error(), 404)
+	}
+
+	if oldRole != nil {
+		return nil, lib.NewErr(messages.ROLE_EXISTS, 400)
+	}
+
 	role, err := rs.repo.Create(dto)
 
 	if err != nil {
-		return nil, err
+		return nil, lib.NewErr(err.Error(), 500)
 	}
 
 	return role, nil
 }
 
-func (rs *RoleService) AddRoleToUser(title string, userId int) (bool, error) {
+func (rs *RoleService) AddRoleToUser(title string, userId int) (bool, lib.Error) {
 
 	role, err := rs.repo.FindRoleByTitle(title)
 
 	if err != nil {
-		return false, err
+		return false, lib.NewErr(err.Error(), 404)
 	}
 
 	flag, err := rs.repo.AddRoleToUser(role.Id, userId)
 
 	if err != nil {
-		return flag, err
+		return flag, lib.NewErr(err.Error(), 500)
 	}
 
 	return flag, nil
 
 }
 
-func (rs *RoleService) RemoveRoleFromUser(title string, userId int) (bool, error) {
+func (rs *RoleService) RemoveRoleFromUser(title string, userId int) (bool, lib.Error) {
 	role, err := rs.repo.FindRoleByTitle(title)
 
 	if err != nil {
-		return false, err
+		return false, lib.NewErr(err.Error(), 404)
 	}
 
 	flag, err := rs.repo.RemoveRoleFromUser(role.Id, userId)
 
 	if err != nil {
-		return flag, err
+		return flag, lib.NewErr(err.Error(), 500)
 	}
 
 	return flag, nil

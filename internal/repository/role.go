@@ -2,9 +2,11 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/maximfedotov74/fiber-psql/internal/model"
+	"github.com/maximfedotov74/fiber-psql/pkg/messages"
 )
 
 type RoleRepository struct {
@@ -24,7 +26,7 @@ func (rr *RoleRepository) Create(dto model.CreateRoleDto) (*model.Role, error) {
 	err := row.Scan(&role.Id, &role.Title)
 
 	if err != nil {
-		return nil, err
+		return nil, errors.New(messages.ROLE_CREATE_ERROR)
 	}
 	return &role, nil
 }
@@ -34,7 +36,7 @@ func (rr *RoleRepository) FindRoleByTitle(title string) (*model.Role, error) {
 	role := model.Role{}
 	err := row.Scan(&role.Id, &role.Title)
 	if err != nil {
-		return nil, err
+		return nil, errors.New(messages.ROLE_NOT_FOUND)
 	}
 
 	return &role, nil
@@ -44,7 +46,7 @@ func (rr *RoleRepository) FindRoleByTitle(title string) (*model.Role, error) {
 func (rr *RoleRepository) AddRoleToUser(roleId int, userId int) (bool, error) {
 	_, err := rr.db.Exec(context.Background(), addRoleToUser, userId, roleId)
 	if err != nil {
-		return false, err
+		return false, errors.New(messages.ROLE_ADD_ERROR)
 	}
 
 	return true, nil
@@ -56,7 +58,7 @@ func (rr *RoleRepository) RemoveRoleFromUser(roleId int, userId int) (bool, erro
 	_, err := rr.db.Exec(context.Background(), query, userId, roleId)
 
 	if err != nil {
-		return false, err
+		return false, errors.New(messages.ROLE_DELETE_ERROR)
 	}
 
 	return true, nil

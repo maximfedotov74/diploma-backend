@@ -27,10 +27,10 @@ func (h *Handler) createRole(ctx *fiber.Ctx) error {
 		return ctx.Status(400).SendString(err.Error())
 	}
 
-	role, err := h.services.RoleService.Create(body)
+	role, appErr := h.services.RoleService.Create(body)
 
-	if err != nil {
-		return ctx.Status(500).SendString(err.Error())
+	if appErr != nil {
+		return ctx.Status(appErr.Status()).SendString(appErr.Message())
 	}
 
 	return ctx.Status(201).JSON(role)
@@ -54,10 +54,10 @@ func (h *Handler) addRoleToUser(ctx *fiber.Ctx) error {
 		return ctx.Status(400).SendString(fmt.Sprintf("%s", error_messages))
 	}
 
-	flag, err := h.services.RoleService.AddRoleToUser(body.Title, body.UserId)
+	flag, appErr := h.services.RoleService.AddRoleToUser(body.Title, body.UserId)
 
-	if err != nil {
-		return ctx.Status(500).SendString(err.Error())
+	if appErr != nil {
+		return ctx.Status(appErr.Status()).SendString(appErr.Message())
 	}
 
 	return ctx.Status(201).JSON(flag)
@@ -82,10 +82,10 @@ func (h *Handler) removeRoleFromUser(ctx *fiber.Ctx) error {
 		return ctx.Status(400).SendString(fmt.Sprintf("%s", error_messages))
 	}
 
-	flag, err := h.services.RoleService.RemoveRoleFromUser(body.Title, body.UserId)
+	flag, appErr := h.services.RoleService.RemoveRoleFromUser(body.Title, body.UserId)
 
-	if err != nil {
-		return ctx.Status(500).SendString(err.Error())
+	if appErr != nil {
+		return ctx.Status(appErr.Status()).SendString(appErr.Message())
 	}
 
 	return ctx.Status(200).JSON(flag)

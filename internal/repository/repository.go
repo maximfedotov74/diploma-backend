@@ -10,6 +10,8 @@ type User interface {
 	Create(dto model.CreateUserDto) (*UserRepoResponse, error)
 	GetUserById(id int) (*model.User, error)
 	GetUserByEmail(email string) (*model.User, error)
+	FindActivationLink(link string) (*int, error)
+	ActivateUser(id *int) (bool, error)
 }
 
 type Role interface {

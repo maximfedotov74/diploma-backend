@@ -37,11 +37,11 @@ func Start() {
 
 	app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
-	db_client := db.NewClient(config.DatabaseUrl)
+	dbClient := db.NewClient(config.DatabaseUrl)
 
-	repositories := repository.New(db_client)
+	repositories := repository.New(dbClient)
 	services := service.New(service.Deps{Repos: repositories, Config: config})
-	handler := handler.New(services)
+	handler := handler.New(services, config)
 
 	router := app.Group("/api")
 
@@ -67,5 +67,5 @@ func Start() {
 
 	log.Info("Cleaning")
 	scheduler.Shutdown()
-	db_client.Close()
+	dbClient.Close()
 }
