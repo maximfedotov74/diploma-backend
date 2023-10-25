@@ -88,24 +88,23 @@ func (ur *UserRepository) findByIdOrEmail(field string, value any) (*model.User,
 	}
 	defer rows.Close()
 
-	if !rows.Next() {
-		return nil, errors.New(messages.USER_NOT_FOUND)
-	}
-
 	var user model.User
-
+	processedRows := 0
 	for rows.Next() {
 		role := model.Role{}
 		err := rows.Scan(&user.Id, &user.Email, &user.PasswordHash, &role.Title, &role.Id)
-
 		if err != nil {
 			return nil, err
 		}
 		user.Roles = append(user.Roles, role)
+		processedRows++
 	}
 
-	if err = rows.Err(); err != nil {
+	if rows.Err() != nil {
 		return nil, err
+	}
+	if processedRows == 0 {
+		return nil, nil
 	}
 
 	return &user, nil

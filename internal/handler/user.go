@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -73,6 +72,7 @@ func (h *Handler) registration(ctx *fiber.Ctx) error {
 // @Failure 400 {array} lib.AppErr
 func (h *Handler) getUserById(ctx *fiber.Ctx) error {
 	id, err := ctx.ParamsInt("id")
+
 	if err != nil {
 		return ctx.Status(400).SendString(err.Error())
 	}
@@ -141,7 +141,6 @@ func (h *Handler) login(ctx *fiber.Ctx) error {
 
 func (h *Handler) activate(ctx *fiber.Ctx) error {
 	activationLink := ctx.Params("activationLink")
-	log.Println(activationLink)
 	activated, err := h.services.UserService.Activate(activationLink)
 
 	if err != nil || !activated {

@@ -22,6 +22,8 @@ type Config struct {
 	SmtpPort           int
 	SmtpMail           string
 	AppLink            string
+	RedisAddr          string
+	RedisPassword      string
 }
 
 func createPanicMessage(key string) string {
@@ -51,6 +53,8 @@ func GetCfg() *Config {
 			SmtpHost:           getEnv("SMTP_HOST"),
 			SmtpMail:           getEnv("SMTP_MAIl"),
 			AppLink:            getEnv("APP_LINK"),
+			RedisAddr:          getEnv("REDIS_ADDR"),
+			RedisPassword:      getEnv("REDIS_PASSWORD"),
 		}
 	})
 	return config

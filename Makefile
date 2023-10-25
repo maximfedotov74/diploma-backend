@@ -23,9 +23,4 @@ migrate-force:
 	migrate -path ./migrations -database '$(DB_URL)?sslmode=disable' force $(FORCE)
 
 
-#  migrate -path ./migrations -database 'postgres://admin:maxim@localhost:5432/go-fiber?sslmode=disable' up 1
-#  migrate -path ./migrations -database 'postgres://admin:maxim@localhost:5432/go-fiber?sslmode=disable' down 1
 
-
-# add -e ENV="dev" or "prod" for migrations
-# migrate create -ext sql -dir ./migrations -seq (name)

@@ -2,7 +2,6 @@ package token
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -74,14 +73,11 @@ func (ts *TokenService) Sign(id int) (Tokens, error) {
 
 	accessToken, err := acccessTokenObject.SignedString([]byte(accessSecret))
 	if err != nil {
-		fmt.Println("Sign access")
 		return tokens, err
 	}
 
 	refreshToken, err := refreshTokenObject.SignedString([]byte(refreshSecret))
 	if err != nil {
-		fmt.Println("Sign refresh")
-
 		return tokens, err
 	}
 

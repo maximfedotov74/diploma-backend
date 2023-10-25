@@ -17,3 +17,14 @@ services:
       - POSTGRES_DB=${DB_NAME}
     ports:
       - ${DB_PORT}:${DB_PORT}
+  redis:
+    container_name: go-redis-test
+    restart: always
+    env_file:
+      - .env
+    image: redis:7.2.2-alpine
+    volumes:
+      - ./redis:/data
+    ports:
+      - ${REDIS_PORT}:${REDIS_PORT}
+    command: redis-server --requirepass ${REDIS_PASSWORD}

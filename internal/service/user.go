@@ -110,7 +110,7 @@ func (us *UserService) Login(dto model.LoginDto) (*model.LoginResponse, lib.Erro
 	}
 
 	if user == nil {
-		return nil, lib.NewErr(messages.INVALID_CREDENTIALS, 404)
+		return nil, lib.NewErr(messages.USER_NOT_FOUND, 404)
 	}
 
 	if isPasswordCorrect := us.comparePasswords(user.PasswordHash, dto.Password); !isPasswordCorrect {

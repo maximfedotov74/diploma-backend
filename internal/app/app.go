@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -16,6 +17,7 @@ import (
 	"github.com/maximfedotov74/fiber-psql/internal/repository"
 	"github.com/maximfedotov74/fiber-psql/internal/scheduler"
 	"github.com/maximfedotov74/fiber-psql/internal/service"
+	"github.com/maximfedotov74/fiber-psql/pkg/cache"
 	"github.com/maximfedotov74/fiber-psql/pkg/db"
 	fiberSwagger "github.com/swaggo/fiber-swagger"
 )
@@ -38,6 +40,12 @@ func Start() {
 	app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
 	dbClient := db.NewClient(config.DatabaseUrl)
+	cacheManager := cache.NewCacheClient(config.RedisAddr, config.RedisPassword)
+
+	err := cacheManager.Set(context.Background(), "key", "value", 0).Err()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 
 	repositories := repository.New(dbClient)
 	services := service.New(service.Deps{Repos: repositories, Config: config})

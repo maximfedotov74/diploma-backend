@@ -1,6 +1,8 @@
 package service
 
 import (
+	"strings"
+
 	"github.com/maximfedotov74/fiber-psql/internal/model"
 	"github.com/maximfedotov74/fiber-psql/internal/repository"
 	"github.com/maximfedotov74/fiber-psql/pkg/lib"
@@ -18,6 +20,8 @@ func NewRoleService(repo repository.Role) *RoleService {
 }
 
 func (rs *RoleService) Create(dto model.CreateRoleDto) (*model.Role, lib.Error) {
+
+	dto.Title = strings.ToUpper(dto.Title)
 
 	oldRole, err := rs.repo.FindRoleByTitle(dto.Title)
 
