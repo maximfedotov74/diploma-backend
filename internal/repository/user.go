@@ -76,9 +76,12 @@ func (ur *UserRepository) Create(dto model.CreateUserDto) (*UserRepoResponse, er
 }
 
 func (ur *UserRepository) findByIdOrEmail(field string, value any) (*model.User, error) {
-	query := fmt.Sprintf(`SELECT public.user.user_id, public.user.email, public.user.password_hash, role.title, role.role_id FROM public.user
+	query := fmt.Sprintf(`SELECT public.user.user_id, public.user.email, public.user.password_hash,
+	role.title, role.role_id, public.user_settings.is_activated
+	FROM public.user
 	LEFT JOIN user_role ON public.user.user_id = user_role.user_id
 	LEFT JOIN public.role ON public.role.role_id = user_role.role_id
+	LEFT JOIN public.user_settings ON public.user.user_id = public.user_settings.user_id
 	WHERE public.user.%s = $1;`, field)
 
 	rows, err := ur.db.Query(context.Background(), query, value)
@@ -92,7 +95,7 @@ func (ur *UserRepository) findByIdOrEmail(field string, value any) (*model.User,
 	processedRows := 0
 	for rows.Next() {
 		role := model.Role{}
-		err := rows.Scan(&user.Id, &user.Email, &user.PasswordHash, &role.Title, &role.Id)
+		err := rows.Scan(&user.Id, &user.Email, &user.PasswordHash, &role.Title, &role.Id, &user.IsActivated)
 		if err != nil {
 			return nil, err
 		}

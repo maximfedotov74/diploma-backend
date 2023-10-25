@@ -15,6 +15,7 @@ type User interface {
 	Login(dto model.LoginDto) (*model.LoginResponse, lib.Error)
 	GetUserById(id int) (*model.User, lib.Error)
 	Activate(activationLink string) (bool, lib.Error)
+	GetLk(id int) (*model.User, lib.Error)
 }
 
 type Role interface {

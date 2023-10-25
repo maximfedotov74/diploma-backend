@@ -7,7 +7,7 @@ type Error interface {
 
 type AppErr struct {
 	MessageText string `json:"message" example:"some error"`
-	StatusCode  int    `json:"status" example:"500"`
+	StatusCode  int    `json:"status" example:"404"`
 }
 
 func NewErr(m string, s int) AppErr {

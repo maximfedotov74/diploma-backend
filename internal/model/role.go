@@ -1,7 +1,7 @@
 package model
 
 type CreateRoleDto struct {
-	Title string `json:"title" validate:"required,min=6,max=55" db:"title"`
+	Title string `json:"title" validate:"required,min=6,max=55" db:"title" example:"ADMIN"`
 }
 
 type Role struct {
@@ -10,6 +10,6 @@ type Role struct {
 }
 
 type AddRoleToUserDto struct {
-	Title  string `json:"title" validate:"required,min=3"`
-	UserId int    `json:"user_id" validate:"required,min=1"`
+	Title  string `json:"title" validate:"required,min=3" example:"ADMIN"`
+	UserId int    `json:"user_id" validate:"required,min=1" example:"1"`
 }

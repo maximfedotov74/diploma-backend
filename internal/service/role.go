@@ -23,11 +23,7 @@ func (rs *RoleService) Create(dto model.CreateRoleDto) (*model.Role, lib.Error) 
 
 	dto.Title = strings.ToUpper(dto.Title)
 
-	oldRole, err := rs.repo.FindRoleByTitle(dto.Title)
-
-	if err != nil {
-		return nil, lib.NewErr(err.Error(), 404)
-	}
+	oldRole, _ := rs.repo.FindRoleByTitle(dto.Title)
 
 	if oldRole != nil {
 		return nil, lib.NewErr(messages.ROLE_EXISTS, 400)

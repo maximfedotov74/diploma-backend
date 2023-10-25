@@ -128,3 +128,17 @@ func (us *UserService) Login(dto model.LoginDto) (*model.LoginResponse, lib.Erro
 	return &response, nil
 
 }
+
+func (us *UserService) GetLk(id int) (*model.User, lib.Error) {
+	user, err := us.repo.GetUserById(id)
+
+	if err != nil {
+		return nil, lib.NewErr(err.Error(), 500)
+	}
+
+	if user == nil {
+		return nil, lib.NewErr(messages.USER_NOT_FOUND, 404)
+	}
+
+	return user, nil
+}

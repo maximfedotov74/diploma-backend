@@ -6,6 +6,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/maximfedotov74/fiber-psql/internal/model"
+	"github.com/maximfedotov74/fiber-psql/internal/utils"
 	"github.com/maximfedotov74/fiber-psql/pkg/lib"
 )
 
@@ -14,11 +15,9 @@ func (h *Handler) initUsersRoutes(router fiber.Router) {
 	{
 		user.Post("/registration", h.registration)
 		user.Post("/login", h.login)
-		user.Get("/:id", h.getUserById)
+		user.Get("/:lk", h.authGuard, h.getLk)
 		user.Get("/activate/:activationLink", h.activate)
-		user.Get("/lk", func(c *fiber.Ctx) error {
-			return c.Status(200).SendString("Личный кабинет")
-		})
+		user.Get("/by-id/:id", h.getUserById)
 	}
 }
 
@@ -30,7 +29,9 @@ func (h *Handler) initUsersRoutes(router fiber.Router) {
 // @Param dto body model.CreateUserDto true "create user with body dto"
 // @Router /api/user/registration [post]
 // @Success 201 {object} model.RegistrationResponse
-// @Failure 400 {array} lib.ValidationError
+// @Failure 400 {object} lib.ValidationError
+// @Failure 404 {object} lib.AppErr
+// @Failure 500 {object} lib.AppErr
 func (h *Handler) registration(ctx *fiber.Ctx) error {
 	dto := model.CreateUserDto{}
 
@@ -67,9 +68,11 @@ func (h *Handler) registration(ctx *fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Param id path int true "id parameter"
-// @Router /api/user/:id [get]
+// @Router /api/user/by-id/:id [get]
 // @Success 201 {object} model.User
-// @Failure 400 {array} lib.AppErr
+// @Failure 400 {object} lib.ValidationError
+// @Failure 404 {object} lib.AppErr
+// @Failure 500 {object} lib.AppErr
 func (h *Handler) getUserById(ctx *fiber.Ctx) error {
 	id, err := ctx.ParamsInt("id")
 
@@ -94,7 +97,9 @@ func (h *Handler) getUserById(ctx *fiber.Ctx) error {
 // @Param dto body model.LoginDto true "login in account"
 // @Router /api/user/login [post]
 // @Success 201 {object} model.LoginResponse
-// @Failure 400 {array} lib.AppErr
+// @Failure 400 {object} lib.ValidationError
+// @Failure 404 {object} lib.AppErr
+// @Failure 500 {object} lib.AppErr
 func (h *Handler) login(ctx *fiber.Ctx) error {
 
 	var dto model.LoginDto
@@ -148,4 +153,31 @@ func (h *Handler) activate(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Redirect(fmt.Sprintf("%s/api/user/lk", h.cfg.AppLink), 302)
+}
+
+// @Summary Get profile info
+// @Security BearerToken
+// @Description Get profile info by auth only
+// @Tags users
+// @Accept json
+// @Produce json
+// @Router /api/user/lk [get]
+// @Success 200 {object} model.User
+// @Failure 404 {object} lib.AppErr
+// @Failure 401 {object} lib.AppErr
+// @Failure 500 {object} lib.AppErr
+func (h *Handler) getLk(ctx *fiber.Ctx) error {
+	id, err := utils.GetUserIdFromCtx(ctx)
+	if err != nil {
+		return ctx.Status(err.Status()).JSON(err)
+	}
+
+	user, err := h.services.UserService.GetLk(*id)
+
+	if err != nil {
+		return ctx.Status(err.Status()).JSON(err)
+	}
+
+	return ctx.Status(200).JSON(user)
+
 }
