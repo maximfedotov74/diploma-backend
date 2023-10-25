@@ -1,4 +1,4 @@
-redis
+redis_data
 .env
 .prod.env
 bin

@@ -24,7 +24,7 @@ services:
       - .env
     image: redis:7.2.2-alpine
     volumes:
-      - ./redis:/data
+      - ./redis_data:/data
     ports:
       - ${REDIS_PORT}:${REDIS_PORT}
     command: redis-server --requirepass ${REDIS_PASSWORD}
