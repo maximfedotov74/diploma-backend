@@ -48,7 +48,7 @@ func Start() {
 
 	handler.Init(config, router)
 
-	scheduler := scheduler.New(handler)
+	scheduler := scheduler.New(services)
 	scheduler.Start()
 
 	PORT := config.Port
@@ -60,7 +60,7 @@ func Start() {
 		log.Info("Gracefully shutting down...")
 		_ = app.Shutdown()
 	}()
-
+	log.Infof("Swagger Api docs working on : %s", "/swagger")
 	log.Infof("Server started on PORT: %s", PORT)
 	if err := app.Listen(fmt.Sprintf(":%s", PORT)); err != nil {
 		log.Fatal(err)

@@ -1,0 +1,9 @@
+CREATE TABLE token
+(
+  token_id SERIAL PRIMARY KEY,
+  token VARCHAR(255) NOT NULL UNIQUE,
+  created_at timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  user_agent VARCHAR(255) NOT NULL,
+  user_id INT REFERENCES public.user (user_id) ON DELETE CASCADE NOT NULL
+)

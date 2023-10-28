@@ -4,18 +4,18 @@ import (
 	"time"
 
 	"github.com/go-co-op/gocron"
-	"github.com/maximfedotov74/fiber-psql/internal/handler"
+	"github.com/maximfedotov74/fiber-psql/internal/service"
 )
 
 type CronScheduler struct {
-	handler *handler.Handler
-	cron    *gocron.Scheduler
+	services *service.Services
+	cron     *gocron.Scheduler
 }
 
-func New(h *handler.Handler) *CronScheduler {
+func New(s *service.Services) *CronScheduler {
 	cron := gocron.NewScheduler(time.UTC)
 
-	return &CronScheduler{handler: h, cron: cron}
+	return &CronScheduler{services: s, cron: cron}
 }
 
 func (cs *CronScheduler) Start() {

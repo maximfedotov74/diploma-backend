@@ -14,11 +14,11 @@ import (
 
 type UserService struct {
 	repo         repository.User
-	tokenService token.Token
+	tokenService Token
 	mailService  mail.Mail
 }
 
-func NewUserService(repo repository.User, tokenService token.Token, mailService mail.Mail) *UserService {
+func NewUserService(repo repository.User, tokenService Token, mailService mail.Mail) *UserService {
 	return &UserService{
 		repo:         repo,
 		tokenService: tokenService,
@@ -59,19 +59,19 @@ func (us *UserService) Create(dto model.CreateUserDto) (*int, lib.Error) {
 	return &response.Id, nil
 }
 
-func (us *UserService) Activate(activationLink string) (bool, lib.Error) {
+func (us *UserService) Activate(activationLink string) lib.Error {
 	id, err := us.repo.FindActivationLink(activationLink)
 
 	if err != nil {
-		return false, lib.NewErr(err.Error(), 404)
+		return lib.NewErr(err.Error(), 404)
 	}
 
-	activated, err := us.repo.ActivateUser(id)
+	err = us.repo.ActivateUser(id)
 	if err != nil {
-		return false, lib.NewErr(err.Error(), 500)
+		return lib.NewErr(err.Error(), 500)
 	}
 
-	return activated, nil
+	return nil
 }
 
 func (us *UserService) GetUserById(id int) (*model.User, lib.Error) {
@@ -117,10 +117,18 @@ func (us *UserService) Login(dto model.LoginDto) (*model.LoginResponse, lib.Erro
 		return nil, lib.NewErr(messages.INVALID_CREDENTIALS, 404)
 	}
 
-	tokens, err := us.tokenService.Sign(user.Id)
+	userAgent := "user-agent"
+
+	tokens, err := us.tokenService.Sign(token.UserClaims{UserId: user.Id, UserAgent: userAgent})
 
 	if err != nil {
 		return nil, lib.NewErr(err.Error(), 500)
+	}
+
+	tokenDto := model.CreateToken{UserId: user.Id, UserAgent: userAgent, Token: tokens.RefreshToken}
+	appErr := us.tokenService.Create(tokenDto)
+	if appErr != nil {
+		return nil, appErr
 	}
 
 	response := model.LoginResponse{Id: user.Id, Tokens: tokens, Roles: user.Roles}

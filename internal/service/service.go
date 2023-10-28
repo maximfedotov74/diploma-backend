@@ -14,21 +14,30 @@ type User interface {
 	Create(dto model.CreateUserDto) (*int, lib.Error)
 	Login(dto model.LoginDto) (*model.LoginResponse, lib.Error)
 	GetUserById(id int) (*model.User, lib.Error)
-	Activate(activationLink string) (bool, lib.Error)
+	Activate(activationLink string) lib.Error
 	GetLk(id int) (*model.User, lib.Error)
 }
 
 type Role interface {
 	Create(dto model.CreateRoleDto) (*model.Role, lib.Error)
-	AddRoleToUser(title string, userId int) (bool, lib.Error)
-	RemoveRoleFromUser(title string, userId int) (bool, lib.Error)
+	AddRoleToUser(title string, userId int) lib.Error
+	RemoveRoleFromUser(title string, userId int) lib.Error
+}
+
+type Token interface {
+	FindToken() error
+	RemoveToken() error
+	Sign(claims token.UserClaims) (token.Tokens, error)
+	Parse(token string, tokenType token.TokenType) (*token.UserClaims, error)
+	Refresh() error
+	Create(dto model.CreateToken) lib.Error
 }
 
 type Services struct {
 	UserService  User
-	TokenService token.Token
 	RoleService  Role
 	MailService  mail.Mail
+	TokenService Token
 }
 
 type Deps struct {
@@ -38,7 +47,7 @@ type Deps struct {
 
 func New(deps Deps) *Services {
 	mailService := mail.New(deps.Config.SmtpKey, deps.Config.SmtpMail, deps.Config.SmtpHost, deps.Config.SmtpPort, deps.Config.AppLink)
-	tokenService := token.New(deps.Config)
+	tokenService := NewTokenService(deps.Config, deps.Repos.TokenRepository)
 	roleService := NewRoleService(deps.Repos.RoleRepository)
 	userService := NewUserService(deps.Repos.UserRepository, tokenService, mailService)
 	return &Services{

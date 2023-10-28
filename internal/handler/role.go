@@ -1,11 +1,10 @@
 package handler
 
 import (
-	"fmt"
-
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/maximfedotov74/fiber-psql/internal/model"
+	"github.com/maximfedotov74/fiber-psql/pkg/lib"
 )
 
 // h.authGuard, h.roleGuard("ADMIN")
@@ -37,7 +36,8 @@ func (h *Handler) createRole(ctx *fiber.Ctx) error {
 	err := ctx.BodyParser(&body)
 
 	if err != nil {
-		return ctx.Status(400).SendString(err.Error())
+		appErr := lib.NewErr(err.Error(), 400)
+		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
 	role, appErr := h.services.RoleService.Create(body)
@@ -57,7 +57,7 @@ func (h *Handler) createRole(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param dto body model.AddRoleToUserDto true "add role to user with body dto"
 // @Router /api/role/add-to-user [post]
-// @Success 201 {boolean} bool
+// @Success 201 {string} string
 // @Failure 400 {object} lib.ValidationError
 // @Failure 404 {array} lib.AppErr
 // @Failure 500 {array} lib.AppErr
@@ -67,7 +67,8 @@ func (h *Handler) addRoleToUser(ctx *fiber.Ctx) error {
 	err := ctx.BodyParser(&body)
 
 	if err != nil {
-		return ctx.Status(400).SendString(err.Error())
+		appErr := lib.NewErr(err.Error(), 400)
+		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
 	validate := validator.New()
@@ -76,16 +77,18 @@ func (h *Handler) addRoleToUser(ctx *fiber.Ctx) error {
 
 	if err != nil {
 		error_messages := err.(validator.ValidationErrors)
-		return ctx.Status(400).SendString(fmt.Sprintf("%s", error_messages))
+		items := lib.ValidationMessages(error_messages)
+		validError := lib.NewValidErr(items)
+		return ctx.Status(validError.Status).JSON(validError)
 	}
 
-	flag, appErr := h.services.RoleService.AddRoleToUser(body.Title, body.UserId)
+	appErr := h.services.RoleService.AddRoleToUser(body.Title, body.UserId)
 
 	if appErr != nil {
-		return ctx.Status(appErr.Status()).SendString(appErr.Message())
+		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
-	return ctx.Status(201).JSON(flag)
+	return ctx.Status(201).JSON(model.СompletedOperation{Completed: true})
 
 }
 
@@ -97,7 +100,7 @@ func (h *Handler) addRoleToUser(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param dto body model.AddRoleToUserDto true "Remove role from user with body dto"
 // @Router /api/role/remove-from-user [delete]
-// @Success 201 {boolean} bool
+// @Success 201 {string} string
 // @Failure 400 {object} lib.ValidationError
 // @Failure 404 {array} lib.AppErr
 // @Failure 500 {array} lib.AppErr
@@ -107,7 +110,8 @@ func (h *Handler) removeRoleFromUser(ctx *fiber.Ctx) error {
 	err := ctx.BodyParser(&body)
 
 	if err != nil {
-		return ctx.Status(400).SendString(err.Error())
+		appErr := lib.NewErr(err.Error(), 400)
+		return ctx.Status(appErr.Status()).JSON(appErr.Message())
 	}
 
 	validate := validator.New()
@@ -116,15 +120,17 @@ func (h *Handler) removeRoleFromUser(ctx *fiber.Ctx) error {
 
 	if err != nil {
 		error_messages := err.(validator.ValidationErrors)
-		return ctx.Status(400).SendString(fmt.Sprintf("%s", error_messages))
+		items := lib.ValidationMessages(error_messages)
+		validError := lib.NewValidErr(items)
+		return ctx.Status(validError.Status).JSON(validError)
 	}
 
-	flag, appErr := h.services.RoleService.RemoveRoleFromUser(body.Title, body.UserId)
+	appErr := h.services.RoleService.RemoveRoleFromUser(body.Title, body.UserId)
 
 	if appErr != nil {
 		return ctx.Status(appErr.Status()).SendString(appErr.Message())
 	}
 
-	return ctx.Status(200).JSON(flag)
+	return ctx.Status(200).JSON(model.СompletedOperation{Completed: true})
 
 }

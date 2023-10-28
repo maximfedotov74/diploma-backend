@@ -145,7 +145,7 @@ func (ur *UserRepository) FindActivationLink(link string) (*int, error) {
 	return &id, nil
 }
 
-func (ur *UserRepository) ActivateUser(id *int) (bool, error) {
+func (ur *UserRepository) ActivateUser(id *int) error {
 	query := `UPDATE "public".user_settings
 	SET activation_account_link = NULL,
 	is_activated = TRUE
@@ -153,8 +153,8 @@ func (ur *UserRepository) ActivateUser(id *int) (bool, error) {
 
 	_, err := ur.db.Exec(context.Background(), query, id)
 	if err != nil {
-		return false, errors.New(messages.ACTIVATION_ERROR)
+		return errors.New(messages.ACTIVATION_ERROR)
 	}
 
-	return true, nil
+	return nil
 }

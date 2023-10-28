@@ -38,36 +38,36 @@ func (rs *RoleService) Create(dto model.CreateRoleDto) (*model.Role, lib.Error) 
 	return role, nil
 }
 
-func (rs *RoleService) AddRoleToUser(title string, userId int) (bool, lib.Error) {
+func (rs *RoleService) AddRoleToUser(title string, userId int) lib.Error {
 
 	role, err := rs.repo.FindRoleByTitle(title)
 
 	if err != nil {
-		return false, lib.NewErr(err.Error(), 404)
+		return lib.NewErr(err.Error(), 404)
 	}
 
-	flag, err := rs.repo.AddRoleToUser(role.Id, userId)
+	err = rs.repo.AddRoleToUser(role.Id, userId)
 
 	if err != nil {
-		return flag, lib.NewErr(err.Error(), 500)
+		return lib.NewErr(err.Error(), 500)
 	}
 
-	return flag, nil
+	return nil
 
 }
 
-func (rs *RoleService) RemoveRoleFromUser(title string, userId int) (bool, lib.Error) {
+func (rs *RoleService) RemoveRoleFromUser(title string, userId int) lib.Error {
 	role, err := rs.repo.FindRoleByTitle(title)
 
 	if err != nil {
-		return false, lib.NewErr(err.Error(), 404)
+		return lib.NewErr(err.Error(), 404)
 	}
 
-	flag, err := rs.repo.RemoveRoleFromUser(role.Id, userId)
+	err = rs.repo.RemoveRoleFromUser(role.Id, userId)
 
 	if err != nil {
-		return flag, lib.NewErr(err.Error(), 500)
+		return lib.NewErr(err.Error(), 500)
 	}
 
-	return flag, nil
+	return nil
 }

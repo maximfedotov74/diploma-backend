@@ -43,23 +43,23 @@ func (rr *RoleRepository) FindRoleByTitle(title string) (*model.Role, error) {
 
 }
 
-func (rr *RoleRepository) AddRoleToUser(roleId int, userId int) (bool, error) {
+func (rr *RoleRepository) AddRoleToUser(roleId int, userId int) error {
 	_, err := rr.db.Exec(context.Background(), addRoleToUser, userId, roleId)
 	if err != nil {
-		return false, errors.New(messages.ROLE_ADD_ERROR)
+		return errors.New(messages.ROLE_ADD_ERROR)
 	}
 
-	return true, nil
+	return nil
 }
 
-func (rr *RoleRepository) RemoveRoleFromUser(roleId int, userId int) (bool, error) {
+func (rr *RoleRepository) RemoveRoleFromUser(roleId int, userId int) error {
 
 	query := "DELETE FROM public.user_role WHERE user_id = $1 AND role_id = $2;"
 	_, err := rr.db.Exec(context.Background(), query, userId, roleId)
 
 	if err != nil {
-		return false, errors.New(messages.ROLE_DELETE_ERROR)
+		return errors.New(messages.ROLE_DELETE_ERROR)
 	}
 
-	return true, nil
+	return nil
 }

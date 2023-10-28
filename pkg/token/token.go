@@ -8,14 +8,14 @@ import (
 	"github.com/maximfedotov74/fiber-psql/internal/cfg"
 )
 
-type Token interface {
-	Sign(id int) (Tokens, error)
-	Parse(token string, tokenType TokenType) (int, error)
+type JwtToken interface {
+	Sign(claims UserClaims) (Tokens, error)
+	Parse(token string, tokenType TokenType) (*UserClaims, error)
 }
 
 type Claims struct {
 	jwt.RegisteredClaims
-	UserId int `json:"user_id"`
+	UserClaims
 }
 
 type TokenService struct {
@@ -31,6 +31,11 @@ type Tokens struct {
 
 type TokenType int
 
+type UserClaims struct {
+	UserId    int    `json:"user_id"`
+	UserAgent string `json:"user_agent"`
+}
+
 const (
 	AccessToken TokenType = iota
 	RefreshToken
@@ -42,7 +47,7 @@ func New(cfg *cfg.Config) *TokenService {
 	}
 }
 
-func (ts *TokenService) Sign(id int) (Tokens, error) {
+func (ts *TokenService) Sign(claims UserClaims) (Tokens, error) {
 
 	var tokens Tokens
 
@@ -53,7 +58,7 @@ func (ts *TokenService) Sign(id int) (Tokens, error) {
 	var refreshSecret string = ts.config.RefreshTokenSecret
 
 	accessClaims := Claims{
-		UserId: id,
+		UserClaims: claims,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(accessExpTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -61,7 +66,7 @@ func (ts *TokenService) Sign(id int) (Tokens, error) {
 	}
 
 	refreshClaims := Claims{
-		UserId: id,
+		UserClaims: claims,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(refreshExpTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -86,7 +91,7 @@ func (ts *TokenService) Sign(id int) (Tokens, error) {
 
 }
 
-func (ts *TokenService) Parse(token string, tokenType TokenType) (int, error) {
+func (ts *TokenService) Parse(token string, tokenType TokenType) (*UserClaims, error) {
 	result, err := jwt.ParseWithClaims(token, &Claims{}, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("Invalid token!!")
@@ -101,19 +106,19 @@ func (ts *TokenService) Parse(token string, tokenType TokenType) (int, error) {
 	})
 
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	if !result.Valid {
-		return 0, errors.New("Token is not valid!")
+		return nil, errors.New("Token is not valid!")
 	}
 
 	claims, ok := result.Claims.(*Claims)
 
 	if !ok {
-		return 0, errors.New("Cannot parse claims to struct!")
+		return nil, errors.New("Cannot parse claims to struct!")
 	}
 
-	return claims.UserId, nil
+	return &claims.UserClaims, nil
 
 }

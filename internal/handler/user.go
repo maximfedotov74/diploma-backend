@@ -146,13 +146,13 @@ func (h *Handler) login(ctx *fiber.Ctx) error {
 
 func (h *Handler) activate(ctx *fiber.Ctx) error {
 	activationLink := ctx.Params("activationLink")
-	activated, err := h.services.UserService.Activate(activationLink)
+	err := h.services.UserService.Activate(activationLink)
 
-	if err != nil || !activated {
+	if err != nil {
 		return ctx.Status(err.Status()).JSON(err)
 	}
 
-	return ctx.Redirect(fmt.Sprintf("%s/api/user/lk", h.cfg.AppLink), 302)
+	return ctx.Redirect(fmt.Sprintf("https://ya.ru/"), 302)
 }
 
 // @Summary Get profile info
