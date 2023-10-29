@@ -22,7 +22,7 @@ type Role interface {
 }
 
 type Token interface {
-	FindToken() error
+	FindByAgentAndToken(agent string, token string) (*model.Token, error)
 	RemoveToken(token string) error
 	UpdateToken() error
 	CreateToken(dto model.CreateToken) error

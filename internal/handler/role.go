@@ -11,7 +11,7 @@ import (
 func (h *Handler) initRoleRoutes(router fiber.Router) {
 	role := router.Group("/role")
 	{
-		role.Post("/", h.createRole)
+		role.Post("/", h.authGuard, h.roleGuard("ADMIN"), h.createRole)
 		role.Post("/add-to-user", h.addRoleToUser)
 		role.Delete("/remove-from-user", h.removeRoleFromUser)
 	}

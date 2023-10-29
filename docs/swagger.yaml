@@ -198,7 +198,7 @@ paths:
         "201":
           description: Created
           schema:
-            type: boolean
+            type: string
         "400":
           description: Bad Request
           schema:
@@ -238,7 +238,7 @@ paths:
         "201":
           description: Created
           schema:
-            type: boolean
+            type: string
         "400":
           description: Bad Request
           schema:
@@ -354,6 +354,33 @@ paths:
           schema:
             $ref: '#/definitions/lib.AppErr'
       summary: Login
+      tags:
+      - users
+  /api/user/refresh-token:
+    get:
+      consumes:
+      - application/json
+      description: Refresh tokens by cookies refresh_token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.LoginResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/lib.AppErr'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/lib.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/lib.AppErr'
+      summary: Refresh tokens
       tags:
       - users
   /api/user/registration:

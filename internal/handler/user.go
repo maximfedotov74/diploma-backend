@@ -8,6 +8,7 @@ import (
 	"github.com/maximfedotov74/fiber-psql/internal/model"
 	"github.com/maximfedotov74/fiber-psql/internal/utils"
 	"github.com/maximfedotov74/fiber-psql/pkg/lib"
+	"github.com/maximfedotov74/fiber-psql/pkg/messages"
 )
 
 func (h *Handler) initUsersRoutes(router fiber.Router) {
@@ -15,9 +16,10 @@ func (h *Handler) initUsersRoutes(router fiber.Router) {
 	{
 		user.Post("/registration", h.registration)
 		user.Post("/login", h.login)
-		user.Get("/:lk", h.authGuard, h.getLk)
 		user.Get("/activate/:activationLink", h.activate)
 		user.Get("/by-id/:id", h.getUserById)
+		user.Get("/refresh-token", h.refreshToken)
+		user.Get("/:lk", h.authGuard, h.getLk)
 	}
 }
 
@@ -121,27 +123,52 @@ func (h *Handler) login(ctx *fiber.Ctx) error {
 		return ctx.Status(validError.Status).JSON(validError)
 	}
 
-	resp, appErr := h.services.UserService.Login(dto)
+	userAgent := ctx.Get("User-Agent")
+	resp, appErr := h.services.UserService.Login(dto, userAgent)
 
 	if appErr != nil {
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
-	access_cookie := new(fiber.Cookie)
-	access_cookie.Name = "access_token"
-	access_cookie.Value = resp.Tokens.AccessToken
-	access_cookie.Expires = resp.Tokens.AccessExpTime
-	refresh_cookie := new(fiber.Cookie)
-	refresh_cookie.Name = "refresh_token"
-	refresh_cookie.Value = resp.Tokens.RefreshToken
-	refresh_cookie.Expires = resp.Tokens.RefreshExpTime
-	refresh_cookie.HTTPOnly = true
+	access_cookie, refresh_cookie := utils.SetCookies(resp.Tokens)
 
 	ctx.Cookie(access_cookie)
 	ctx.Cookie(refresh_cookie)
 
 	return ctx.Status(201).JSON(resp)
 
+}
+
+// @Summary Refresh tokens
+// @Description Refresh tokens by cookies refresh_token
+// @Tags users
+// @Accept json
+// @Produce json
+// @Router /api/user/refresh-token [get]
+// @Success 200 {object} model.LoginResponse
+// @Failure 404 {object} lib.AppErr
+// @Failure 401 {object} lib.AppErr
+// @Failure 500 {object} lib.AppErr
+func (h *Handler) refreshToken(ctx *fiber.Ctx) error {
+	refreshToken := ctx.Cookies("refresh_token")
+	if refreshToken == "" {
+		appErr := lib.NewErr(messages.TOKEN_INVALID, 400)
+		return ctx.Status(401).JSON(appErr)
+	}
+
+	userAgent := ctx.Get("User-Agent")
+
+	response, err := h.services.UserService.RefreshToken(refreshToken, userAgent)
+
+	if err != nil {
+		return ctx.Status(err.Status()).JSON(err)
+	}
+
+	access_cookie, refresh_cookie := utils.SetCookies(response.Tokens)
+
+	ctx.Cookie(access_cookie)
+	ctx.Cookie(refresh_cookie)
+	return ctx.Status(202).JSON(response)
 }
 
 func (h *Handler) activate(ctx *fiber.Ctx) error {
@@ -167,12 +194,12 @@ func (h *Handler) activate(ctx *fiber.Ctx) error {
 // @Failure 401 {object} lib.AppErr
 // @Failure 500 {object} lib.AppErr
 func (h *Handler) getLk(ctx *fiber.Ctx) error {
-	id, err := utils.GetUserIdFromCtx(ctx)
+	claims, err := utils.GetUserDataFromCtx(ctx)
 	if err != nil {
 		return ctx.Status(err.Status()).JSON(err)
 	}
 
-	user, err := h.services.UserService.GetLk(*id)
+	user, err := h.services.UserService.GetLk(claims.UserId)
 
 	if err != nil {
 		return ctx.Status(err.Status()).JSON(err)

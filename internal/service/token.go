@@ -1,8 +1,6 @@
 package service
 
 import (
-	"log"
-
 	"github.com/maximfedotov74/fiber-psql/internal/cfg"
 	"github.com/maximfedotov74/fiber-psql/internal/model"
 	"github.com/maximfedotov74/fiber-psql/internal/repository"
@@ -29,22 +27,35 @@ func (ts *TokenService) Create(dto model.CreateToken) lib.Error {
 	err := ts.repo.CreateToken(dto)
 
 	if err != nil {
-		log.Println(err)
 		return lib.NewErr(messages.TOKEN_CREATE_ERROR, 500)
 	}
 
 	return nil
 }
 
-func (ts *TokenService) FindToken() error {
-	return nil
+func (ts *TokenService) FindToken(agent string, token string) (*model.Token, lib.Error) {
+
+	dbToken, err := ts.repo.FindByAgentAndToken(agent, token)
+
+	if err != nil {
+		return nil, lib.NewErr(messages.TOKEN_NOT_FOUND, 404)
+	}
+	return dbToken, nil
+
 }
 
 func (ts *TokenService) RemoveToken() error {
 	return nil
 }
 
-func (ts *TokenService) Refresh() error {
+func (ts *TokenService) Refresh(refreshToken string) error {
+
+	_, err := ts.jwtService.Parse(refreshToken, token.RefreshToken)
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

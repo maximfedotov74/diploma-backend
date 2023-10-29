@@ -12,10 +12,11 @@ import (
 type User interface {
 	GetAll()
 	Create(dto model.CreateUserDto) (*int, lib.Error)
-	Login(dto model.LoginDto) (*model.LoginResponse, lib.Error)
+	Login(dto model.LoginDto, userAgent string) (*model.LoginResponse, lib.Error)
 	GetUserById(id int) (*model.User, lib.Error)
 	Activate(activationLink string) lib.Error
 	GetLk(id int) (*model.User, lib.Error)
+	RefreshToken(refreshToken string, userAgent string) (*model.LoginResponse, lib.Error)
 }
 
 type Role interface {
@@ -25,11 +26,11 @@ type Role interface {
 }
 
 type Token interface {
-	FindToken() error
+	FindToken(agent string, token string) (*model.Token, lib.Error)
 	RemoveToken() error
 	Sign(claims token.UserClaims) (token.Tokens, error)
 	Parse(token string, tokenType token.TokenType) (*token.UserClaims, error)
-	Refresh() error
+	Refresh(refreshToken string) error
 	Create(dto model.CreateToken) lib.Error
 }
 

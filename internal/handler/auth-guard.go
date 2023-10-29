@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/maximfedotov74/fiber-psql/internal/constants"
+	"github.com/maximfedotov74/fiber-psql/internal/model"
 	"github.com/maximfedotov74/fiber-psql/pkg/lib"
 	"github.com/maximfedotov74/fiber-psql/pkg/messages"
 	"github.com/maximfedotov74/fiber-psql/pkg/token"
@@ -12,6 +13,7 @@ import (
 
 func (h *Handler) authGuard(ctx *fiber.Ctx) error {
 	ctx.Locals(constants.USER_CTX_KEY, nil)
+	userAgent := ctx.Get("User-Agent")
 
 	authHeader := ctx.Get(constants.HEADER_AUTHORIZATION)
 
@@ -24,13 +26,19 @@ func (h *Handler) authGuard(ctx *fiber.Ctx) error {
 	}
 
 	accessToken := splittedHeader[1]
-
-	userId, err := h.services.TokenService.Parse(accessToken, token.AccessToken)
+	claims, err := h.services.TokenService.Parse(accessToken, token.AccessToken)
 	if err != nil {
 		return ctx.Status(authError.Status()).JSON(authError)
 	}
 
-	ctx.Locals(constants.USER_CTX_KEY, userId)
+	user, _ := h.services.UserService.GetUserById(claims.UserId)
+	if user == nil {
+		return ctx.Status(authError.Status()).JSON(authError)
+	}
+
+	contextData := model.UserContextData{UserId: user.Id, Roles: user.Roles, UserAgent: userAgent}
+
+	ctx.Locals(constants.USER_CTX_KEY, contextData)
 	return ctx.Next()
 
 }

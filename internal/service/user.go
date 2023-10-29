@@ -81,6 +81,24 @@ func (us *UserService) GetUserById(id int) (*model.User, lib.Error) {
 		return nil, lib.NewErr(err.Error(), 500)
 	}
 
+	if user == nil {
+		return nil, lib.NewErr(messages.USER_NOT_FOUND, 404)
+	}
+
+	return user, nil
+}
+
+func (us *UserService) GetUserByEmail(email string) (*model.User, lib.Error) {
+	user, err := us.repo.GetUserByEmail(email)
+
+	if err != nil {
+		return nil, lib.NewErr(err.Error(), 500)
+	}
+
+	if user == nil {
+		return nil, lib.NewErr(messages.USER_NOT_FOUND, 404)
+	}
+
 	return user, nil
 }
 
@@ -102,22 +120,16 @@ func (us *UserService) comparePasswords(hashed string, pass string) bool {
 	return true
 }
 
-func (us *UserService) Login(dto model.LoginDto) (*model.LoginResponse, lib.Error) {
-	user, err := us.repo.GetUserByEmail(dto.Email)
+func (us *UserService) Login(dto model.LoginDto, userAgent string) (*model.LoginResponse, lib.Error) {
+	user, appErr := us.GetUserByEmail(dto.Email)
 
-	if err != nil {
-		return nil, lib.NewErr(err.Error(), 500)
-	}
-
-	if user == nil {
-		return nil, lib.NewErr(messages.USER_NOT_FOUND, 404)
+	if appErr != nil {
+		return nil, appErr
 	}
 
 	if isPasswordCorrect := us.comparePasswords(user.PasswordHash, dto.Password); !isPasswordCorrect {
 		return nil, lib.NewErr(messages.INVALID_CREDENTIALS, 404)
 	}
-
-	userAgent := "user-agent"
 
 	tokens, err := us.tokenService.Sign(token.UserClaims{UserId: user.Id, UserAgent: userAgent})
 
@@ -126,7 +138,7 @@ func (us *UserService) Login(dto model.LoginDto) (*model.LoginResponse, lib.Erro
 	}
 
 	tokenDto := model.CreateToken{UserId: user.Id, UserAgent: userAgent, Token: tokens.RefreshToken}
-	appErr := us.tokenService.Create(tokenDto)
+	appErr = us.tokenService.Create(tokenDto)
 	if appErr != nil {
 		return nil, appErr
 	}
@@ -149,4 +161,43 @@ func (us *UserService) GetLk(id int) (*model.User, lib.Error) {
 	}
 
 	return user, nil
+}
+
+func (us *UserService) RefreshToken(refreshToken string, userAgent string) (*model.LoginResponse, lib.Error) {
+
+	_, err := us.tokenService.Parse(refreshToken, token.RefreshToken)
+
+	if err != nil {
+		return nil, lib.NewErr(err.Error(), 401)
+	}
+
+	dbToken, appErr := us.tokenService.FindToken(userAgent, refreshToken)
+
+	if appErr != nil {
+		return nil, appErr
+	}
+
+	user, appErr := us.GetUserById(dbToken.UserId)
+	if appErr != nil {
+		return nil, appErr
+	}
+
+	claims := token.UserClaims{UserId: user.Id, UserAgent: dbToken.UserAgent}
+
+	tokens, err := us.tokenService.Sign(claims)
+
+	if err != nil {
+		return nil, lib.NewErr(err.Error(), 500)
+	}
+
+	tokenDto := model.CreateToken{UserId: user.Id, UserAgent: dbToken.UserAgent, Token: tokens.RefreshToken}
+	appErr = us.tokenService.Create(tokenDto)
+
+	if appErr != nil {
+		return nil, appErr
+	}
+
+	response := model.LoginResponse{Id: user.Id, Tokens: tokens, Roles: user.Roles}
+
+	return &response, nil
 }

@@ -89,9 +89,10 @@ func (ur *UserRepository) findByIdOrEmail(field string, value any) (*model.User,
 	if err != nil {
 		return nil, err
 	}
+
 	defer rows.Close()
 
-	var user model.User
+	user := model.User{}
 	processedRows := 0
 	for rows.Next() {
 		role := model.Role{}
