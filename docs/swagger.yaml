@@ -140,6 +140,40 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/auth/registration:
+    post:
+      consumes:
+      - application/json
+      description: Registation by body arguments
+      parameters:
+      - description: Registation user with body dto
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateUserDto'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.RegistrationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/lib.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/lib.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/lib.AppErr'
+      summary: Registation user
+      tags:
+      - users
   /api/role/:
     post:
       consumes:
@@ -381,40 +415,6 @@ paths:
           schema:
             $ref: '#/definitions/lib.AppErr'
       summary: Refresh tokens
-      tags:
-      - users
-  /api/user/registration:
-    post:
-      consumes:
-      - application/json
-      description: Create user by body arguments
-      parameters:
-      - description: create user with body dto
-        in: body
-        name: dto
-        required: true
-        schema:
-          $ref: '#/definitions/model.CreateUserDto'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/model.RegistrationResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/lib.ValidationError'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/lib.AppErr'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/lib.AppErr'
-      summary: Create user
       tags:
       - users
 swagger: "2.0"

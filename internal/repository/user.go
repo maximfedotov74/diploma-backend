@@ -22,7 +22,7 @@ func (ur *UserRepository) GetAll() error {
 	return nil
 }
 
-func (ur *UserRepository) Create(dto model.CreateUserDto) (*UserRepoResponse, error) {
+func (ur *UserRepository) Create(dto model.CreateUserDto) (*model.UserCreatedResponse, error) {
 
 	txCtx := context.Background()
 
@@ -72,7 +72,7 @@ func (ur *UserRepository) Create(dto model.CreateUserDto) (*UserRepoResponse, er
 		return nil, err
 	}
 
-	return &UserRepoResponse{Id: id, ActivationAccountLink: link}, nil
+	return &model.UserCreatedResponse{Id: id, ActivationAccountLink: link}, nil
 }
 
 func (ur *UserRepository) findByIdOrEmail(field string, value any) (*model.User, error) {

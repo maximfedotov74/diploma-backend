@@ -31,3 +31,8 @@ type LoginResponse struct {
 	Tokens token.Tokens `json:"tokens"`
 	Roles  []Role       `json:"roles"`
 }
+
+type UserCreatedResponse struct {
+	Id                    int    `json:"id"`
+	ActivationAccountLink string `json:"activation_account_link"`
+}

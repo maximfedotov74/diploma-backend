@@ -5,9 +5,19 @@ import (
 	"github.com/maximfedotov74/fiber-psql/internal/model"
 )
 
+const (
+	emailField  = "email"
+	userIdField = "user_id"
+)
+
+const (
+	userRole  = "USER"
+	adminRole = "ADMIN"
+)
+
 type User interface {
 	GetAll() error
-	Create(dto model.CreateUserDto) (*UserRepoResponse, error)
+	Create(dto model.CreateUserDto) (*model.UserCreatedResponse, error)
 	GetUserById(id int) (*model.User, error)
 	GetUserByEmail(email string) (*model.User, error)
 	FindActivationLink(link string) (*int, error)

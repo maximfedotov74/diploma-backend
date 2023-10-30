@@ -29,6 +29,9 @@ type Tokens struct {
 	RefreshExpTime time.Time `json:"-"`
 }
 
+const TOKEN_INVALID = "Ошибка при валидации токена!"
+const PARSE_CLAIMS_ERROR = "Данные записанные в токен не соответствуют требуемым!"
+
 type TokenType int
 
 type UserClaims struct {
@@ -94,7 +97,7 @@ func (ts *TokenService) Sign(claims UserClaims) (Tokens, error) {
 func (ts *TokenService) Parse(token string, tokenType TokenType) (*UserClaims, error) {
 	result, err := jwt.ParseWithClaims(token, &Claims{}, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("Invalid token!!")
+			return nil, errors.New(TOKEN_INVALID)
 		}
 		var secret string
 		if tokenType == AccessToken {
@@ -110,13 +113,13 @@ func (ts *TokenService) Parse(token string, tokenType TokenType) (*UserClaims, e
 	}
 
 	if !result.Valid {
-		return nil, errors.New("Token is not valid!")
+		return nil, errors.New(TOKEN_INVALID)
 	}
 
 	claims, ok := result.Claims.(*Claims)
 
 	if !ok {
-		return nil, errors.New("Cannot parse claims to struct!")
+		return nil, errors.New(PARSE_CLAIMS_ERROR)
 	}
 
 	return &claims.UserClaims, nil

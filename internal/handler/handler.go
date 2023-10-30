@@ -21,4 +21,5 @@ func New(services *service.Services, cfg *cfg.Config) *Handler {
 func (h *Handler) Init(cfg *cfg.Config, router fiber.Router) {
 	h.initUsersRoutes(router)
 	h.initRoleRoutes(router)
+	h.initAuthRoutes(router)
 }

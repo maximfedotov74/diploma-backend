@@ -11,12 +11,10 @@ import (
 
 type User interface {
 	GetAll()
-	Create(dto model.CreateUserDto) (*int, lib.Error)
-	Login(dto model.LoginDto, userAgent string) (*model.LoginResponse, lib.Error)
+	Create(dto model.CreateUserDto) (*model.UserCreatedResponse, lib.Error)
 	GetUserById(id int) (*model.User, lib.Error)
+	GetUserByEmail(email string) (*model.User, lib.Error)
 	Activate(activationLink string) lib.Error
-	GetLk(id int) (*model.User, lib.Error)
-	RefreshToken(refreshToken string, userAgent string) (*model.LoginResponse, lib.Error)
 }
 
 type Role interface {
@@ -34,11 +32,23 @@ type Token interface {
 	Create(dto model.CreateToken) lib.Error
 }
 
+type Auth interface {
+	Registration(dto model.CreateUserDto) (*int, lib.Error)
+	Login(dto model.LoginDto, userAgent string) (*model.LoginResponse, lib.Error)
+	Refresh(refreshToken string, userAgent string) (*model.LoginResponse, lib.Error)
+}
+
+type Password interface {
+	HashPassword(password string) (string, error)
+	ComparePasswords(hashed string, pass string) bool
+}
+
 type Services struct {
 	UserService  User
 	RoleService  Role
 	MailService  mail.Mail
 	TokenService Token
+	AuthService  Auth
 }
 
 type Deps struct {
@@ -47,13 +57,17 @@ type Deps struct {
 }
 
 func New(deps Deps) *Services {
+	passwordService := NewPasswordService()
 	mailService := mail.New(deps.Config.SmtpKey, deps.Config.SmtpMail, deps.Config.SmtpHost, deps.Config.SmtpPort, deps.Config.AppLink)
 	tokenService := NewTokenService(deps.Config, deps.Repos.TokenRepository)
 	roleService := NewRoleService(deps.Repos.RoleRepository)
-	userService := NewUserService(deps.Repos.UserRepository, tokenService, mailService)
+	userService := NewUserService(deps.Repos.UserRepository, tokenService, mailService, passwordService)
+	authService := NewAuthService(userService, tokenService, passwordService, mailService)
+
 	return &Services{
 		UserService:  userService,
 		TokenService: tokenService,
 		RoleService:  roleService,
+		AuthService:  authService,
 	}
 }
