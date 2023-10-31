@@ -11,9 +11,10 @@ import (
 func GetUserDataFromCtx(ctx *fiber.Ctx) (*model.UserContextData, lib.Error) {
 	data := ctx.Locals(constants.USER_CTX_KEY)
 
-	claims, ok := data.(*model.UserContextData)
+	claims, ok := data.(model.UserContextData)
 	if !ok {
 		return nil, lib.NewErr(messages.UNAUTHORIZED, 401)
 	}
-	return claims, nil
+
+	return &claims, nil
 }

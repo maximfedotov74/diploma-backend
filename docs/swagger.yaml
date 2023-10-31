@@ -41,6 +41,13 @@ definitions:
     - title
     - user_id
     type: object
+  model.ChangePasswordDto:
+    properties:
+      new_password:
+        type: string
+      old_password:
+        type: string
+    type: object
   model.CreateRoleDto:
     properties:
       title:
@@ -173,7 +180,7 @@ paths:
             $ref: '#/definitions/lib.AppErr'
       summary: Registation user
       tags:
-      - users
+      - auth
   /api/role/:
     post:
       consumes:
@@ -327,6 +334,40 @@ paths:
       summary: Get user by id
       tags:
       - users
+  /api/user/change-password:
+    patch:
+      consumes:
+      - application/json
+      description: Change user password
+      parameters:
+      - description: change password
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/model.ChangePasswordDto'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/lib.AppErr'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/lib.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/lib.AppErr'
+      security:
+      - BearerToken: []
+      summary: Change password
+      tags:
+      - users
   /api/user/lk:
     get:
       consumes:
@@ -389,7 +430,7 @@ paths:
             $ref: '#/definitions/lib.AppErr'
       summary: Login
       tags:
-      - users
+      - auth
   /api/user/refresh-token:
     get:
       consumes:
@@ -416,5 +457,5 @@ paths:
             $ref: '#/definitions/lib.AppErr'
       summary: Refresh tokens
       tags:
-      - users
+      - auth
 swagger: "2.0"

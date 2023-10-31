@@ -15,6 +15,7 @@ type User interface {
 	GetUserById(id int) (*model.User, lib.Error)
 	GetUserByEmail(email string) (*model.User, lib.Error)
 	Activate(activationLink string) lib.Error
+	ChangePassword(dto model.ChangePasswordDto, userId int, userAgent string) lib.Error
 }
 
 type Role interface {

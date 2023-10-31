@@ -20,7 +20,7 @@ func (h *Handler) initAuthRoutes(router fiber.Router) {
 
 // @Summary Registation user
 // @Description Registation by body arguments
-// @Tags users
+// @Tags auth
 // @Accept json
 // @Produce json
 // @Param dto body model.CreateUserDto true "Registation user with body dto"
@@ -61,7 +61,7 @@ func (h *Handler) registration(ctx *fiber.Ctx) error {
 
 // @Summary Login
 // @Description Login to an account with account data
-// @Tags users
+// @Tags auth
 // @Accept json
 // @Produce json
 // @Param dto body model.LoginDto true "login in account"
@@ -109,7 +109,7 @@ func (h *Handler) login(ctx *fiber.Ctx) error {
 
 // @Summary Refresh tokens
 // @Description Refresh tokens by cookies refresh_token
-// @Tags users
+// @Tags auth
 // @Accept json
 // @Produce json
 // @Router /api/user/refresh-token [get]

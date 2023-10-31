@@ -3,8 +3,11 @@ package handler
 import (
 	"fmt"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"github.com/maximfedotov74/fiber-psql/internal/model"
 	"github.com/maximfedotov74/fiber-psql/internal/utils"
+	"github.com/maximfedotov74/fiber-psql/pkg/lib"
 )
 
 func (h *Handler) initUsersRoutes(router fiber.Router) {
@@ -12,6 +15,7 @@ func (h *Handler) initUsersRoutes(router fiber.Router) {
 	{
 		user.Get("/activate/:activationLink", h.activate)
 		user.Get("/by-id/:id", h.getUserById)
+		user.Patch("/change-password", h.authGuard, h.changePassword)
 		user.Get("/:lk", h.authGuard, h.getLk)
 	}
 }
@@ -78,5 +82,53 @@ func (h *Handler) getLk(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Status(200).JSON(user)
+
+}
+
+// @Summary Change password
+// @Security BearerToken
+// @Description Change user password
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param dto body model.ChangePasswordDto true "change password"
+// @Router /api/user/change-password [patch]
+// @Success 200
+// @Failure 404 {object} lib.AppErr
+// @Failure 401 {object} lib.AppErr
+// @Failure 500 {object} lib.AppErr
+func (h *Handler) changePassword(ctx *fiber.Ctx) error {
+
+	var dto model.ChangePasswordDto
+
+	err := ctx.BodyParser(&dto)
+	if err != nil {
+		return ctx.Status(400).SendString(err.Error())
+	}
+
+	validate := validator.New()
+
+	err = validate.Struct(&dto)
+
+	if err != nil {
+		error_messages := err.(validator.ValidationErrors)
+		items := lib.ValidationMessages(error_messages)
+		validError := lib.NewValidErr(items)
+
+		return ctx.Status(validError.Status).JSON(validError)
+	}
+
+	claims, appErr := utils.GetUserDataFromCtx(ctx)
+	if err != nil {
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	appErr = h.services.UserService.ChangePassword(dto, claims.UserId, claims.UserAgent)
+
+	if appErr != nil {
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	return ctx.SendStatus(200)
 
 }

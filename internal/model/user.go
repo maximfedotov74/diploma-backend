@@ -36,3 +36,8 @@ type UserCreatedResponse struct {
 	Id                    int    `json:"id"`
 	ActivationAccountLink string `json:"activation_account_link"`
 }
+
+type ChangePasswordDto struct {
+	OldPassword string `json:"old_password"`
+	NewPassword string `json:"new_password"`
+}

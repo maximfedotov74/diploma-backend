@@ -76,6 +76,9 @@ func (ur *UserRepository) Create(dto model.CreateUserDto) (*model.UserCreatedRes
 }
 
 func (ur *UserRepository) findByIdOrEmail(field string, value any) (*model.User, error) {
+
+	ctx := context.Background()
+
 	query := fmt.Sprintf(`SELECT public.user.user_id, public.user.email, public.user.password_hash,
 	role.title, role.role_id, public.user_settings.is_activated
 	FROM public.user
@@ -84,7 +87,7 @@ func (ur *UserRepository) findByIdOrEmail(field string, value any) (*model.User,
 	LEFT JOIN public.user_settings ON public.user.user_id = public.user_settings.user_id
 	WHERE public.user.%s = $1;`, field)
 
-	rows, err := ur.db.Query(context.Background(), query, value)
+	rows, err := ur.db.Query(ctx, query, value)
 
 	if err != nil {
 		return nil, err
@@ -134,9 +137,10 @@ func (ur *UserRepository) GetUserByEmail(email string) (*model.User, error) {
 }
 
 func (ur *UserRepository) FindActivationLink(link string) (*int, error) {
+	ctx := context.Background()
 	query := `SELECT "public"."user_settings".user_id FROM "public"."user_settings"
 	WHERE "public".user_settings.activation_account_link = $1;`
-	row := ur.db.QueryRow(context.Background(), query, link)
+	row := ur.db.QueryRow(ctx, query, link)
 	var id int
 	err := row.Scan(&id)
 	if err != nil {
@@ -147,14 +151,30 @@ func (ur *UserRepository) FindActivationLink(link string) (*int, error) {
 }
 
 func (ur *UserRepository) ActivateUser(id *int) error {
+	ctx := context.Background()
 	query := `UPDATE "public".user_settings
 	SET activation_account_link = NULL,
 	is_activated = TRUE
 	WHERE "public".user_settings.user_id = $1;`
 
-	_, err := ur.db.Exec(context.Background(), query, id)
+	_, err := ur.db.Exec(ctx, query, id)
 	if err != nil {
 		return errors.New(messages.ACTIVATION_ERROR)
+	}
+
+	return nil
+}
+
+func (ur *UserRepository) ChangePassword(userId int, newPassword string) error {
+
+	ctx := context.Background()
+
+	query := `UPDATE public.user SET password_hash = $1,
+	updated_at = CURRENT_TIMESTAMP WHERE public.user.user_id = $2;`
+
+	_, err := ur.db.Exec(ctx, query, newPassword, userId)
+	if err != nil {
+		return errors.New(messages.UPDATE_PASSWORD_ERROR)
 	}
 
 	return nil

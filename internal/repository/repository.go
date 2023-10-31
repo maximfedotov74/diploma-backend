@@ -22,6 +22,7 @@ type User interface {
 	GetUserByEmail(email string) (*model.User, error)
 	FindActivationLink(link string) (*int, error)
 	ActivateUser(id *int) error
+	ChangePassword(userId int, newPassword string) error
 }
 
 type Role interface {
