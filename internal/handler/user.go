@@ -15,8 +15,12 @@ func (h *Handler) initUsersRoutes(router fiber.Router) {
 	{
 		user.Get("/activate/:activationLink", h.activate)
 		user.Get("/by-id/:id", h.getUserById)
+		user.Get("/lk", h.authGuard, h.getLk)
+
+		user.Post("/create-change-password-code", h.authGuard, h.createChangePasswordCode)
+
 		user.Patch("/change-password", h.authGuard, h.changePassword)
-		user.Get("/:lk", h.authGuard, h.getLk)
+
 	}
 }
 
@@ -75,7 +79,7 @@ func (h *Handler) getLk(ctx *fiber.Ctx) error {
 		return ctx.Status(err.Status()).JSON(err)
 	}
 
-	user, err := h.services.UserService.GetUserById(claims.UserId)
+	user, err := h.services.UserService.GetUserById(claims.User.Id)
 
 	if err != nil {
 		return ctx.Status(err.Status()).JSON(err)
@@ -119,16 +123,49 @@ func (h *Handler) changePassword(ctx *fiber.Ctx) error {
 	}
 
 	claims, appErr := utils.GetUserDataFromCtx(ctx)
-	if err != nil {
+
+	if appErr != nil {
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
-	appErr = h.services.UserService.ChangePassword(dto, claims.UserId, claims.UserAgent)
+	tokens, appErr := h.services.UserService.ChangePassword(dto, claims)
+
+	if appErr != nil {
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	access_cookie, refresh_cookie := utils.SetCookies(*tokens)
+
+	ctx.Cookie(access_cookie)
+	ctx.Cookie(refresh_cookie)
+
+	return ctx.SendStatus(200)
+}
+
+// @Summary Create change password code
+// @Security BearerToken
+// @Description Create change password code and send to email
+// @Tags users
+// @Accept json
+// @Produce json
+// @Router /api/user/create-change-password-code [post]
+// @Success 200
+// @Failure 404 {object} lib.AppErr
+// @Failure 401 {object} lib.AppErr
+// @Failure 500 {object} lib.AppErr
+func (h *Handler) createChangePasswordCode(ctx *fiber.Ctx) error {
+
+	claims, appErr := utils.GetUserDataFromCtx(ctx)
+
+	if appErr != nil {
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	appErr = h.services.UserService.CreateChangePasswordCode(claims.User)
 
 	if appErr != nil {
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
 	return ctx.SendStatus(200)
-
 }

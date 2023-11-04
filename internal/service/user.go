@@ -4,18 +4,18 @@ import (
 	"github.com/maximfedotov74/fiber-psql/internal/model"
 	"github.com/maximfedotov74/fiber-psql/internal/repository"
 	"github.com/maximfedotov74/fiber-psql/pkg/lib"
-	"github.com/maximfedotov74/fiber-psql/pkg/mail"
 	"github.com/maximfedotov74/fiber-psql/pkg/messages"
+	"github.com/maximfedotov74/fiber-psql/pkg/token"
 )
 
 type UserService struct {
 	repo            repository.User
 	tokenService    Token
 	passwordService Password
-	mailService     mail.Mail
+	mailService     Mail
 }
 
-func NewUserService(repo repository.User, tokenService Token, mailService mail.Mail, passwordService Password) *UserService {
+func NewUserService(repo repository.User, tokenService Token, mailService Mail, passwordService Password) *UserService {
 	return &UserService{
 		repo:            repo,
 		tokenService:    tokenService,
@@ -81,40 +81,64 @@ func (us *UserService) GetUserByEmail(email string) (*model.User, lib.Error) {
 	return user, nil
 }
 
-func (us *UserService) ChangePassword(dto model.ChangePasswordDto, userId int, userAgent string) lib.Error {
+func (us *UserService) CreateChangePasswordCode(user model.User) lib.Error {
 
-	user, appErr := us.GetUserById(userId)
+	code, err := us.repo.CreateChangePasswordCode(user.Id)
 
-	if appErr != nil {
-		return appErr
+	if err != nil {
+		return lib.NewErr(err.Error(), 500)
 	}
 
-	oldMatch := us.passwordService.ComparePasswords(user.PasswordHash, dto.OldPassword)
+	go us.mailService.SendChangePasswordEmail(user.Email, "Код для смены пароля", *code)
+
+	return nil
+}
+
+func (us *UserService) ChangePassword(dto model.ChangePasswordDto, contextData *model.UserContextData) (*token.Tokens, lib.Error) {
+
+	oldMatch := us.passwordService.ComparePasswords(contextData.User.PasswordHash, dto.OldPassword)
 
 	if !oldMatch {
-		return lib.NewErr(messages.BAD_PASSWORD, 400)
+		return nil, lib.NewErr(messages.BAD_PASSWORD, 400)
 	}
 
-	newMatch := us.passwordService.ComparePasswords(user.PasswordHash, dto.NewPassword)
+	newMatch := us.passwordService.ComparePasswords(contextData.User.PasswordHash, dto.NewPassword)
 
 	if newMatch {
-		return lib.NewErr(messages.BAD_NEW_PASSWORD, 400)
+		return nil, lib.NewErr(messages.BAD_NEW_PASSWORD, 400)
 
 	}
 
 	newHash, err := us.passwordService.HashPassword(dto.NewPassword)
 
 	if err != nil {
-		return lib.NewErr(err.Error(), 500)
+		return nil, lib.NewErr(err.Error(), 500)
 	}
 
-	err = us.repo.ChangePassword(user.Id, newHash)
+	_, err = us.repo.FindChangePasswordCode(contextData.User.Id, dto.Code)
 
 	if err != nil {
-		return lib.NewErr(err.Error(), 500)
+		return nil, lib.NewErr(err.Error(), 404)
 	}
 
-	//update tokens
+	err = us.repo.ChangePassword(contextData.User.Id, newHash)
 
-	return nil
+	if err != nil {
+		return nil, lib.NewErr(err.Error(), 500)
+	}
+
+	tokens, err := us.tokenService.Sign(token.UserClaims{UserId: contextData.User.Id, UserAgent: contextData.UserAgent})
+
+	if err != nil {
+		return nil, lib.NewErr(err.Error(), 500)
+	}
+
+	tokenDto := model.CreateToken{UserId: contextData.User.Id, UserAgent: contextData.UserAgent, Token: tokens.RefreshToken}
+	appErr := us.tokenService.Create(tokenDto)
+
+	if appErr != nil {
+		return nil, appErr
+	}
+
+	return &tokens, nil
 }

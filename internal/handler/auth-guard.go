@@ -36,7 +36,7 @@ func (h *Handler) authGuard(ctx *fiber.Ctx) error {
 		return ctx.Status(authError.Status()).JSON(authError)
 	}
 
-	contextData := model.UserContextData{UserId: user.Id, Roles: user.Roles, UserAgent: userAgent}
+	contextData := model.UserContextData{User: *user, UserAgent: userAgent}
 
 	ctx.Locals(constants.USER_CTX_KEY, contextData)
 	return ctx.Next()

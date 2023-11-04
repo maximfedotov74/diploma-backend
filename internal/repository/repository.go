@@ -23,6 +23,8 @@ type User interface {
 	FindActivationLink(link string) (*int, error)
 	ActivateUser(id *int) error
 	ChangePassword(userId int, newPassword string) error
+	CreateChangePasswordCode(userId int) (*string, error)
+	FindChangePasswordCode(userId int, code string) (*model.ChangePasswordCode, error)
 }
 
 type Role interface {
@@ -35,7 +37,6 @@ type Role interface {
 type Token interface {
 	FindByAgentAndToken(agent string, token string) (*model.Token, error)
 	RemoveToken(token string) error
-	UpdateToken() error
 	CreateToken(dto model.CreateToken) error
 }
 

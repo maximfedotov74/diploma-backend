@@ -43,10 +43,25 @@ definitions:
     type: object
   model.ChangePasswordDto:
     properties:
+      code:
+        example: "123456"
+        maxLength: 6
+        minLength: 6
+        type: string
       new_password:
+        example: sdfsdfs222
+        maxLength: 100
+        minLength: 6
         type: string
       old_password:
+        example: sdfsdfs222
+        maxLength: 100
+        minLength: 6
         type: string
+    required:
+    - code
+    - new_password
+    - old_password
     type: object
   model.CreateRoleDto:
     properties:
@@ -366,6 +381,33 @@ paths:
       security:
       - BearerToken: []
       summary: Change password
+      tags:
+      - users
+  /api/user/create-change-password-code:
+    post:
+      consumes:
+      - application/json
+      description: Create change password code and send to email
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/lib.AppErr'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/lib.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/lib.AppErr'
+      security:
+      - BearerToken: []
+      summary: Create change password code
       tags:
       - users
   /api/user/lk:

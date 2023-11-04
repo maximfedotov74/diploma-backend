@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/maximfedotov74/fiber-psql/internal/model"
 	"github.com/maximfedotov74/fiber-psql/pkg/messages"
@@ -27,6 +29,7 @@ func (ur *UserRepository) Create(dto model.CreateUserDto) (*model.UserCreatedRes
 	txCtx := context.Background()
 
 	tx, err := ur.db.Begin(txCtx)
+
 	defer func() {
 		if err != nil {
 			tx.Rollback(txCtx)
@@ -36,12 +39,12 @@ func (ur *UserRepository) Create(dto model.CreateUserDto) (*model.UserCreatedRes
 	}()
 
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	query := "INSERT INTO public.user (email, password_hash) VALUES ($1, $2) RETURNING user_id;"
 
-	row := tx.QueryRow(context.Background(), query, dto.Email, dto.Password)
+	row := tx.QueryRow(txCtx, query, dto.Email, dto.Password)
 	var id int
 
 	err = row.Scan(&id)
@@ -167,15 +170,107 @@ func (ur *UserRepository) ActivateUser(id *int) error {
 
 func (ur *UserRepository) ChangePassword(userId int, newPassword string) error {
 
-	ctx := context.Background()
+	txCtx := context.Background()
+
+	tx, err := ur.db.Begin(txCtx)
+
+	defer func() {
+		if err != nil {
+			tx.Rollback(txCtx)
+		} else {
+			tx.Commit(txCtx)
+		}
+	}()
+
+	if err != nil {
+		return err
+	}
 
 	query := `UPDATE public.user SET password_hash = $1,
 	updated_at = CURRENT_TIMESTAMP WHERE public.user.user_id = $2;`
 
-	_, err := ur.db.Exec(ctx, query, newPassword, userId)
+	_, err = tx.Exec(txCtx, query, newPassword, userId)
 	if err != nil {
 		return errors.New(messages.UPDATE_PASSWORD_ERROR)
 	}
 
+	err = RemoveChangePasswordCode(userId, tx, txCtx)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func RemoveChangePasswordCode(userId int, tx pgx.Tx, ctx context.Context) error {
+	query := "DELETE FROM change_password_code WHERE user_id = $1"
+
+	_, err := tx.Exec(ctx, query, userId)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ur *UserRepository) FindChangePasswordCode(userId int, code string) (*model.ChangePasswordCode, error) {
+	ctx := context.Background()
+
+	log.Println(userId)
+	log.Println(code)
+	query := `SELECT change_password_code_id, code, user_id FROM
+	change_password_code WHERE user_id = $1 AND code = $2 AND end_time > CURRENT_TIMESTAMP;`
+
+	row := ur.db.QueryRow(ctx, query, userId, code)
+
+	codeModel := model.ChangePasswordCode{}
+
+	err := row.Scan(&codeModel.ChangePasswordCodeId, &codeModel.Code, &codeModel.UserId)
+
+	if err != nil {
+		log.Println(err.Error())
+		return nil, errors.New(messages.CHANGE_PASSWORD_CODE_NOT_FOUND)
+	}
+
+	return &codeModel, nil
+
+}
+
+func (ur *UserRepository) CreateChangePasswordCode(userId int) (*string, error) {
+
+	txCtx := context.Background()
+
+	tx, err := ur.db.Begin(txCtx)
+
+	defer func() {
+		if err != nil {
+			tx.Rollback(txCtx)
+		} else {
+			tx.Commit(txCtx)
+		}
+	}()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = RemoveChangePasswordCode(userId, tx, txCtx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	query := "INSERT INTO change_password_code (user_id) VALUES ($1) RETURNING code;"
+
+	row := tx.QueryRow(txCtx, query, userId)
+
+	var code string
+
+	err = row.Scan(&code)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &code, nil
 }

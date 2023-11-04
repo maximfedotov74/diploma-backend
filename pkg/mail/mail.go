@@ -12,10 +12,6 @@ type MailService struct {
 	appLink     string
 }
 
-type Mail interface {
-	SendActivationEmail(to string, subject string, link string) error
-}
-
 func New(smtpKey string, sender string, host string, port int, appLink string) *MailService {
 	return &MailService{
 		smtpKey:     smtpKey,
@@ -39,7 +35,13 @@ func (ms *MailService) sendEmail(to string, subject string, html string) error {
 
 func (ms *MailService) SendActivationEmail(to string, subject string, link string) error {
 
-	t := ms.CreateActivationTemplate(link, to)
+	t := ms.createActivationTemplate(link, to)
+
+	return ms.sendEmail(to, subject, t)
+}
+
+func (ms *MailService) SendChangePasswordEmail(to string, subject string, code string) error {
+	t := ms.createChangePasswordCodeTemplate(code, to)
 
 	return ms.sendEmail(to, subject, t)
 }

@@ -6,4 +6,4 @@ CREATE TABLE token
   updated_at timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   user_agent VARCHAR(255) NOT NULL,
   user_id INT REFERENCES public.user (user_id) ON DELETE CASCADE NOT NULL
-)
+);

@@ -5,7 +5,6 @@ import (
 
 	"github.com/maximfedotov74/fiber-psql/internal/model"
 	"github.com/maximfedotov74/fiber-psql/pkg/lib"
-	"github.com/maximfedotov74/fiber-psql/pkg/mail"
 	"github.com/maximfedotov74/fiber-psql/pkg/messages"
 	"github.com/maximfedotov74/fiber-psql/pkg/token"
 )
@@ -14,10 +13,10 @@ type AuthService struct {
 	userService     User
 	tokenService    Token
 	passwordService Password
-	mailService     mail.Mail
+	mailService     Mail
 }
 
-func NewAuthService(userService User, tokenService Token, passwordService Password, mailService mail.Mail) *AuthService {
+func NewAuthService(userService User, tokenService Token, passwordService Password, mailService Mail) *AuthService {
 	return &AuthService{
 		userService:     userService,
 		tokenService:    tokenService,

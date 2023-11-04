@@ -10,7 +10,7 @@ import (
 func (h *Handler) roleGuard(roles ...string) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 
-		userData, err := utils.GetUserDataFromCtx(ctx)
+		contextData, err := utils.GetUserDataFromCtx(ctx)
 
 		if err != nil {
 			return ctx.Status(err.Status()).JSON(err)
@@ -20,7 +20,7 @@ func (h *Handler) roleGuard(roles ...string) fiber.Handler {
 		mustRolesFound := len(roles)
 
 		for _, role := range roles {
-			for _, userRole := range userData.Roles {
+			for _, userRole := range contextData.User.Roles {
 				if userRole.Title == role {
 					rolesFound++
 					break

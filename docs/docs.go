@@ -360,6 +360,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/user/create-change-password-code": {
+            "post": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "description": "Create change password code and send to email",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Create change password code",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/lib.AppErr"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/lib.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/lib.AppErr"
+                        }
+                    }
+                }
+            }
+        },
         "/api/user/lk": {
             "get": {
                 "security": [
@@ -563,12 +606,29 @@ const docTemplate = `{
         },
         "model.ChangePasswordDto": {
             "type": "object",
+            "required": [
+                "code",
+                "new_password",
+                "old_password"
+            ],
             "properties": {
+                "code": {
+                    "type": "string",
+                    "maxLength": 6,
+                    "minLength": 6,
+                    "example": "123456"
+                },
                 "new_password": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 6,
+                    "example": "sdfsdfs222"
                 },
                 "old_password": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 6,
+                    "example": "sdfsdfs222"
                 }
             }
         },

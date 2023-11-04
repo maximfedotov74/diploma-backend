@@ -45,10 +45,6 @@ func (tr *TokenRepository) RemoveToken(token string) error {
 	return nil
 }
 
-func (tr *TokenRepository) UpdateToken() error {
-	return nil
-}
-
 func (tr *TokenRepository) CreateToken(dto model.CreateToken) error {
 
 	ctx := context.Background()
@@ -73,15 +69,16 @@ func (tr *TokenRepository) CreateToken(dto model.CreateToken) error {
 
 			return nil
 		} else {
+
 			return err
 		}
 	}
+	query = "UPDATE public.token SET token = $1, updated_at = CURRENT_TIMESTAMP WHERE token_id = $2;"
 
-	query = "UPDATE public.token SET token = $1, updated_at = CURRENT_TIMESTAMP;"
-
-	_, err = tr.db.Exec(ctx, query, dto.Token)
+	_, err = tr.db.Exec(ctx, query, dto.Token, tokenModel.TokenId)
 
 	if err != nil {
+
 		return err
 	}
 

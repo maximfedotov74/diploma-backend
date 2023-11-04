@@ -4,6 +4,7 @@ import (
 	"github.com/maximfedotov74/fiber-psql/internal/cfg"
 	"github.com/maximfedotov74/fiber-psql/internal/model"
 	"github.com/maximfedotov74/fiber-psql/internal/repository"
+	"github.com/maximfedotov74/fiber-psql/pkg/ip"
 	"github.com/maximfedotov74/fiber-psql/pkg/lib"
 	"github.com/maximfedotov74/fiber-psql/pkg/mail"
 	"github.com/maximfedotov74/fiber-psql/pkg/token"
@@ -15,7 +16,8 @@ type User interface {
 	GetUserById(id int) (*model.User, lib.Error)
 	GetUserByEmail(email string) (*model.User, lib.Error)
 	Activate(activationLink string) lib.Error
-	ChangePassword(dto model.ChangePasswordDto, userId int, userAgent string) lib.Error
+	CreateChangePasswordCode(user model.User) lib.Error
+	ChangePassword(dto model.ChangePasswordDto, contextData *model.UserContextData) (*token.Tokens, lib.Error)
 }
 
 type Role interface {
@@ -44,10 +46,19 @@ type Password interface {
 	ComparePasswords(hashed string, pass string) bool
 }
 
+type Mail interface {
+	SendActivationEmail(to string, subject string, link string) error
+	SendChangePasswordEmail(to string, subject string, code string) error
+}
+
+type Ip interface {
+	GetGeolocation(ip string) (*ip.IpLocationResponse, error)
+}
+
 type Services struct {
 	UserService  User
 	RoleService  Role
-	MailService  mail.Mail
+	MailService  Mail
 	TokenService Token
 	AuthService  Auth
 }

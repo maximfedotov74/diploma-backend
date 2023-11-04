@@ -15,6 +15,12 @@ func (h *Handler) initAuthRoutes(router fiber.Router) {
 		auth.Post("/registration", h.registration)
 		auth.Post("/login", h.login)
 		auth.Get("/refresh-token", h.refreshToken)
+		auth.Get("/ip", func(c *fiber.Ctx) error {
+
+			ip := "94.181.43.165"
+
+			return c.JSON(ip)
+		})
 	}
 }
 

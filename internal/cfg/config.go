@@ -24,6 +24,7 @@ type Config struct {
 	AppLink            string
 	RedisAddr          string
 	RedisPassword      string
+	DaDataKey          string
 }
 
 func createPanicMessage(key string) string {
@@ -55,6 +56,7 @@ func GetCfg() *Config {
 			AppLink:            getEnv("APP_LINK"),
 			RedisAddr:          getEnv("REDIS_ADDR"),
 			RedisPassword:      getEnv("REDIS_PASSWORD"),
+			DaDataKey:          getEnv("DADATA_API_KEY"),
 		}
 	})
 	return config

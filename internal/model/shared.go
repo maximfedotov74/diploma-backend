@@ -5,7 +5,6 @@ type СompletedOperation struct {
 }
 
 type UserContextData struct {
-	UserId    int    `json:"user_id" db:"user_id" example:"1"`
-	Roles     []Role `json:"roles"`
+	User      User   `json:"user"`
 	UserAgent string `json:"user_agent"`
 }
