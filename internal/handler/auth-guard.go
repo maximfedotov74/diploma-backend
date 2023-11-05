@@ -13,7 +13,7 @@ import (
 
 func (h *Handler) authGuard(ctx *fiber.Ctx) error {
 	ctx.Locals(constants.USER_CTX_KEY, nil)
-	userAgent := ctx.Get("gent")
+	userAgent := ctx.Get("User-Agent")
 
 	authHeader := ctx.Get(constants.HEADER_AUTHORIZATION)
 

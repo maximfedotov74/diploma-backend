@@ -17,7 +17,7 @@ const (
 
 type User interface {
 	GetAll() error
-	Create(password *string, email string, auth_type string) (*model.UserCreatedResponse, error)
+	Create(password string, email string) (*model.UserCreatedResponse, error)
 	GetUserById(id int) (*model.User, error)
 	GetUserByEmail(email string) (*model.User, error)
 	FindActivationLink(link string) (*int, error)

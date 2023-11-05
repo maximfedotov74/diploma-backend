@@ -8,13 +8,11 @@ import (
 	"github.com/maximfedotov74/fiber-psql/pkg/lib"
 	"github.com/maximfedotov74/fiber-psql/pkg/mail"
 	"github.com/maximfedotov74/fiber-psql/pkg/token"
-	yandexauth "github.com/maximfedotov74/fiber-psql/pkg/yandex-auth"
 )
 
 type User interface {
 	GetAll()
 	Create(dto model.CreateUserDto) (*model.UserCreatedResponse, lib.Error)
-	CreateYandex(email string) (*model.UserCreatedResponse, lib.Error)
 	GetUserById(id int) (*model.User, lib.Error)
 	GetUserByEmail(email string) (*model.User, lib.Error)
 	Activate(activationLink string) lib.Error
@@ -41,8 +39,6 @@ type Auth interface {
 	Registration(dto model.CreateUserDto) (*int, lib.Error)
 	Login(dto model.LoginDto, userAgent string) (*model.LoginResponse, lib.Error)
 	Refresh(refreshToken string, userAgent string) (*model.LoginResponse, lib.Error)
-	GetYandexLoginUrl() string
-	YandexLogin(code string, userAgent string) (*model.LoginResponse, lib.Error)
 }
 
 type Password interface {
@@ -59,18 +55,12 @@ type Ip interface {
 	GetGeolocation(ip string) (*ip.IpLocationResponse, error)
 }
 
-type YandexAuth interface {
-	GetYandexLoginUrl() string
-	GetUserByCode(code string) (*yandexauth.YandexLoginResponse, error)
-}
-
 type Services struct {
-	UserService       User
-	RoleService       Role
-	MailService       Mail
-	TokenService      Token
-	AuthService       Auth
-	YandexAuthService YandexAuth
+	UserService  User
+	RoleService  Role
+	MailService  Mail
+	TokenService Token
+	AuthService  Auth
 }
 
 type Deps struct {
@@ -84,8 +74,7 @@ func New(deps Deps) *Services {
 	tokenService := NewTokenService(deps.Config, deps.Repos.TokenRepository)
 	roleService := NewRoleService(deps.Repos.RoleRepository)
 	userService := NewUserService(deps.Repos.UserRepository, tokenService, mailService, passwordService)
-	yandexAuthService := yandexauth.NewYandexAuth(deps.Config.YandexClientId, deps.Config.YandexCleintSecret)
-	authService := NewAuthService(userService, tokenService, passwordService, mailService, yandexAuthService)
+	authService := NewAuthService(userService, tokenService, passwordService, mailService)
 
 	return &Services{
 		UserService:  userService,

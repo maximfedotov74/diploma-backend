@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/maximfedotov74/fiber-psql/internal/constants"
 	"github.com/maximfedotov74/fiber-psql/internal/model"
 	"github.com/maximfedotov74/fiber-psql/internal/repository"
 	"github.com/maximfedotov74/fiber-psql/pkg/lib"
@@ -29,19 +28,7 @@ func (us *UserService) GetAll() {}
 
 func (us *UserService) Create(dto model.CreateUserDto) (*model.UserCreatedResponse, lib.Error) {
 
-	response, err := us.repo.Create(&dto.Password, dto.Email, constants.CREDENTIALS)
-
-	if err != nil {
-		return nil, lib.NewErr(err.Error(), 500)
-	}
-
-	return response, nil
-
-}
-
-func (us *UserService) CreateYandex(email string) (*model.UserCreatedResponse, lib.Error) {
-
-	response, err := us.repo.Create(nil, email, constants.YANDEX)
+	response, err := us.repo.Create(dto.Password, dto.Email)
 
 	if err != nil {
 		return nil, lib.NewErr(err.Error(), 500)
@@ -109,17 +96,13 @@ func (us *UserService) CreateChangePasswordCode(user model.User) lib.Error {
 
 func (us *UserService) ChangePassword(dto model.ChangePasswordDto, contextData *model.UserContextData) (*token.Tokens, lib.Error) {
 
-	if contextData.User.PasswordHash == nil {
-		return nil, lib.NewErr(messages.BAD_NEW_PASSWORD, 400)
-	}
-
-	oldMatch := us.passwordService.ComparePasswords(*contextData.User.PasswordHash, dto.OldPassword)
+	oldMatch := us.passwordService.ComparePasswords(contextData.User.PasswordHash, dto.OldPassword)
 
 	if !oldMatch {
 		return nil, lib.NewErr(messages.BAD_PASSWORD, 400)
 	}
 
-	newMatch := us.passwordService.ComparePasswords(*contextData.User.PasswordHash, dto.NewPassword)
+	newMatch := us.passwordService.ComparePasswords(contextData.User.PasswordHash, dto.NewPassword)
 
 	if newMatch {
 		return nil, lib.NewErr(messages.BAD_NEW_PASSWORD, 400)

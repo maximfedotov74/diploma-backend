@@ -4,7 +4,7 @@ CREATE TABLE public.user
   created_at timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   email VARCHAR(129) NOT NULL UNIQUE,
-  password_hash VARCHAR(255)
+  password_hash VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE role
@@ -20,14 +20,12 @@ CREATE TABLE public.user_role
   role_id INT REFERENCES public.role (role_id) ON DELETE CASCADE NOT NULL
 );
 
-CREATE TYPE auth_type AS ENUM ('credentials', 'yandex');
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE public.user_settings (
   user_settings_id SERIAL PRIMARY KEY,
   activation_account_link UUID DEFAULT NULL,
   is_activated boolean NOT NULL DEFAULT false,
-  auth_provider auth_type NOT NULL,
   user_id INT UNIQUE REFERENCES public.user (user_id) ON DELETE CASCADE NOT NULL
 );
 
