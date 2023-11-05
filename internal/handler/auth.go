@@ -15,11 +15,27 @@ func (h *Handler) initAuthRoutes(router fiber.Router) {
 		auth.Post("/registration", h.registration)
 		auth.Post("/login", h.login)
 		auth.Get("/refresh-token", h.refreshToken)
-		auth.Get("/ip", func(c *fiber.Ctx) error {
 
-			ip := "94.181.43.165"
+		auth.Get("/yandex-url", func(c *fiber.Ctx) error {
+			url := h.services.AuthService.GetYandexLoginUrl()
+			return c.Redirect(url)
+		})
 
-			return c.JSON(ip)
+		auth.Get("/yandex", h.yandexLogin)
+		auth.Get("/home", func(c *fiber.Ctx) error {
+			c.Set("Content-type", "text/html")
+			return c.Send([]byte(`<!DOCTYPE html>
+			<html lang="en">
+				<head>
+					<meta charset="UTF-8" />
+					<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+					<title>Document</title>
+				</head>
+				<body>
+					<h1>Hello world!</h1>
+				</body>
+			</html>
+			`))
 		})
 	}
 }
@@ -63,6 +79,23 @@ func (h *Handler) registration(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Status(201).JSON(model.RegistrationResponse{Id: *id})
+}
+
+func (h *Handler) yandexLogin(ctx *fiber.Ctx) error {
+	code := ctx.Query("code")
+	userAgent := ctx.Get("User-Agent")
+	response, err := h.services.AuthService.YandexLogin(code, userAgent)
+
+	if err != nil {
+		return ctx.Status(err.Status()).JSON(err)
+	}
+
+	access_cookie, refresh_cookie := utils.SetCookies(response.Tokens)
+
+	ctx.Cookie(access_cookie)
+	ctx.Cookie(refresh_cookie)
+
+	return ctx.Redirect("http://localhost:5000/api/auth/home")
 }
 
 // @Summary Login

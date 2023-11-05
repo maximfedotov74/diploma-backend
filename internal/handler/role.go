@@ -27,8 +27,8 @@ func (h *Handler) initRoleRoutes(router fiber.Router) {
 // @Router /api/role/ [post]
 // @Success 201 {object} model.Role
 // @Failure 400 {object} lib.ValidationError
-// @Failure 404 {array} lib.AppErr
-// @Failure 500 {array} lib.AppErr
+// @Failure 404 {object} lib.AppErr
+// @Failure 500 {object} lib.AppErr
 func (h *Handler) createRole(ctx *fiber.Ctx) error {
 
 	body := model.CreateRoleDto{}
@@ -59,8 +59,8 @@ func (h *Handler) createRole(ctx *fiber.Ctx) error {
 // @Router /api/role/add-to-user [post]
 // @Success 201 {string} string
 // @Failure 400 {object} lib.ValidationError
-// @Failure 404 {array} lib.AppErr
-// @Failure 500 {array} lib.AppErr
+// @Failure 404 {object} lib.AppErr
+// @Failure 500 {object} lib.AppErr
 func (h *Handler) addRoleToUser(ctx *fiber.Ctx) error {
 	body := model.AddRoleToUserDto{}
 
@@ -102,8 +102,8 @@ func (h *Handler) addRoleToUser(ctx *fiber.Ctx) error {
 // @Router /api/role/remove-from-user [delete]
 // @Success 201 {string} string
 // @Failure 400 {object} lib.ValidationError
-// @Failure 404 {array} lib.AppErr
-// @Failure 500 {array} lib.AppErr
+// @Failure 404 {object} lib.AppErr
+// @Failure 500 {object} lib.AppErr
 func (h *Handler) removeRoleFromUser(ctx *fiber.Ctx) error {
 	body := model.AddRoleToUserDto{}
 

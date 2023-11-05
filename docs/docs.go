@@ -112,19 +112,13 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/lib.AppErr"
-                            }
+                            "$ref": "#/definitions/lib.AppErr"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/lib.AppErr"
-                            }
+                            "$ref": "#/definitions/lib.AppErr"
                         }
                     }
                 }
@@ -175,19 +169,13 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/lib.AppErr"
-                            }
+                            "$ref": "#/definitions/lib.AppErr"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/lib.AppErr"
-                            }
+                            "$ref": "#/definitions/lib.AppErr"
                         }
                     }
                 }
@@ -238,19 +226,13 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/lib.AppErr"
-                            }
+                            "$ref": "#/definitions/lib.AppErr"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/lib.AppErr"
-                            }
+                            "$ref": "#/definitions/lib.AppErr"
                         }
                     }
                 }

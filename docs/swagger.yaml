@@ -222,15 +222,11 @@ paths:
         "404":
           description: Not Found
           schema:
-            items:
-              $ref: '#/definitions/lib.AppErr'
-            type: array
+            $ref: '#/definitions/lib.AppErr'
         "500":
           description: Internal Server Error
           schema:
-            items:
-              $ref: '#/definitions/lib.AppErr'
-            type: array
+            $ref: '#/definitions/lib.AppErr'
       security:
       - BearerToken: []
       summary: Create role
@@ -262,15 +258,11 @@ paths:
         "404":
           description: Not Found
           schema:
-            items:
-              $ref: '#/definitions/lib.AppErr'
-            type: array
+            $ref: '#/definitions/lib.AppErr'
         "500":
           description: Internal Server Error
           schema:
-            items:
-              $ref: '#/definitions/lib.AppErr'
-            type: array
+            $ref: '#/definitions/lib.AppErr'
       security:
       - BearerToken: []
       summary: Add role to user
@@ -302,15 +294,11 @@ paths:
         "404":
           description: Not Found
           schema:
-            items:
-              $ref: '#/definitions/lib.AppErr'
-            type: array
+            $ref: '#/definitions/lib.AppErr'
         "500":
           description: Internal Server Error
           schema:
-            items:
-              $ref: '#/definitions/lib.AppErr'
-            type: array
+            $ref: '#/definitions/lib.AppErr'
       security:
       - BearerToken: []
       summary: Remove role from user

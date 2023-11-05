@@ -4,7 +4,7 @@ CREATE TABLE public.user
   created_at timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   email VARCHAR(129) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL
+  password_hash VARCHAR(255)
 );
 
 CREATE TABLE role
@@ -30,3 +30,7 @@ CREATE TABLE public.user_settings (
   auth_provider auth_type NOT NULL,
   user_id INT UNIQUE REFERENCES public.user (user_id) ON DELETE CASCADE NOT NULL
 );
+
+
+INSERT INTO public.role (title) VALUES('ADMIN');
+INSERT INTO public.role (title) VALUES('USER');

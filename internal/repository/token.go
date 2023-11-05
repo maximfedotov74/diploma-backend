@@ -59,7 +59,6 @@ func (tr *TokenRepository) CreateToken(dto model.CreateToken) error {
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
-
 			query = "INSERT INTO token (token, user_agent, user_id) VALUES ($1, $2, $3) RETURNING token_id;"
 			_, err = tr.db.Exec(ctx, query, dto.Token, dto.UserAgent, dto.UserId)
 

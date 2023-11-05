@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 
+	"github.com/maximfedotov74/fiber-psql/internal/constants"
 	"github.com/maximfedotov74/fiber-psql/internal/model"
 	"github.com/maximfedotov74/fiber-psql/pkg/lib"
 	"github.com/maximfedotov74/fiber-psql/pkg/messages"
@@ -14,15 +15,79 @@ type AuthService struct {
 	tokenService    Token
 	passwordService Password
 	mailService     Mail
+	yandexService   YandexAuth
 }
 
-func NewAuthService(userService User, tokenService Token, passwordService Password, mailService Mail) *AuthService {
+func NewAuthService(userService User, tokenService Token, passwordService Password, mailService Mail, yandex YandexAuth) *AuthService {
 	return &AuthService{
 		userService:     userService,
 		tokenService:    tokenService,
 		passwordService: passwordService,
 		mailService:     mailService,
+		yandexService:   yandex,
 	}
+}
+
+func (as *AuthService) YandexLogin(code string, userAgent string) (*model.LoginResponse, lib.Error) {
+	yandexUser, err := as.yandexService.GetUserByCode(code)
+	if err != nil {
+		return nil, lib.NewErr(err.Error(), 500)
+	}
+
+	userExists, _ := as.userService.GetUserByEmail(yandexUser.Email)
+
+	if userExists != nil {
+		if userExists.AuthProvider != constants.YANDEX {
+			return nil, lib.NewErr(messages.USER_EXISTS, 400)
+		}
+
+		tokens, err := as.tokenService.Sign(token.UserClaims{UserId: userExists.Id, UserAgent: userAgent})
+
+		if err != nil {
+			return nil, lib.NewErr(err.Error(), 500)
+		}
+
+		tokenDto := model.CreateToken{UserId: userExists.Id, UserAgent: userAgent, Token: tokens.RefreshToken}
+		appErr := as.tokenService.Create(tokenDto)
+		if appErr != nil {
+			return nil, appErr
+		}
+
+		response := model.LoginResponse{Id: userExists.Id, Tokens: tokens, Roles: userExists.Roles}
+
+		return &response, nil
+	}
+
+	newUser, appErr := as.userService.CreateYandex(yandexUser.Email)
+	if appErr != nil {
+		return nil, appErr
+	}
+
+	user, appErr := as.userService.GetUserById(newUser.Id)
+
+	if appErr != nil {
+		return nil, appErr
+	}
+
+	tokens, err := as.tokenService.Sign(token.UserClaims{UserId: user.Id, UserAgent: userAgent})
+
+	if err != nil {
+		return nil, lib.NewErr(err.Error(), 500)
+	}
+
+	tokenDto := model.CreateToken{UserId: user.Id, UserAgent: userAgent, Token: tokens.RefreshToken}
+	appErr = as.tokenService.Create(tokenDto)
+	if appErr != nil {
+		return nil, appErr
+	}
+
+	response := model.LoginResponse{Id: user.Id, Tokens: tokens, Roles: user.Roles}
+
+	return &response, nil
+}
+
+func (as *AuthService) GetYandexLoginUrl() string {
+	return as.yandexService.GetYandexLoginUrl()
 }
 
 func (as *AuthService) Login(dto model.LoginDto, userAgent string) (*model.LoginResponse, lib.Error) {
@@ -32,7 +97,11 @@ func (as *AuthService) Login(dto model.LoginDto, userAgent string) (*model.Login
 		return nil, appErr
 	}
 
-	if isPasswordCorrect := as.passwordService.ComparePasswords(user.PasswordHash, dto.Password); !isPasswordCorrect {
+	if user.AuthProvider == constants.YANDEX {
+		return nil, lib.NewErr(messages.USER_NOT_FOUND, 404)
+	}
+
+	if isPasswordCorrect := as.passwordService.ComparePasswords(*user.PasswordHash, dto.Password); !isPasswordCorrect {
 		return nil, lib.NewErr(messages.INVALID_CREDENTIALS, 404)
 	}
 

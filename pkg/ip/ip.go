@@ -9,10 +9,11 @@ import (
 
 type IpService struct {
 	DadataApiKey string
+	httpClient   http.Client
 }
 
 func NewIpService(key string) *IpService {
-	return &IpService{DadataApiKey: key}
+	return &IpService{DadataApiKey: key, httpClient: http.Client{}}
 }
 
 func (is *IpService) GetGeolocation(ip string) (*IpLocationResponse, error) {
@@ -25,8 +26,7 @@ func (is *IpService) GetGeolocation(ip string) (*IpLocationResponse, error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Token %s", is.DadataApiKey))
-	client := http.Client{}
-	response, err := client.Do(req)
+	response, err := is.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

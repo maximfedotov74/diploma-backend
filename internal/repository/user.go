@@ -24,7 +24,7 @@ func (ur *UserRepository) GetAll() error {
 	return nil
 }
 
-func (ur *UserRepository) Create(dto model.CreateUserDto) (*model.UserCreatedResponse, error) {
+func (ur *UserRepository) Create(password *string, email string, auth_type string) (*model.UserCreatedResponse, error) {
 
 	txCtx := context.Background()
 
@@ -44,7 +44,7 @@ func (ur *UserRepository) Create(dto model.CreateUserDto) (*model.UserCreatedRes
 
 	query := "INSERT INTO public.user (email, password_hash) VALUES ($1, $2) RETURNING user_id;"
 
-	row := tx.QueryRow(txCtx, query, dto.Email, dto.Password)
+	row := tx.QueryRow(txCtx, query, email, password)
 	var id int
 
 	err = row.Scan(&id)
@@ -68,7 +68,7 @@ func (ur *UserRepository) Create(dto model.CreateUserDto) (*model.UserCreatedRes
 	}
 
 	query = "INSERT INTO public.user_settings (auth_provider, user_id, activation_account_link) VALUES ($1, $2, uuid_generate_v4()) RETURNING activation_account_link;"
-	row = tx.QueryRow(txCtx, query, "credentials", id)
+	row = tx.QueryRow(txCtx, query, auth_type, id)
 	var link string
 	err = row.Scan(&link)
 	if err != nil {
@@ -83,7 +83,7 @@ func (ur *UserRepository) findByIdOrEmail(field string, value any) (*model.User,
 	ctx := context.Background()
 
 	query := fmt.Sprintf(`SELECT public.user.user_id, public.user.email, public.user.password_hash,
-	role.title, role.role_id, public.user_settings.is_activated
+	role.title, role.role_id, public.user_settings.is_activated, public.user_settings.auth_provider
 	FROM public.user
 	LEFT JOIN user_role ON public.user.user_id = user_role.user_id
 	LEFT JOIN public.role ON public.role.role_id = user_role.role_id
@@ -102,7 +102,7 @@ func (ur *UserRepository) findByIdOrEmail(field string, value any) (*model.User,
 	processedRows := 0
 	for rows.Next() {
 		role := model.Role{}
-		err := rows.Scan(&user.Id, &user.Email, &user.PasswordHash, &role.Title, &role.Id, &user.IsActivated)
+		err := rows.Scan(&user.Id, &user.Email, &user.PasswordHash, &role.Title, &role.Id, &user.IsActivated, &user.AuthProvider)
 		if err != nil {
 			return nil, err
 		}

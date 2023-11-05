@@ -5,11 +5,12 @@ import (
 )
 
 type User struct {
-	Id           int    `json:"user_id" db:"user_id" example:"1"`
-	Email        string `json:"email" validate:"required,email" db:"email" example:"makc@mail.ru"`
-	PasswordHash string `json:"password_hash" validate:"required,min=6,max=100" db:"password_hash" example:"sdfsdfs222"`
-	IsActivated  bool   `json:"is_activated" db:"is_activated" example:"false"`
-	Roles        []Role `json:"roles"`
+	Id           int     `json:"user_id" db:"user_id" example:"1"`
+	Email        string  `json:"email" validate:"required,email" db:"email" example:"makc@mail.ru"`
+	PasswordHash *string `json:"-" validate:"required,min=6,max=100" db:"password_hash" example:"sdfsdfs222"`
+	IsActivated  bool    `json:"is_activated" db:"is_activated" example:"false"`
+	AuthProvider string  `json:"auth_provider" db:"auth_provider"`
+	Roles        []Role  `json:"roles"`
 }
 
 type RegistrationResponse struct {

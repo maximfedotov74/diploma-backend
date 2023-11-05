@@ -43,7 +43,7 @@ func (h *Handler) getUserById(ctx *fiber.Ctx) error {
 	}
 	user, appErr := h.services.UserService.GetUserById(id)
 
-	if err != nil {
+	if appErr != nil {
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 

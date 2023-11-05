@@ -25,6 +25,8 @@ type Config struct {
 	RedisAddr          string
 	RedisPassword      string
 	DaDataKey          string
+	YandexClientId     string
+	YandexCleintSecret string
 }
 
 func createPanicMessage(key string) string {
@@ -57,6 +59,8 @@ func GetCfg() *Config {
 			RedisAddr:          getEnv("REDIS_ADDR"),
 			RedisPassword:      getEnv("REDIS_PASSWORD"),
 			DaDataKey:          getEnv("DADATA_API_KEY"),
+			YandexClientId:     getEnv("YANDEX_CLIENT_ID"),
+			YandexCleintSecret: getEnv("YANDEX_CLIENT_SECRET"),
 		}
 	})
 	return config
