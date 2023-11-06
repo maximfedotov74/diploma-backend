@@ -67,6 +67,104 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/category/create-category": {
+            "post": {
+                "description": "Create category with dto",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "category"
+                ],
+                "summary": "Create category",
+                "parameters": [
+                    {
+                        "description": "Create category dto",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateCategoryDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/lib.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/lib.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/lib.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/category/create-type": {
+            "post": {
+                "description": "Create category type with dto",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "category"
+                ],
+                "summary": "Create category type",
+                "parameters": [
+                    {
+                        "description": "Create category-type dto",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateCategoryTypeDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/lib.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/lib.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/lib.AppErr"
+                        }
+                    }
+                }
+            }
+        },
         "/api/role/": {
             "post": {
                 "security": [
@@ -614,6 +712,40 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CreateCategoryDto": {
+            "type": "object",
+            "required": [
+                "title"
+            ],
+            "properties": {
+                "img_path": {
+                    "type": "string",
+                    "example": "/static/example.webp"
+                },
+                "parent_category_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "title": {
+                    "type": "string",
+                    "minLength": 3,
+                    "example": "Верхняя одежда"
+                }
+            }
+        },
+        "model.CreateCategoryTypeDto": {
+            "type": "object",
+            "required": [
+                "title"
+            ],
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "minLength": 3,
+                    "example": "Верхняя одежда"
+                }
+            }
+        },
         "model.CreateRoleDto": {
             "type": "object",
             "required": [
@@ -669,12 +801,6 @@ const docTemplate = `{
         "model.LoginResponse": {
             "type": "object",
             "properties": {
-                "roles": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.Role"
-                    }
-                },
                 "tokens": {
                     "$ref": "#/definitions/token.Tokens"
                 },
@@ -709,8 +835,7 @@ const docTemplate = `{
         "model.User": {
             "type": "object",
             "required": [
-                "email",
-                "password_hash"
+                "email"
             ],
             "properties": {
                 "email": {
@@ -720,12 +845,6 @@ const docTemplate = `{
                 "is_activated": {
                     "type": "boolean",
                     "example": false
-                },
-                "password_hash": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "minLength": 6,
-                    "example": "sdfsdfs222"
                 },
                 "roles": {
                     "type": "array",

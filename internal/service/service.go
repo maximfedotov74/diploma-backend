@@ -55,12 +55,20 @@ type Ip interface {
 	GetGeolocation(ip string) (*ip.IpLocationResponse, error)
 }
 
+type Category interface {
+	CreateCategoryType(dto model.CreateCategoryTypeDto) lib.Error
+	FindTypeByTitle(title string) (*model.CategoryType, lib.Error)
+	FindCategoryByTitle(title string) (*model.Category, lib.Error)
+	CreateCategory(dto model.CreateCategoryDto) lib.Error
+}
+
 type Services struct {
-	UserService  User
-	RoleService  Role
-	MailService  Mail
-	TokenService Token
-	AuthService  Auth
+	UserService     User
+	RoleService     Role
+	MailService     Mail
+	TokenService    Token
+	AuthService     Auth
+	CategoryService Category
 }
 
 type Deps struct {
@@ -75,11 +83,13 @@ func New(deps Deps) *Services {
 	roleService := NewRoleService(deps.Repos.RoleRepository)
 	userService := NewUserService(deps.Repos.UserRepository, tokenService, mailService, passwordService)
 	authService := NewAuthService(userService, tokenService, passwordService, mailService)
+	categoryService := NewCategoryService(deps.Repos.CategoryRepository)
 
 	return &Services{
-		UserService:  userService,
-		TokenService: tokenService,
-		RoleService:  roleService,
-		AuthService:  authService,
+		UserService:     userService,
+		TokenService:    tokenService,
+		RoleService:     roleService,
+		AuthService:     authService,
+		CategoryService: categoryService,
 	}
 }

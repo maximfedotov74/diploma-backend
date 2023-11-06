@@ -40,10 +40,18 @@ type Token interface {
 	CreateToken(dto model.CreateToken) error
 }
 
+type Category interface {
+	CreateCategoryType(title string) error
+	CreateCategory(title string, img *string, parentId *int) error
+	FindTypeByTitle(title string) (*model.CategoryType, error)
+	FindCategoryByTitle(title string) (*model.Category, error)
+}
+
 type Repositories struct {
-	UserRepository  User
-	RoleRepository  Role
-	TokenRepository Token
+	UserRepository     User
+	RoleRepository     Role
+	TokenRepository    Token
+	CategoryRepository Category
 }
 
 func New(db *pgxpool.Pool) *Repositories {
@@ -51,10 +59,12 @@ func New(db *pgxpool.Pool) *Repositories {
 	role := NewRoleRepository(db)
 	user := NewUserRepository(db)
 	token := NewTokenRepository(db)
+	categoryRepository := NewCategoryRepository(db)
 
 	return &Repositories{
-		UserRepository:  user,
-		RoleRepository:  role,
-		TokenRepository: token,
+		UserRepository:     user,
+		RoleRepository:     role,
+		TokenRepository:    token,
+		CategoryRepository: categoryRepository,
 	}
 }

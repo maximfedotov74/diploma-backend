@@ -63,6 +63,30 @@ definitions:
     - new_password
     - old_password
     type: object
+  model.CreateCategoryDto:
+    properties:
+      img_path:
+        example: /static/example.webp
+        type: string
+      parent_category_id:
+        minimum: 1
+        type: integer
+      title:
+        example: Верхняя одежда
+        minLength: 3
+        type: string
+    required:
+    - title
+    type: object
+  model.CreateCategoryTypeDto:
+    properties:
+      title:
+        example: Верхняя одежда
+        minLength: 3
+        type: string
+    required:
+    - title
+    type: object
   model.CreateRoleDto:
     properties:
       title:
@@ -103,10 +127,6 @@ definitions:
     type: object
   model.LoginResponse:
     properties:
-      roles:
-        items:
-          $ref: '#/definitions/model.Role'
-        type: array
       tokens:
         $ref: '#/definitions/token.Tokens'
       user_id:
@@ -136,11 +156,6 @@ definitions:
       is_activated:
         example: false
         type: boolean
-      password_hash:
-        example: sdfsdfs222
-        maxLength: 100
-        minLength: 6
-        type: string
       roles:
         items:
           $ref: '#/definitions/model.Role'
@@ -150,7 +165,6 @@ definitions:
         type: integer
     required:
     - email
-    - password_hash
     type: object
   token.Tokens:
     properties:
@@ -196,6 +210,70 @@ paths:
       summary: Registation user
       tags:
       - auth
+  /api/category/create-category:
+    post:
+      consumes:
+      - application/json
+      description: Create category with dto
+      parameters:
+      - description: Create category dto
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateCategoryDto'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/lib.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/lib.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/lib.AppErr'
+      summary: Create category
+      tags:
+      - category
+  /api/category/create-type:
+    post:
+      consumes:
+      - application/json
+      description: Create category type with dto
+      parameters:
+      - description: Create category-type dto
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateCategoryTypeDto'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/lib.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/lib.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/lib.AppErr'
+      summary: Create category type
+      tags:
+      - category
   /api/role/:
     post:
       consumes:
