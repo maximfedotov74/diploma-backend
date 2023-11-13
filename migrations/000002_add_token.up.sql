@@ -1,6 +1,6 @@
-CREATE TABLE token
+CREATE TABLE IF NOT EXISTS session
 (
-  token_id SERIAL PRIMARY KEY,
+  session_id SERIAL PRIMARY KEY,
   token TEXT NOT NULL UNIQUE,
   created_at timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

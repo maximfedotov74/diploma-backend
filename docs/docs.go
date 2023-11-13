@@ -35,7 +35,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.CreateUserDto"
+                            "$ref": "#/definitions/user.CreateUserDto"
                         }
                     }
                 ],
@@ -43,25 +43,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.RegistrationResponse"
+                            "$ref": "#/definitions/auth.RegistrationResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/lib.ValidationError"
+                            "$ref": "#/definitions/exception.ValidationError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     }
                 }
@@ -87,7 +87,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.CreateCategoryDto"
+                            "$ref": "#/definitions/category.CreateCategoryDto"
                         }
                     }
                 ],
@@ -98,68 +98,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/lib.ValidationError"
+                            "$ref": "#/definitions/exception.ValidationError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/category/create-type": {
-            "post": {
-                "description": "Create category type with dto",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "category"
-                ],
-                "summary": "Create category type",
-                "parameters": [
-                    {
-                        "description": "Create category-type dto",
-                        "name": "dto",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/model.CreateCategoryTypeDto"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/lib.ValidationError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     }
                 }
@@ -190,7 +141,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.CreateRoleDto"
+                            "$ref": "#/definitions/role.CreateRoleDto"
                         }
                     }
                 ],
@@ -198,25 +149,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.Role"
+                            "$ref": "#/definitions/role.Role"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/lib.ValidationError"
+                            "$ref": "#/definitions/exception.ValidationError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     }
                 }
@@ -247,7 +198,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.AddRoleToUserDto"
+                            "$ref": "#/definitions/role.AddRoleToUserDto"
                         }
                     }
                 ],
@@ -261,19 +212,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/lib.ValidationError"
+                            "$ref": "#/definitions/exception.ValidationError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     }
                 }
@@ -304,7 +255,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.AddRoleToUserDto"
+                            "$ref": "#/definitions/role.AddRoleToUserDto"
                         }
                     }
                 ],
@@ -318,19 +269,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/lib.ValidationError"
+                            "$ref": "#/definitions/exception.ValidationError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     }
                 }
@@ -362,25 +313,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.User"
+                            "$ref": "#/definitions/user.User"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/lib.ValidationError"
+                            "$ref": "#/definitions/exception.ValidationError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     }
                 }
@@ -411,7 +362,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.ChangePasswordDto"
+                            "$ref": "#/definitions/user.ChangePasswordDto"
                         }
                     }
                 ],
@@ -422,19 +373,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     }
                 }
@@ -465,19 +416,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     }
                 }
@@ -505,25 +456,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.User"
+                            "$ref": "#/definitions/user.User"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     }
                 }
@@ -549,7 +500,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.LoginDto"
+                            "$ref": "#/definitions/auth.LoginDto"
                         }
                     }
                 ],
@@ -557,25 +508,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.LoginResponse"
+                            "$ref": "#/definitions/auth.LoginResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/lib.ValidationError"
+                            "$ref": "#/definitions/exception.ValidationError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     }
                 }
@@ -598,25 +549,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.LoginResponse"
+                            "$ref": "#/definitions/auth.LoginResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/lib.AppErr"
+                            "$ref": "#/definitions/exception.AppErr"
                         }
                     }
                 }
@@ -624,7 +575,74 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "lib.AppErr": {
+        "auth.LoginDto": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "makc@mail.ru"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 6,
+                    "example": "sdfsdfs222"
+                }
+            }
+        },
+        "auth.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "tokens": {
+                    "$ref": "#/definitions/jwt.Tokens"
+                },
+                "user_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "auth.RegistrationResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "category.CreateCategoryDto": {
+            "type": "object",
+            "required": [
+                "short_title",
+                "title"
+            ],
+            "properties": {
+                "img_path": {
+                    "type": "string",
+                    "example": "/static/example.webp"
+                },
+                "parent_category_id": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "short_title": {
+                    "type": "string",
+                    "minLength": 3,
+                    "example": "Верхняя одежда"
+                },
+                "title": {
+                    "type": "string",
+                    "minLength": 3,
+                    "example": "Мужская Верхняя одежда"
+                }
+            }
+        },
+        "exception.AppErr": {
             "type": "object",
             "properties": {
                 "message": {
@@ -637,13 +655,13 @@ const docTemplate = `{
                 }
             }
         },
-        "lib.ValidationError": {
+        "exception.ValidationError": {
             "type": "object",
             "properties": {
                 "errors": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/lib.validationErrorItem"
+                        "$ref": "#/definitions/exception.validationErrorItem"
                     }
                 },
                 "status": {
@@ -652,7 +670,7 @@ const docTemplate = `{
                 }
             }
         },
-        "lib.validationErrorItem": {
+        "exception.validationErrorItem": {
             "type": "object",
             "properties": {
                 "key": {
@@ -665,7 +683,18 @@ const docTemplate = `{
                 }
             }
         },
-        "model.AddRoleToUserDto": {
+        "jwt.Tokens": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "role.AddRoleToUserDto": {
             "type": "object",
             "required": [
                 "title",
@@ -684,7 +713,34 @@ const docTemplate = `{
                 }
             }
         },
-        "model.ChangePasswordDto": {
+        "role.CreateRoleDto": {
+            "type": "object",
+            "required": [
+                "title"
+            ],
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "maxLength": 55,
+                    "minLength": 6,
+                    "example": "ADMIN"
+                }
+            }
+        },
+        "role.Role": {
+            "type": "object",
+            "properties": {
+                "role_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "title": {
+                    "type": "string",
+                    "example": "ADMIN"
+                }
+            }
+        },
+        "user.ChangePasswordDto": {
             "type": "object",
             "required": [
                 "code",
@@ -712,55 +768,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.CreateCategoryDto": {
-            "type": "object",
-            "required": [
-                "title"
-            ],
-            "properties": {
-                "img_path": {
-                    "type": "string",
-                    "example": "/static/example.webp"
-                },
-                "parent_category_id": {
-                    "type": "integer",
-                    "minimum": 1
-                },
-                "title": {
-                    "type": "string",
-                    "minLength": 3,
-                    "example": "Верхняя одежда"
-                }
-            }
-        },
-        "model.CreateCategoryTypeDto": {
-            "type": "object",
-            "required": [
-                "title"
-            ],
-            "properties": {
-                "title": {
-                    "type": "string",
-                    "minLength": 3,
-                    "example": "Верхняя одежда"
-                }
-            }
-        },
-        "model.CreateRoleDto": {
-            "type": "object",
-            "required": [
-                "title"
-            ],
-            "properties": {
-                "title": {
-                    "type": "string",
-                    "maxLength": 55,
-                    "minLength": 6,
-                    "example": "ADMIN"
-                }
-            }
-        },
-        "model.CreateUserDto": {
+        "user.CreateUserDto": {
             "type": "object",
             "required": [
                 "email",
@@ -779,60 +787,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.LoginDto": {
-            "type": "object",
-            "required": [
-                "email",
-                "password"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "makc@mail.ru"
-                },
-                "password": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "minLength": 6,
-                    "example": "sdfsdfs222"
-                }
-            }
-        },
-        "model.LoginResponse": {
-            "type": "object",
-            "properties": {
-                "tokens": {
-                    "$ref": "#/definitions/token.Tokens"
-                },
-                "user_id": {
-                    "type": "integer",
-                    "example": 1
-                }
-            }
-        },
-        "model.RegistrationResponse": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer",
-                    "example": 1
-                }
-            }
-        },
-        "model.Role": {
-            "type": "object",
-            "properties": {
-                "role_id": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "title": {
-                    "type": "string",
-                    "example": "ADMIN"
-                }
-            }
-        },
-        "model.User": {
+        "user.User": {
             "type": "object",
             "required": [
                 "email"
@@ -849,23 +804,12 @@ const docTemplate = `{
                 "roles": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.Role"
+                        "$ref": "#/definitions/role.Role"
                     }
                 },
                 "user_id": {
                     "type": "integer",
                     "example": 1
-                }
-            }
-        },
-        "token.Tokens": {
-            "type": "object",
-            "properties": {
-                "access_token": {
-                    "type": "string"
-                },
-                "refresh_token": {
-                    "type": "string"
                 }
             }
         }

@@ -1,0 +1,295 @@
+package user
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/maximfedotov74/fiber-psql/internal/domain/role"
+	"github.com/maximfedotov74/fiber-psql/internal/shared/db"
+	"github.com/maximfedotov74/fiber-psql/internal/shared/messages"
+)
+
+const (
+	userRole  = "USER"
+	adminRole = "ADMIN"
+)
+
+const (
+	emailField  = "email"
+	userIdField = "user_id"
+)
+
+type RoleRepository interface {
+	FindRoleByTitle(title string) (*role.Role, error)
+	AddRoleToUser(roleId int, userId int, tx *db.Transaction) error
+}
+
+type UserRepository struct {
+	db       *pgxpool.Pool
+	roleRepo RoleRepository
+}
+
+func NewUserRepository(db *pgxpool.Pool, roleRepo RoleRepository) *UserRepository {
+	return &UserRepository{db: db, roleRepo: roleRepo}
+}
+
+func (ur *UserRepository) GetAll() error {
+	return nil
+}
+
+func (ur *UserRepository) Create(password string, email string) (*UserCreatedResponse, error) {
+
+	txCtx := context.Background()
+
+	tx, err := ur.db.Begin(txCtx)
+
+	defer func() {
+		if err != nil {
+			tx.Rollback(txCtx)
+		} else {
+			tx.Commit(txCtx)
+		}
+	}()
+
+	if err != nil {
+		return nil, err
+	}
+
+	query := "INSERT INTO public.user (email, password_hash) VALUES ($1, $2) RETURNING user_id, email;"
+
+	row := tx.QueryRow(txCtx, query, email, password)
+	var id int
+	var userEmail string
+
+	err = row.Scan(&id, &userEmail)
+	if err != nil {
+		return nil, err
+	}
+
+	role, err := ur.roleRepo.FindRoleByTitle(userRole)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = ur.roleRepo.AddRoleToUser(role.Id, id, &db.Transaction{Executer: tx, Ctx: txCtx})
+
+	if err != nil {
+		return nil, err
+	}
+
+	query = "INSERT INTO public.user_settings (user_id, activation_account_link) VALUES ($1, uuid_generate_v4()) RETURNING activation_account_link;"
+	row = tx.QueryRow(txCtx, query, id)
+	var link string
+	err = row.Scan(&link)
+	if err != nil {
+		return nil, err
+	}
+
+	return &UserCreatedResponse{Id: id, ActivationAccountLink: link, Email: userEmail}, nil
+}
+
+func (ur *UserRepository) findByIdOrEmail(field string, value any) (*User, error) {
+
+	ctx := context.Background()
+
+	query := fmt.Sprintf(`SELECT public.user.user_id, public.user.email, public.user.password_hash,
+	role.title, role.role_id, public.user_settings.is_activated
+	FROM public.user
+	LEFT JOIN user_role ON public.user.user_id = user_role.user_id
+	LEFT JOIN public.role ON public.role.role_id = user_role.role_id
+	LEFT JOIN public.user_settings ON public.user.user_id = public.user_settings.user_id
+	WHERE public.user.%s = $1;`, field)
+
+	rows, err := ur.db.Query(ctx, query, value)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	user := User{}
+	processedRows := 0
+	for rows.Next() {
+		role := role.Role{}
+		err := rows.Scan(&user.Id, &user.Email, &user.PasswordHash, &role.Title, &role.Id, &user.IsActivated)
+		if err != nil {
+			return nil, err
+		}
+		user.Roles = append(user.Roles, role)
+		processedRows++
+	}
+
+	if rows.Err() != nil {
+		return nil, err
+	}
+	if processedRows == 0 {
+		return nil, nil
+	}
+
+	return &user, nil
+
+}
+
+func (ur *UserRepository) GetUserById(id int) (*User, error) {
+	user, err := ur.findByIdOrEmail(userIdField, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (ur *UserRepository) GetUserByEmail(email string) (*User, error) {
+	user, err := ur.findByIdOrEmail(emailField, email)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (ur *UserRepository) FindActivationLink(link string) (*int, error) {
+	ctx := context.Background()
+	query := `SELECT "public"."user_settings".user_id FROM "public"."user_settings"
+	WHERE "public".user_settings.activation_account_link = $1;`
+	row := ur.db.QueryRow(ctx, query, link)
+	var id int
+	err := row.Scan(&id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &id, nil
+}
+
+func (ur *UserRepository) ActivateUser(id *int) error {
+	ctx := context.Background()
+	query := `UPDATE "public".user_settings
+	SET activation_account_link = NULL,
+	is_activated = TRUE
+	WHERE "public".user_settings.user_id = $1;`
+
+	_, err := ur.db.Exec(ctx, query, id)
+	if err != nil {
+		return errors.New(messages.ACTIVATION_ERROR)
+	}
+
+	return nil
+}
+
+func (ur *UserRepository) ChangePassword(userId int, newPassword string) error {
+
+	txCtx := context.Background()
+
+	tx, err := ur.db.Begin(txCtx)
+
+	defer func() {
+		if err != nil {
+			tx.Rollback(txCtx)
+		} else {
+			tx.Commit(txCtx)
+		}
+	}()
+
+	if err != nil {
+		return err
+	}
+
+	query := `UPDATE public.user SET password_hash = $1,
+	updated_at = CURRENT_TIMESTAMP WHERE public.user.user_id = $2;`
+
+	_, err = tx.Exec(txCtx, query, newPassword, userId)
+	if err != nil {
+		return errors.New(messages.UPDATE_PASSWORD_ERROR)
+	}
+
+	err = RemoveChangePasswordCode(userId, tx, txCtx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func RemoveChangePasswordCode(userId int, tx pgx.Tx, ctx context.Context) error {
+	query := "DELETE FROM change_password_code WHERE user_id = $1"
+
+	_, err := tx.Exec(ctx, query, userId)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ur *UserRepository) FindChangePasswordCode(userId int, code string) (*ChangePasswordCode, error) {
+	ctx := context.Background()
+
+	log.Println(userId)
+	log.Println(code)
+	query := `SELECT change_password_code_id, code, user_id FROM
+	change_password_code WHERE user_id = $1 AND code = $2 AND end_time > CURRENT_TIMESTAMP;`
+
+	row := ur.db.QueryRow(ctx, query, userId, code)
+
+	codeModel := ChangePasswordCode{}
+
+	err := row.Scan(&codeModel.ChangePasswordCodeId, &codeModel.Code, &codeModel.UserId)
+
+	if err != nil {
+		log.Println(err.Error())
+		return nil, errors.New(messages.CHANGE_PASSWORD_CODE_NOT_FOUND)
+	}
+
+	return &codeModel, nil
+
+}
+
+func (ur *UserRepository) CreateChangePasswordCode(userId int) (*string, error) {
+
+	txCtx := context.Background()
+
+	tx, err := ur.db.Begin(txCtx)
+
+	defer func() {
+		if err != nil {
+			tx.Rollback(txCtx)
+		} else {
+			tx.Commit(txCtx)
+		}
+	}()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = RemoveChangePasswordCode(userId, tx, txCtx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	query := "INSERT INTO change_password_code (user_id) VALUES ($1) RETURNING code;"
+
+	row := tx.QueryRow(txCtx, query, userId)
+
+	var code string
+
+	err = row.Scan(&code)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &code, nil
+}

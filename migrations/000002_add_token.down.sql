@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS public.token;
+DROP TABLE IF EXISTS public.session;

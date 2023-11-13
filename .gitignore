@@ -7,3 +7,4 @@ bin
 .vscode/
 .idea/
 pgdata
+sql

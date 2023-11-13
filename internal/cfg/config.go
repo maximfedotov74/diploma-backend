@@ -35,7 +35,7 @@ var config *Config
 
 var once sync.Once
 
-func GetCfg() *Config {
+func MustGetCfg() *Config {
 	once.Do(func() {
 		err := godotenv.Load(".env")
 
