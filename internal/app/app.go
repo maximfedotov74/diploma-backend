@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -27,12 +28,17 @@ import (
 	"github.com/maximfedotov74/fiber-psql/internal/shared/mail"
 	"github.com/maximfedotov74/fiber-psql/internal/shared/password"
 	"github.com/maximfedotov74/fiber-psql/internal/shared/scheduler"
-	"github.com/redis/go-redis/v9"
 
 	fiberSwagger "github.com/swaggo/fiber-swagger"
 )
 
 type Application struct{}
+
+type Test struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+	Age  uint8  `json:"age"`
+}
 
 func NewApplication() *Application {
 	return &Application{}
@@ -63,7 +69,22 @@ func (app *Application) Start() {
 	schdulerService := scheduler.New(cron)
 	schdulerService.Start()
 
-	cacheService := cache.NewCacheService(cfg.RedisAddr, cfg.RedisPassword)
+	cacheContext, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	defer cancel()
+
+	cacheService := cache.NewCacheService(cfg.RedisAddr, cfg.RedisPassword, cacheContext)
+
+	max := Test{Id: 1, Name: "Maxim", Age: 19}
+	err := cacheService.Set(strconv.Itoa(max.Id), max, time.Minute)
+	if err != nil {
+		log.Fatal(err)
+	}
+	res := Test{}
+	err = cacheService.Get("1", &res)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Info(res)
 
 	app.initializeDependencies(dbService, cfg, router, cacheService)
 
@@ -82,12 +103,10 @@ func (app *Application) Start() {
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT, os.Interrupt)
 	<-quit
 	log.Info("Gracefully shutting down...")
-	shutDownContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 
 	log.Info("Cleaning")
 	_ = fiberInstance.Shutdown()
-	cacheService.Shutdown(shutDownContext)
+	cacheService.Shutdown()
 	schdulerService.Shutdown()
 	dbService.Close()
 	log.Info("Application shutdown successfully!")
@@ -95,7 +114,7 @@ func (app *Application) Start() {
 }
 
 func (app *Application) initializeDependencies(dbService *pgxpool.Pool, cfg *cfg.Config,
-	router fiber.Router, cacheService *redis.Client) {
+	router fiber.Router, cacheService *cache.CacheService) {
 	jwtSerivce := jwt.NewJwtService(jwt.JwtConfig{RefreshTokenExp: cfg.RefreshTokenExp, AccessTokenExp: cfg.AccessTokenExp, RefreshTokenSecret: cfg.RefreshTokenSecret, AccessTokenSecret: cfg.AccessTokenSecret})
 
 	mailService := mail.NewMailService(mail.MailConfig{SmtpKey: cfg.SmtpKey, SenderEmail: cfg.SmtpMail, SmtpHost: cfg.SmtpHost, SmtpPort: cfg.SmtpPort, AppLink: cfg.AppLink})
