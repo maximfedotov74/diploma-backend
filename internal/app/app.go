@@ -17,7 +17,9 @@ import (
 	_ "github.com/maximfedotov74/fiber-psql/docs"
 	"github.com/maximfedotov74/fiber-psql/internal/cfg"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/auth"
+	"github.com/maximfedotov74/fiber-psql/internal/domain/brand"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/category"
+	"github.com/maximfedotov74/fiber-psql/internal/domain/product"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/role"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/session"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/user"
@@ -125,10 +127,14 @@ func (app *Application) initializeDependencies(dbService *pgxpool.Pool, cfg *cfg
 	categoryRepository := category.NewCategoryRepository(dbService)
 	userRepository := user.NewUserRepository(dbService, roleRepository)
 	sessionRepository := session.NewSessionRepository(dbService)
+	brandRepository := brand.NewBrandRepository(dbService)
+	productRepository := product.NewProductRepository(dbService)
 
 	roleService := role.NewRoleService(roleRepository)
 	categoryService := category.NewCategoryService(categoryRepository)
 	sessionService := session.NewSessionService(sessionRepository, jwtSerivce)
+	brandService := brand.NewBrandService(brandRepository)
+	productService := product.NewProductService(productRepository, categoryService, brandService)
 
 	userService := user.NewUserService(userRepository, sessionService, mailService, passwordService)
 	authService := auth.NewAuthService(userService, sessionService, passwordService, mailService)
@@ -140,9 +146,14 @@ func (app *Application) initializeDependencies(dbService *pgxpool.Pool, cfg *cfg
 	roleHandler := role.NewRoleHandler(roleService, authGuard.CheckAuth, roleGuard, router)
 	categoryHandler := category.NewCategoryHandler(categoryService, router, authGuard.CheckAuth)
 	authHandler := auth.NewAuthHandler(authService, router, authGuard.CheckAuth)
+	brandHandler := brand.NewBrandHandler(brandService, router)
+	productHandler := product.NewProductHandler(productService, router, authGuard.CheckAuth, roleGuard)
 
 	userHandler.InitRoutes()
 	roleHandler.InitRoutes()
 	categoryHandler.InitRoutes()
 	authHandler.InitRoutes()
+	brandHandler.InitRoutes()
+	productHandler.InitRoutes()
+
 }

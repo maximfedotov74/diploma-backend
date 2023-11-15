@@ -6,6 +6,8 @@ import (
 	"github.com/maximfedotov74/fiber-psql/internal/shared/messages"
 )
 
+// todo add remove sessions
+
 type JwtTokenService interface{}
 
 type Repository interface {

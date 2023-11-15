@@ -27,6 +27,34 @@ definitions:
         example: 1
         type: integer
     type: object
+  brand.Brand:
+    properties:
+      description:
+        type: string
+      id:
+        example: 2
+        type: integer
+      img_path:
+        type: string
+      slug:
+        type: string
+      title:
+        example: adidas
+        type: string
+    type: object
+  brand.CreateBrandDto:
+    properties:
+      description:
+        type: string
+      img_path:
+        type: string
+      title:
+        example: adidas
+        minLength: 2
+        type: string
+    required:
+    - title
+    type: object
   category.CreateCategoryDto:
     properties:
       img_path:
@@ -80,6 +108,80 @@ definitions:
       access_token:
         type: string
       refresh_token:
+        type: string
+    type: object
+  product.CreateProductDto:
+    properties:
+      brand_id:
+        example: 10
+        type: integer
+      category_id:
+        example: 10
+        type: integer
+      description:
+        example: Отлчиная куртка теплая
+        type: string
+      discount:
+        type: integer
+      price:
+        example: 15000
+        type: integer
+      title:
+        example: Куртка теплая
+        type: string
+    type: object
+  product.Product:
+    properties:
+      brand:
+        $ref: '#/definitions/product.ProductBrand'
+      category:
+        $ref: '#/definitions/product.ProductCategory'
+      description:
+        example: Отлчиная куртка теплая
+        type: string
+      discount:
+        type: integer
+      id:
+        example: 1
+        type: integer
+      price:
+        example: 15000
+        type: integer
+      slug:
+        type: string
+      title:
+        example: Куртка теплая
+        type: string
+    type: object
+  product.ProductBrand:
+    properties:
+      id:
+        example: 2
+        type: integer
+      img_path:
+        type: string
+      slug:
+        example: verhnia-odezhda
+        type: string
+      title:
+        example: adidas
+        type: string
+    type: object
+  product.ProductCategory:
+    properties:
+      category_id:
+        example: 3
+        type: integer
+      img_path:
+        example: /static/example.webp
+        type: string
+      short_title:
+        type: string
+      slug:
+        example: verhnia-odezhda
+        type: string
+      title:
+        example: Верхняя одежда
         type: string
     type: object
   role.AddRoleToUserDto:
@@ -206,6 +308,71 @@ paths:
       summary: Registation user
       tags:
       - auth
+  /api/brand/:
+    post:
+      consumes:
+      - application/json
+      description: Create brand with dto
+      parameters:
+      - description: Create brand dto
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/brand.CreateBrandDto'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Create brand
+      tags:
+      - brand
+  /api/brand/:title:
+    get:
+      consumes:
+      - application/json
+      description: Get brand by title
+      parameters:
+      - description: title parameter
+        in: path
+        name: title
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/brand.Brand'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Get brand by title
+      tags:
+      - brand
   /api/category/create-category:
     post:
       consumes:
@@ -238,6 +405,71 @@ paths:
       summary: Create category
       tags:
       - category
+  /api/product/:
+    post:
+      consumes:
+      - application/json
+      description: Create product with dto
+      parameters:
+      - description: Create product dto
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/product.CreateProductDto'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Create product
+      tags:
+      - product
+  /api/product/:slug:
+    get:
+      consumes:
+      - application/json
+      description: Get product by title
+      parameters:
+      - description: slug parameter
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/product.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Get product by title
+      tags:
+      - product
   /api/role/:
     post:
       consumes:
@@ -360,8 +592,8 @@ paths:
       produces:
       - application/json
       responses:
-        "201":
-          description: Created
+        "200":
+          description: OK
           schema:
             $ref: '#/definitions/user.User'
         "400":

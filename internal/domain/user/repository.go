@@ -13,6 +13,7 @@ import (
 	"github.com/maximfedotov74/fiber-psql/internal/shared/messages"
 )
 
+// TODO ADD erros and update find method
 const (
 	userRole  = "USER"
 	adminRole = "ADMIN"

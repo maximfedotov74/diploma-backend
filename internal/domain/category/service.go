@@ -7,7 +7,7 @@ import (
 
 type Repository interface {
 	CreateCategory(dto CreateCategoryDto, slug string) error
-	RecursiveGet(field string, value any) (*RecursiveCategory, error)
+	FindByField(field string, value any) (*Category, error)
 	GetCatalogCategories() ([]CatalogCategory, error)
 }
 
@@ -44,9 +44,18 @@ func (cs *CategoryService) GetCatalogCategories() ([]CatalogCategory, exception.
 	return cts, nil
 }
 
-func (cs *CategoryService) RecursiveGet() (*RecursiveCategory, exception.Error) {
+func (cs *CategoryService) FindBySlug(slug string) (*Category, exception.Error) {
 
-	result, err := cs.repo.RecursiveGet("slug", "muzhskaia-verkhniaia-odezhda")
+	result, err := cs.repo.FindByField("slug", slug)
+	if err != nil {
+		return nil, exception.NewErr(err.Error(), 500)
+	}
+	return result, nil
+}
+
+func (cs *CategoryService) FindById(id int) (*Category, exception.Error) {
+
+	result, err := cs.repo.FindByField("category_id", id)
 	if err != nil {
 		return nil, exception.NewErr(err.Error(), 500)
 	}

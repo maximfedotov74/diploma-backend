@@ -95,7 +95,7 @@ func (cr *CategoryRepository) GetCatalogCategories() ([]CatalogCategory, error) 
 	return res, nil
 }
 
-func (cr *CategoryRepository) RecursiveGet(field string, value any) (*RecursiveCategory, error) {
+func (cr *CategoryRepository) FindByField(field string, value any) (*Category, error) {
 	query := fmt.Sprintf(`
 	WITH RECURSIVE category_tree AS (
 		SELECT category_id, title, slug, short_title, img_path, parent_category_id, 1 AS level
@@ -120,14 +120,14 @@ func (cr *CategoryRepository) RecursiveGet(field string, value any) (*RecursiveC
 	}
 	defer rows.Close()
 
-	result := RecursiveCategory{}
-	secondMap := make(map[int]RecursiveCategory)
-	thirdMap := make(map[int]RecursiveCategory)
-	fourthMap := make(map[int]RecursiveCategory)
+	result := Category{}
+	secondMap := make(map[int]Category)
+	thirdMap := make(map[int]Category)
+	fourthMap := make(map[int]Category)
 
 	for rows.Next() {
 
-		category := RecursiveCategory{}
+		category := Category{}
 
 		err := rows.Scan(&category.Id, &category.Title, &category.Slug,
 			&category.ShortTitle, &category.ImgPath, &category.ParentId, &category.Level)
@@ -188,4 +188,8 @@ func (cr *CategoryRepository) CreateCategory(dto CreateCategoryDto, slug string)
 	}
 
 	return nil
+}
+
+func (cr *CategoryRepository) FindById(id int) {
+
 }

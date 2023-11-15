@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS public.session;
+DROP TABLE IF EXISTS public.session CASCADE;

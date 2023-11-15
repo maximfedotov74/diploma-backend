@@ -4,6 +4,7 @@ include $(ENV_PATH)
 DOWN =
 UP =
 FORCE =
+SEQ = 
 
 run-dev:
 	go run cmd/main.go
@@ -21,6 +22,8 @@ migrate-down:
 	migrate -path ./migrations -database '$(DB_URL)?sslmode=disable' down $(DOWN)
 migrate-force:
 	migrate -path ./migrations -database '$(DB_URL)?sslmode=disable' force $(FORCE)
+create-migration:
+	migrate create -ext sql -dir ./migrations -seq $(SEQ)
 
 
 

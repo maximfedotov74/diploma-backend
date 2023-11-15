@@ -56,6 +56,105 @@
                 }
             }
         },
+        "/api/brand/": {
+            "post": {
+                "description": "Create brand with dto",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "brand"
+                ],
+                "summary": "Create brand",
+                "parameters": [
+                    {
+                        "description": "Create brand dto",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/brand.CreateBrandDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/brand/:title": {
+            "get": {
+                "description": "Get brand by title",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "brand"
+                ],
+                "summary": "Get brand by title",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "title parameter",
+                        "name": "title",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/brand.Brand"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
         "/api/category/create-category": {
             "post": {
                 "description": "Create category with dto",
@@ -83,6 +182,105 @@
                 "responses": {
                     "201": {
                         "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/product/": {
+            "post": {
+                "description": "Create product with dto",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Create product",
+                "parameters": [
+                    {
+                        "description": "Create product dto",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/product.CreateProductDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/product/:slug": {
+            "get": {
+                "description": "Get product by title",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Get product by title",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "slug parameter",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/product.Product"
+                        }
                     },
                     "400": {
                         "description": "Bad Request",
@@ -299,8 +497,8 @@
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/user.User"
                         }
@@ -604,6 +802,47 @@
                 }
             }
         },
+        "brand.Brand": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "img_path": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "adidas"
+                }
+            }
+        },
+        "brand.CreateBrandDto": {
+            "type": "object",
+            "required": [
+                "title"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "img_path": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string",
+                    "minLength": 2,
+                    "example": "adidas"
+                }
+            }
+        },
         "category.CreateCategoryDto": {
             "type": "object",
             "required": [
@@ -680,6 +919,111 @@
                 },
                 "refresh_token": {
                     "type": "string"
+                }
+            }
+        },
+        "product.CreateProductDto": {
+            "type": "object",
+            "properties": {
+                "brand_id": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "category_id": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Отлчиная куртка теплая"
+                },
+                "discount": {
+                    "type": "integer"
+                },
+                "price": {
+                    "type": "integer",
+                    "example": 15000
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Куртка теплая"
+                }
+            }
+        },
+        "product.Product": {
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "$ref": "#/definitions/product.ProductBrand"
+                },
+                "category": {
+                    "$ref": "#/definitions/product.ProductCategory"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Отлчиная куртка теплая"
+                },
+                "discount": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "price": {
+                    "type": "integer",
+                    "example": 15000
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Куртка теплая"
+                }
+            }
+        },
+        "product.ProductBrand": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "img_path": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "verhnia-odezhda"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "adidas"
+                }
+            }
+        },
+        "product.ProductCategory": {
+            "type": "object",
+            "properties": {
+                "category_id": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "img_path": {
+                    "type": "string",
+                    "example": "/static/example.webp"
+                },
+                "short_title": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "verhnia-odezhda"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Верхняя одежда"
                 }
             }
         },

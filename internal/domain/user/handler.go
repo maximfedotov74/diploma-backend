@@ -52,7 +52,7 @@ func (uh *UserHandler) InitRoutes() {
 // @Produce json
 // @Param id path int true "id parameter"
 // @Router /api/user/by-id/:id [get]
-// @Success 201 {object} user.User
+// @Success 200 {object} user.User
 // @Failure 400 {object} exception.ValidationError
 // @Failure 404 {object} exception.AppErr
 // @Failure 500 {object} exception.AppErr

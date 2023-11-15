@@ -10,7 +10,8 @@ import (
 type Service interface {
 	CreateCategory(dto CreateCategoryDto) exception.Error
 	GetCatalogCategories() ([]CatalogCategory, exception.Error)
-	RecursiveGet() (*RecursiveCategory, exception.Error)
+	FindById(id int) (*Category, exception.Error)
+	FindBySlug(slug string) (*Category, exception.Error)
 }
 
 type CategoryHandler struct {
@@ -37,7 +38,7 @@ func (ch *CategoryHandler) InitRoutes() {
 }
 
 func (h *CategoryHandler) rg(ctx *fiber.Ctx) error {
-	err, j := h.service.RecursiveGet()
+	err, j := h.service.FindBySlug("men")
 	if err != nil {
 		return ctx.JSON(err)
 	}
