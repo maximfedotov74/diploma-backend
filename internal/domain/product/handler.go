@@ -1,6 +1,8 @@
 package product
 
 import (
+	"path/filepath"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	exception "github.com/maximfedotov74/fiber-psql/internal/shared/error"
@@ -8,8 +10,11 @@ import (
 )
 
 type Service interface {
-	FindBySlug(slug string) (*Product, exception.Error)
+	FindByProductSlugAndModelId(slug string, id int) (*Product, exception.Error)
 	CreateProduct(dto CreateProductDto) exception.Error
+	CreateModel(dto CreateProductModelDto) exception.Error
+	AddPhoto(dto CreateProducModelImg) exception.Error
+	FindById(id int) (*ProductWithoutRelations, exception.Error)
 }
 
 type RoleGuard interface {
@@ -31,7 +36,9 @@ func (ph *ProductHandler) InitRoutes() {
 	productRouter := ph.router.Group("product")
 	{
 		productRouter.Post("/", ph.createProduct)
-		productRouter.Get("/:slug", ph.findBySlug)
+		productRouter.Post("/model", ph.createProductModel)
+		productRouter.Post("/add-photo", ph.addPhoto)
+		productRouter.Get("/:id/:slug", ph.findByProductSlugAndModelId)
 	}
 }
 
@@ -77,20 +84,118 @@ func (ph *ProductHandler) createProduct(ctx *fiber.Ctx) error {
 	return ctx.SendStatus(201)
 }
 
+// @Summary Create product-model
+// @Description Create product model with dto
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param dto body product.CreateProductModelDto true "Create product model dto"
+// @Router /api/product/model [post]
+// @Success 201
+// @Failure 400 {object} exception.ValidationError
+// @Failure 404 {object} exception.AppErr
+// @Failure 500 {object} exception.AppErr
+func (ph *ProductHandler) createProductModel(ctx *fiber.Ctx) error {
+
+	dto := CreateProductModelDto{}
+
+	err := ctx.BodyParser(&dto)
+
+	if err != nil {
+		appErr := exception.NewErr(messages.INVALID_BODY, 400)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	validate := validator.New()
+
+	err = validate.Struct(&dto)
+
+	if err != nil {
+		error_messages := err.(validator.ValidationErrors)
+		items := exception.ValidationMessages(error_messages)
+		validError := exception.NewValidErr(items)
+
+		return ctx.Status(validError.Status).JSON(validError)
+	}
+
+	ex := ph.service.CreateModel(dto)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.SendStatus(201)
+}
+
+// @Summary Add photo to product model
+// @Description Add photo to product model
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param dto body product.CreateProducModelImg true "Add photo to product model"
+// @Router /api/product/add-photo [post]
+// @Success 201
+// @Failure 400 {object} exception.ValidationError
+// @Failure 404 {object} exception.AppErr
+// @Failure 500 {object} exception.AppErr
+func (ph *ProductHandler) addPhoto(ctx *fiber.Ctx) error {
+
+	dto := CreateProducModelImg{}
+
+	err := ctx.BodyParser(&dto)
+
+	if err != nil {
+		appErr := exception.NewErr(messages.INVALID_BODY, 400)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	validate := validator.New()
+
+	err = validate.Struct(&dto)
+
+	if err != nil {
+		error_messages := err.(validator.ValidationErrors)
+		items := exception.ValidationMessages(error_messages)
+		validError := exception.NewValidErr(items)
+
+		return ctx.Status(validError.Status).JSON(validError)
+	}
+
+	isValid := filepath.IsAbs(dto.ImgPath)
+
+	if !isValid {
+		ex := exception.NewErr("Некорректный путь до файла!", 400)
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	ex := ph.service.AddPhoto(dto)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.SendStatus(201)
+}
+
 // @Summary Get product by title
 // @Description Get product by title
 // @Tags product
 // @Accept json
 // @Produce json
-// @Param slug path string true "slug parameter"
+// @Param slug path string true "product slug parameter"
+// @Param id path int true "model id parameter"
 // @Router /api/product/:slug [get]
 // @Success 200 {object} product.Product
 // @Failure 400 {object} exception.ValidationError
 // @Failure 404 {object} exception.AppErr
 // @Failure 500 {object} exception.AppErr
-func (ph *ProductHandler) findBySlug(ctx *fiber.Ctx) error {
+func (ph *ProductHandler) findByProductSlugAndModelId(ctx *fiber.Ctx) error {
 	slug := ctx.Params("slug")
-	p, ex := ph.service.FindBySlug(slug)
+	id, err := ctx.ParamsInt("id")
+
+	if err != nil {
+		appErr := exception.NewErr(messages.INVALID_BODY, 400)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+	p, ex := ph.service.FindByProductSlugAndModelId(slug, id)
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}

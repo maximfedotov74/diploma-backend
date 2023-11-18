@@ -10,4 +10,14 @@ CREATE TABLE IF NOT EXISTS category (
 
 
 
+INSERT INTO category (title, slug, short_title) VALUES ('Мужская одежда, обувь и аксессуары', 'men', 'Мужчинам'); --1
 
+INSERT INTO category (title, slug, short_title) VALUES ('Женская одежда, обувь и аксессуары', 'women', 'Женщинам'); -- 2
+
+INSERT INTO category (title, slug, short_title) VALUES ('Детская одежда, обувь и аксессуары', 'children', 'Детям'); -- 3
+
+INSERT INTO category (title, slug, short_title, parent_category_id) VALUES ('Мужская Одежда', 'muzhskaya-odezhda', 'Одежда', 1); -- 4
+
+INSERT INTO category (title, slug, short_title, parent_category_id) VALUES ('Мужская верхняя одежда', 'muzhskaya-verkhnyaya-odezhda', 'Верхняя одежда', 4); --5
+
+INSERT INTO category (title, slug, short_title, parent_category_id) VALUES ('Мужские бомберы', 'muzhbombery', 'Бомберы', 5); --6

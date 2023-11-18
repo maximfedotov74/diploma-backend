@@ -7,3 +7,4 @@ CREATE TABLE IF NOT EXISTS product_model (
 
 
 
+-- //todo add feedback to model 

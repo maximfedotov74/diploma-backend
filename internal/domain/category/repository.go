@@ -9,6 +9,7 @@ import (
 	"github.com/maximfedotov74/fiber-psql/internal/shared/messages"
 )
 
+// todo add errors
 type CategoryRepository struct {
 	db *pgxpool.Pool
 }
@@ -95,7 +96,7 @@ func (cr *CategoryRepository) GetCatalogCategories() ([]CatalogCategory, error) 
 	return res, nil
 }
 
-func (cr *CategoryRepository) FindByField(field string, value any) (*Category, error) {
+func (cr *CategoryRepository) FindByFieldWithSubcategories(field string, value any) (*Category, error) {
 	query := fmt.Sprintf(`
 	WITH RECURSIVE category_tree AS (
 		SELECT category_id, title, slug, short_title, img_path, parent_category_id, 1 AS level
@@ -176,7 +177,83 @@ func (cr *CategoryRepository) FindByField(field string, value any) (*Category, e
 	return &result, nil
 }
 
+func (cr *CategoryRepository) FindByField(field string, value any) (*CategoryDb, error) {
+	query := fmt.Sprintf(`
+	SELECT category_id, parent_category_id, slug, title, short_title, img_path
+	FROM category WHERE %s = $1;
+	`, field)
+
+	row := cr.db.QueryRow(context.Background(), query, value)
+
+	cat := CategoryDb{}
+
+	err := row.Scan(&cat.Id, &cat.ParentId, &cat.Slug, &cat.Title, &cat.ShortTitle, &cat.ImgPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cat, nil
+}
+
+func (cr *CategoryRepository) GetParentTopLevel(id int) (*CategoryDb, error) {
+	query := `
+	WITH RECURSIVE recursive_cte AS (
+		SELECT category_id, parent_category_id, slug, title, short_title, img_path
+		FROM category
+		WHERE category_id = $1
+		UNION ALL
+		SELECT t.category_id, t.parent_category_id, t.slug, t.title, t.short_title, t.img_path
+		FROM category t
+		INNER JOIN recursive_cte r ON r.parent_category_id = t.category_id
+	)
+	SELECT *
+	FROM recursive_cte
+	WHERE parent_category_id IS NULL;
+	`
+	row := cr.db.QueryRow(context.Background(), query, id)
+
+	categoryDb := CategoryDb{}
+
+	err := row.Scan(&categoryDb.Id, &categoryDb.ParentId, &categoryDb.Slug, &categoryDb.Title, &categoryDb.ShortTitle, &categoryDb.ImgPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &categoryDb, nil
+}
+
+func (cr *CategoryRepository) GetParentSubLevel(id int) (*CategoryDb, error) {
+	query := `
+	WITH RECURSIVE recursive_cte AS (
+		SELECT category_id, parent_category_id, slug, title, short_title, img_path, 1 AS level
+		FROM category
+		WHERE category_id = $1
+		UNION ALL
+		SELECT t.category_id, t.parent_category_id, t.slug, t.title, t.short_title, t.img_path, r.level +1
+		FROM category t
+		INNER JOIN recursive_cte r ON r.parent_category_id = t.category_id
+		WHERE r.level < 3
+	)
+	SELECT *
+	FROM recursive_cte
+	WHERE level = 3;
+	`
+	row := cr.db.QueryRow(context.Background(), query, id)
+
+	categoryDb := CategoryDb{}
+
+	err := row.Scan(&categoryDb.Id, &categoryDb.ParentId, &categoryDb.Slug,
+		&categoryDb.Title, &categoryDb.ShortTitle, &categoryDb.ImgPath, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &categoryDb, nil
+}
+
 func (cr *CategoryRepository) CreateCategory(dto CreateCategoryDto, slug string) error {
+
 	ctx := context.Background()
 
 	query := "INSERT INTO category (title, img_path, parent_category_id, slug, short_title) VALUES ($1, $2, $3, $4, $5);"
@@ -188,8 +265,4 @@ func (cr *CategoryRepository) CreateCategory(dto CreateCategoryDto, slug string)
 	}
 
 	return nil
-}
-
-func (cr *CategoryRepository) FindById(id int) {
-
 }

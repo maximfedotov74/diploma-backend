@@ -20,7 +20,7 @@ func NewBrandService(repo Repository) *BrandService {
 }
 
 func (bs *BrandService) FindByTitle(title string) (*Brand, exception.Error) {
-	brandExist, err := bs.repo.FindByFeild("slug", title)
+	brandExist, err := bs.repo.FindByFeild("title", title)
 
 	if err != nil {
 		return nil, exception.NewErr(err.Error(), 500)
@@ -31,6 +31,16 @@ func (bs *BrandService) FindByTitle(title string) (*Brand, exception.Error) {
 
 func (bs *BrandService) FindById(id int) (*Brand, exception.Error) {
 	brandExist, err := bs.repo.FindByFeild("brand_id", id)
+
+	if err != nil {
+		return nil, exception.NewErr(err.Error(), 500)
+	}
+
+	return brandExist, nil
+}
+
+func (bs *BrandService) FindBySlug(slug string) (*Brand, exception.Error) {
+	brandExist, err := bs.repo.FindByFeild("slug", slug)
 
 	if err != nil {
 		return nil, exception.NewErr(err.Error(), 500)

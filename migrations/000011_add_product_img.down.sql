@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS product_img CASCADE;
+DROP TABLE IF EXISTS product_model_img CASCADE;

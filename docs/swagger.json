@@ -204,6 +204,342 @@
                 }
             }
         },
+        "/api/option/": {
+            "post": {
+                "description": "Create option with dto",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "option"
+                ],
+                "summary": "Create option",
+                "parameters": [
+                    {
+                        "description": "Create option dto",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/option.CreateOptionDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/option/:id": {
+            "get": {
+                "description": "Get option by id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "option"
+                ],
+                "summary": "Get option by id",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "id parameter",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/option.Option"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete option by id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "option"
+                ],
+                "summary": "Delete option by id",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "id parameter",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Update option with dto",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "option"
+                ],
+                "summary": "Update option",
+                "parameters": [
+                    {
+                        "description": "Update option dto",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/option.UpdateOptionDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/option/add-to-product-model": {
+            "post": {
+                "description": "Add option to product model",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "option"
+                ],
+                "summary": "Add option to product model",
+                "parameters": [
+                    {
+                        "description": "Add to product model dto",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/option.AddOptionToProductModelDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/option/value": {
+            "post": {
+                "description": "Create value with dto",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "option"
+                ],
+                "summary": "Create value",
+                "parameters": [
+                    {
+                        "description": "Create option value dto",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/option.CreateOptionValueDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/option/value:id": {
+            "delete": {
+                "description": "Delete option value by id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "option"
+                ],
+                "summary": "Delete option value by id",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "id parameter",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
         "/api/product/": {
             "post": {
                 "description": "Create product with dto",
@@ -269,8 +605,15 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "slug parameter",
+                        "description": "product slug parameter",
                         "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "model id parameter",
+                        "name": "id",
                         "in": "path",
                         "required": true
                     }
@@ -281,6 +624,104 @@
                         "schema": {
                             "$ref": "#/definitions/product.Product"
                         }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/product/add-photo": {
+            "post": {
+                "description": "Add photo to product model",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Add photo to product model",
+                "parameters": [
+                    {
+                        "description": "Add photo to product model",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/product.CreateProducModelImg"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/product/model": {
+            "post": {
+                "description": "Create product model with dto",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Create product-model",
+                "parameters": [
+                    {
+                        "description": "Create product model dto",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/product.CreateProductModelDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -922,31 +1363,187 @@
                 }
             }
         },
+        "option.AddOptionToProductModelDto": {
+            "type": "object",
+            "required": [
+                "option_id",
+                "product_model_id",
+                "value_id"
+            ],
+            "properties": {
+                "option_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "product_model_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "value_id": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "option.CreateOptionDto": {
+            "type": "object",
+            "required": [
+                "slug",
+                "title"
+            ],
+            "properties": {
+                "slug": {
+                    "type": "string",
+                    "minLength": 3,
+                    "example": "color"
+                },
+                "title": {
+                    "type": "string",
+                    "minLength": 3,
+                    "example": "Цвет"
+                }
+            }
+        },
+        "option.CreateOptionValueDto": {
+            "type": "object",
+            "properties": {
+                "info": {
+                    "type": "string"
+                },
+                "option_id": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "value": {
+                    "type": "string",
+                    "example": "Желтый"
+                }
+            }
+        },
+        "option.Option": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "color"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Цвет"
+                },
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/option.OptionValue"
+                    }
+                }
+            }
+        },
+        "option.OptionValue": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 44
+                },
+                "info": {
+                    "type": "string"
+                },
+                "option_id": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "value": {
+                    "type": "string",
+                    "example": "Желтый"
+                }
+            }
+        },
+        "option.UpdateOptionDto": {
+            "type": "object",
+            "required": [
+                "title"
+            ],
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "minLength": 3,
+                    "example": "Цвет"
+                }
+            }
+        },
+        "product.CreateProducModelImg": {
+            "type": "object",
+            "required": [
+                "img_path",
+                "product_model_id"
+            ],
+            "properties": {
+                "img_path": {
+                    "type": "string"
+                },
+                "main": {
+                    "type": "boolean"
+                },
+                "product_model_id": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
         "product.CreateProductDto": {
             "type": "object",
+            "required": [
+                "brand_id",
+                "category_id",
+                "title"
+            ],
             "properties": {
                 "brand_id": {
                     "type": "integer",
+                    "minimum": 1,
                     "example": 10
                 },
                 "category_id": {
                     "type": "integer",
+                    "minimum": 1,
                     "example": 10
                 },
                 "description": {
                     "type": "string",
                     "example": "Отлчиная куртка теплая"
                 },
-                "discount": {
-                    "type": "integer"
-                },
-                "price": {
-                    "type": "integer",
-                    "example": 15000
-                },
                 "title": {
                     "type": "string",
+                    "minLength": 3,
                     "example": "Куртка теплая"
+                }
+            }
+        },
+        "product.CreateProductModelDto": {
+            "type": "object",
+            "required": [
+                "price",
+                "product_id"
+            ],
+            "properties": {
+                "discount": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "price": {
+                    "type": "number",
+                    "minimum": 1,
+                    "example": 15000
+                },
+                "product_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 10
                 }
             }
         },
@@ -959,20 +1556,22 @@
                 "category": {
                     "$ref": "#/definitions/product.ProductCategory"
                 },
+                "current_model": {
+                    "$ref": "#/definitions/product.ProductModel"
+                },
                 "description": {
                     "type": "string",
                     "example": "Отлчиная куртка теплая"
-                },
-                "discount": {
-                    "type": "integer"
                 },
                 "id": {
                     "type": "integer",
                     "example": 1
                 },
-                "price": {
-                    "type": "integer",
-                    "example": 15000
+                "models": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product.ProductModel"
+                    }
                 },
                 "slug": {
                     "type": "string"
@@ -1024,6 +1623,102 @@
                 "title": {
                     "type": "string",
                     "example": "Верхняя одежда"
+                }
+            }
+        },
+        "product.ProductModel": {
+            "type": "object",
+            "properties": {
+                "discount": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "images": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product.ProductModelImg"
+                    }
+                },
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product.ProductModelOption"
+                    }
+                },
+                "price": {
+                    "type": "number",
+                    "example": 15000
+                },
+                "product_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "product.ProductModelImg": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "img_path": {
+                    "type": "string"
+                },
+                "main": {
+                    "type": "boolean"
+                },
+                "product_model_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "product.ProductModelOption": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "model_id": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "color"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Цвет"
+                },
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product.ProductModelOptionValue"
+                    }
+                }
+            }
+        },
+        "product.ProductModelOptionValue": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 44
+                },
+                "info": {
+                    "type": "string"
+                },
+                "option_id": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "value": {
+                    "type": "string",
+                    "example": "Желтый"
                 }
             }
         },

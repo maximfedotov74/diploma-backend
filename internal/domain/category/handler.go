@@ -10,8 +10,10 @@ import (
 type Service interface {
 	CreateCategory(dto CreateCategoryDto) exception.Error
 	GetCatalogCategories() ([]CatalogCategory, exception.Error)
-	FindById(id int) (*Category, exception.Error)
-	FindBySlug(slug string) (*Category, exception.Error)
+	FindByIdWithSubcategories(id int) (*Category, exception.Error)
+	FindBySlugWithSubcategories(slug string) (*Category, exception.Error)
+	FindBySlug(slug string) (*CategoryDb, exception.Error)
+	FindById(id int) (*CategoryDb, exception.Error)
 }
 
 type CategoryHandler struct {
@@ -38,7 +40,7 @@ func (ch *CategoryHandler) InitRoutes() {
 }
 
 func (h *CategoryHandler) rg(ctx *fiber.Ctx) error {
-	err, j := h.service.FindBySlug("men")
+	err, j := h.service.FindBySlugWithSubcategories("men")
 	if err != nil {
 		return ctx.JSON(err)
 	}

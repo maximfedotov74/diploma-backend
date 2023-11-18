@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strconv"
+	"path"
 	"syscall"
 	"time"
 
@@ -19,6 +19,7 @@ import (
 	"github.com/maximfedotov74/fiber-psql/internal/domain/auth"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/brand"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/category"
+	"github.com/maximfedotov74/fiber-psql/internal/domain/option"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/product"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/role"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/session"
@@ -26,6 +27,7 @@ import (
 	"github.com/maximfedotov74/fiber-psql/internal/guards"
 	"github.com/maximfedotov74/fiber-psql/internal/shared/cache"
 	"github.com/maximfedotov74/fiber-psql/internal/shared/db"
+	"github.com/maximfedotov74/fiber-psql/internal/shared/file"
 	"github.com/maximfedotov74/fiber-psql/internal/shared/jwt"
 	"github.com/maximfedotov74/fiber-psql/internal/shared/mail"
 	"github.com/maximfedotov74/fiber-psql/internal/shared/password"
@@ -35,12 +37,6 @@ import (
 )
 
 type Application struct{}
-
-type Test struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
-	Age  uint8  `json:"age"`
-}
 
 func NewApplication() *Application {
 	return &Application{}
@@ -54,13 +50,35 @@ func NewApplication() *Application {
 func (app *Application) Start() {
 	cfg := cfg.MustGetCfg()
 
-	fiberInstance := fiber.New()
+	time.Now()
+
+	fiberInstance := fiber.New(fiber.Config{BodyLimit: 10 * 10 * 1024 * 1024})
 
 	fiberInstance.Use((logger.New(logger.Config{
 		Format: "[${ip}]:${port} ${status} - ${method} ${path}\n",
 	})))
 
 	fiberInstance.Get("/swagger/*", fiberSwagger.WrapHandler)
+
+	dir, err := os.Getwd()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	staticPath := path.Join(dir, cfg.StaticPath)
+
+	_, err = os.Stat(staticPath)
+
+	if os.IsNotExist(err) {
+		os.Mkdir(staticPath, 0700)
+	}
+
+	fileService := file.NewFileService(staticPath)
+
+	fiberInstance.Static("/static", staticPath, fiber.Static{
+		ByteRange: true,
+	})
 
 	dbService := db.NewDbService(cfg.DatabaseUrl)
 
@@ -76,19 +94,7 @@ func (app *Application) Start() {
 
 	cacheService := cache.NewCacheService(cfg.RedisAddr, cfg.RedisPassword, cacheContext)
 
-	max := Test{Id: 1, Name: "Maxim", Age: 19}
-	err := cacheService.Set(strconv.Itoa(max.Id), max, time.Minute)
-	if err != nil {
-		log.Fatal(err)
-	}
-	res := Test{}
-	err = cacheService.Get("1", &res)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Info(res)
-
-	app.initializeDependencies(dbService, cfg, router, cacheService)
+	app.initializeDependencies(dbService, cfg, router, cacheService, fileService)
 
 	PORT := cfg.Port
 
@@ -116,7 +122,8 @@ func (app *Application) Start() {
 }
 
 func (app *Application) initializeDependencies(dbService *pgxpool.Pool, cfg *cfg.Config,
-	router fiber.Router, cacheService *cache.CacheService) {
+	router fiber.Router, cacheService *cache.CacheService, fileService *file.FileService) {
+
 	jwtSerivce := jwt.NewJwtService(jwt.JwtConfig{RefreshTokenExp: cfg.RefreshTokenExp, AccessTokenExp: cfg.AccessTokenExp, RefreshTokenSecret: cfg.RefreshTokenSecret, AccessTokenSecret: cfg.AccessTokenSecret})
 
 	mailService := mail.NewMailService(mail.MailConfig{SmtpKey: cfg.SmtpKey, SenderEmail: cfg.SmtpMail, SmtpHost: cfg.SmtpHost, SmtpPort: cfg.SmtpPort, AppLink: cfg.AppLink})
@@ -129,12 +136,14 @@ func (app *Application) initializeDependencies(dbService *pgxpool.Pool, cfg *cfg
 	sessionRepository := session.NewSessionRepository(dbService)
 	brandRepository := brand.NewBrandRepository(dbService)
 	productRepository := product.NewProductRepository(dbService)
+	optionRepository := option.NewOptionRepository(dbService)
 
 	roleService := role.NewRoleService(roleRepository)
 	categoryService := category.NewCategoryService(categoryRepository)
 	sessionService := session.NewSessionService(sessionRepository, jwtSerivce)
 	brandService := brand.NewBrandService(brandRepository)
 	productService := product.NewProductService(productRepository, categoryService, brandService)
+	optionService := option.NewOptionService(optionRepository)
 
 	userService := user.NewUserService(userRepository, sessionService, mailService, passwordService)
 	authService := auth.NewAuthService(userService, sessionService, passwordService, mailService)
@@ -148,6 +157,7 @@ func (app *Application) initializeDependencies(dbService *pgxpool.Pool, cfg *cfg
 	authHandler := auth.NewAuthHandler(authService, router, authGuard.CheckAuth)
 	brandHandler := brand.NewBrandHandler(brandService, router)
 	productHandler := product.NewProductHandler(productService, router, authGuard.CheckAuth, roleGuard)
+	optionHandler := option.NewOptionHandler(optionService, router, authGuard.CheckAuth)
 
 	userHandler.InitRoutes()
 	roleHandler.InitRoutes()
@@ -155,5 +165,6 @@ func (app *Application) initializeDependencies(dbService *pgxpool.Pool, cfg *cfg
 	authHandler.InitRoutes()
 	brandHandler.InitRoutes()
 	productHandler.InitRoutes()
+	optionHandler.InitOptionRoutes()
 
 }

@@ -4,3 +4,4 @@ CREATE TABLE IF NOT EXISTS brand (
   description TEXT,
   img_path VARCHAR(255)
 );
+

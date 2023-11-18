@@ -7,8 +7,11 @@ import (
 
 type Repository interface {
 	CreateCategory(dto CreateCategoryDto, slug string) error
-	FindByField(field string, value any) (*Category, error)
+	FindByFieldWithSubcategories(field string, value any) (*Category, error)
+	FindByField(field string, value any) (*CategoryDb, error)
 	GetCatalogCategories() ([]CatalogCategory, error)
+	GetParentTopLevel(parentId int) (*CategoryDb, error)
+	GetParentSubLevel(id int) (*CategoryDb, error)
 }
 
 type CategoryService struct {
@@ -44,7 +47,25 @@ func (cs *CategoryService) GetCatalogCategories() ([]CatalogCategory, exception.
 	return cts, nil
 }
 
-func (cs *CategoryService) FindBySlug(slug string) (*Category, exception.Error) {
+func (cs *CategoryService) FindBySlugWithSubcategories(slug string) (*Category, exception.Error) {
+
+	result, err := cs.repo.FindByFieldWithSubcategories("slug", slug)
+	if err != nil {
+		return nil, exception.NewErr(err.Error(), 500)
+	}
+	return result, nil
+}
+
+func (cs *CategoryService) FindByIdWithSubcategories(id int) (*Category, exception.Error) {
+
+	result, err := cs.repo.FindByFieldWithSubcategories("category_id", id)
+	if err != nil {
+		return nil, exception.NewErr(err.Error(), 500)
+	}
+	return result, nil
+}
+
+func (cs *CategoryService) FindBySlug(slug string) (*CategoryDb, exception.Error) {
 
 	result, err := cs.repo.FindByField("slug", slug)
 	if err != nil {
@@ -53,11 +74,19 @@ func (cs *CategoryService) FindBySlug(slug string) (*Category, exception.Error) 
 	return result, nil
 }
 
-func (cs *CategoryService) FindById(id int) (*Category, exception.Error) {
+func (cs *CategoryService) FindById(id int) (*CategoryDb, exception.Error) {
 
 	result, err := cs.repo.FindByField("category_id", id)
 	if err != nil {
 		return nil, exception.NewErr(err.Error(), 500)
 	}
 	return result, nil
+}
+
+func (cs *CategoryService) GetParentSubLevel(id int) (*CategoryDb, exception.Error) {
+	cat, err := cs.repo.GetParentSubLevel(id)
+	if err != nil {
+		return nil, exception.NewErr(err.Error(), 500)
+	}
+	return cat, nil
 }
