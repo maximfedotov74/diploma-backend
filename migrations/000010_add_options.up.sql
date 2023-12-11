@@ -20,8 +20,3 @@ CREATE TABLE IF NOT EXISTS product_model_option (
 );
 
 
-CREATE TABLE IF NOT EXISTS category_option (
-    id SERIAL PRIMARY KEY,
-    category_id INT REFERENCES category (category_id) ON DELETE CASCADE NOT NULL,
-    option_id INT REFERENCES option (option_id) ON DELETE CASCADE NOT NULL
-);

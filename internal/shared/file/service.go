@@ -2,9 +2,9 @@ package file
 
 import (
 	"io"
+	"math/rand"
 	"mime/multipart"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -50,10 +50,16 @@ func (fs *FileService) Upload(dir string, header *multipart.FileHeader) (*string
 		return nil, err
 	}
 
-	new_name, err := fs.generateRandomName()
+	new_name := fs.generateRandomName()
 
 	if fileType == "image" && extType != "svg+xml" {
-		webp, err := bimg.NewImage(bytes).Convert(bimg.WEBP)
+
+		options := bimg.Options{
+			Quality: 50,
+			Type:    bimg.WEBP,
+		}
+
+		webp, err := bimg.Resize(bytes, options)
 
 		if err != nil {
 			return nil, err
@@ -67,7 +73,7 @@ func (fs *FileService) Upload(dir string, header *multipart.FileHeader) (*string
 			return nil, err
 		}
 
-		absPath := "/static/" + dir + new_name + ".webp"
+		absPath := "/" + path.Join("static", dir, new_name) + ".webp"
 
 		return &absPath, nil
 	}
@@ -80,7 +86,7 @@ func (fs *FileService) Upload(dir string, header *multipart.FileHeader) (*string
 		return nil, err
 	}
 
-	absPath := "/static/" + dir + "/" + new_name + ext
+	absPath := "/" + path.Join("static", dir, new_name) + ext
 
 	return &absPath, nil
 
@@ -94,8 +100,37 @@ func (fs *FileService) getFileExt(name string) string {
 	return strings.TrimPrefix(filepath.Ext(name), filepath.Base(name))
 }
 
-func (fs *FileService) generateRandomName() (string, error) {
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const (
+	letterIdxBits = 6
+	letterIdxMask = 1<<letterIdxBits - 1
+	letterIdxMax  = 63 / letterIdxBits
+)
 
-	newUUID, err := exec.Command("uuidgen").Output()
-	return string(newUUID), err
+func (fs *FileService) generateRandomString(n int) string {
+	b := make([]byte, n)
+	for i, cache, remain := n-1, rand.Int63(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = rand.Int63(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+			b[i] = letterBytes[idx]
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
+	}
+
+	return string(b)
+}
+
+func (fs *FileService) generateRandomName() string {
+
+	s := make([]string, 0, 3)
+
+	for i := 0; i < 3; i++ {
+		s = append(s, fs.generateRandomString(23))
+	}
+
+	return strings.Join(s, "-")
 }

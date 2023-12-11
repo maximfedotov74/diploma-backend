@@ -1,6 +1,8 @@
 package guards
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 	exception "github.com/maximfedotov74/fiber-psql/internal/shared/error"
 	"github.com/maximfedotov74/fiber-psql/internal/shared/messages"
@@ -27,7 +29,7 @@ func (rg *RoleGuard) CheckRoles(roles ...string) fiber.Handler {
 
 		for _, role := range roles {
 			for _, userRole := range contextData.Roles {
-				if userRole.Title == role {
+				if strings.ToUpper(userRole.Title) == strings.ToUpper(role) {
 					rolesFound++
 					break
 				}
@@ -38,7 +40,7 @@ func (rg *RoleGuard) CheckRoles(roles ...string) fiber.Handler {
 			return ctx.Next()
 		}
 
-		forbidden := exception.NewErr(messages.FORBIDDEN, 403)
+		forbidden := exception.NewErr(messages.FORBIDDEN, exception.STATUS_FORBIDDEN)
 		return ctx.Status(forbidden.Status()).JSON(forbidden)
 	}
 }

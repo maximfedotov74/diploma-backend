@@ -60,7 +60,7 @@ func (h *UserHandler) getUserById(ctx *fiber.Ctx) error {
 	id, err := ctx.ParamsInt("id")
 
 	if err != nil {
-		return ctx.Status(400).SendString(err.Error())
+		return ctx.Status(exception.STATUS_BAD_REQUEST).SendString(err.Error())
 	}
 	user, appErr := h.service.GetUserById(id)
 
@@ -68,7 +68,7 @@ func (h *UserHandler) getUserById(ctx *fiber.Ctx) error {
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
-	return ctx.Status(200).JSON(user)
+	return ctx.Status(exception.STATUS_OK).JSON(user)
 
 }
 
@@ -80,7 +80,7 @@ func (h *UserHandler) activate(ctx *fiber.Ctx) error {
 		return ctx.Status(err.Status()).JSON(err)
 	}
 
-	return ctx.Redirect(fmt.Sprintf("https://ya.ru/"), 302)
+	return ctx.Redirect(fmt.Sprintf("https://ya.ru/"), exception.STATUS_REDIRECT_TEMP)
 }
 
 // @Summary Get profile info
@@ -106,7 +106,7 @@ func (h *UserHandler) getLk(ctx *fiber.Ctx) error {
 		return ctx.Status(err.Status()).JSON(err)
 	}
 
-	return ctx.Status(200).JSON(user)
+	return ctx.Status(exception.STATUS_OK).JSON(user)
 
 }
 
@@ -128,7 +128,7 @@ func (h *UserHandler) changePassword(ctx *fiber.Ctx) error {
 
 	err := ctx.BodyParser(&dto)
 	if err != nil {
-		return ctx.Status(400).SendString(err.Error())
+		return ctx.Status(exception.STATUS_BAD_REQUEST).SendString(err.Error())
 	}
 
 	validate := validator.New()
@@ -160,7 +160,7 @@ func (h *UserHandler) changePassword(ctx *fiber.Ctx) error {
 	ctx.Cookie(access_cookie)
 	ctx.Cookie(refresh_cookie)
 
-	return ctx.SendStatus(200)
+	return ctx.SendStatus(exception.STATUS_OK)
 }
 
 // @Summary Create change password code
@@ -188,5 +188,5 @@ func (h *UserHandler) createChangePasswordCode(ctx *fiber.Ctx) error {
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
-	return ctx.SendStatus(200)
+	return ctx.SendStatus(exception.STATUS_OK)
 }

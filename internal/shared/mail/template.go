@@ -26,7 +26,7 @@ func (m *MailService) createActivationTemplate(link string, email string) string
 				"
 			>
 				<p style="font-weight: 600">Приветствуем вас, дорогой друг!</p>
-				<p style="font-weight: 600">Спасибо за регистрацию на нашем форуме!</p>
+				<p style="font-weight: 600">Спасибо за регистрацию в магазине одежды Family Moda!</p>
 				<a href="%s">подтвердить регистрацию</a>
 			</div>
 		</div>

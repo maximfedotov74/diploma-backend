@@ -1,17 +1,18 @@
 package app
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/signal"
 	"path"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/go-co-op/gocron"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/maximfedotov74/fiber-psql/docs"
@@ -19,13 +20,14 @@ import (
 	"github.com/maximfedotov74/fiber-psql/internal/domain/auth"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/brand"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/category"
+	"github.com/maximfedotov74/fiber-psql/internal/domain/feedback"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/option"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/product"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/role"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/session"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/user"
+	"github.com/maximfedotov74/fiber-psql/internal/domain/wish"
 	"github.com/maximfedotov74/fiber-psql/internal/guards"
-	"github.com/maximfedotov74/fiber-psql/internal/shared/cache"
 	"github.com/maximfedotov74/fiber-psql/internal/shared/db"
 	"github.com/maximfedotov74/fiber-psql/internal/shared/file"
 	"github.com/maximfedotov74/fiber-psql/internal/shared/jwt"
@@ -50,13 +52,24 @@ func NewApplication() *Application {
 func (app *Application) Start() {
 	cfg := cfg.MustGetCfg()
 
-	time.Now()
-
 	fiberInstance := fiber.New(fiber.Config{BodyLimit: 10 * 10 * 1024 * 1024})
 
 	fiberInstance.Use((logger.New(logger.Config{
 		Format: "[${ip}]:${port} ${status} - ${method} ${path}\n",
 	})))
+
+	fiberInstance.Use(cors.New(cors.Config{
+		AllowOrigins: cfg.ClientUrl,
+		AllowMethods: strings.Join([]string{
+			fiber.MethodGet,
+			fiber.MethodPost,
+			fiber.MethodHead,
+			fiber.MethodPut,
+			fiber.MethodDelete,
+			fiber.MethodPatch,
+		}, ","),
+		AllowCredentials: true,
+	}))
 
 	fiberInstance.Get("/swagger/*", fiberSwagger.WrapHandler)
 
@@ -89,12 +102,7 @@ func (app *Application) Start() {
 	schdulerService := scheduler.New(cron)
 	schdulerService.Start()
 
-	cacheContext, cancel := context.WithTimeout(context.Background(), time.Second*2)
-	defer cancel()
-
-	cacheService := cache.NewCacheService(cfg.RedisAddr, cfg.RedisPassword, cacheContext)
-
-	app.initializeDependencies(dbService, cfg, router, cacheService, fileService)
+	app.initializeDependencies(dbService, cfg, router, fileService)
 
 	PORT := cfg.Port
 
@@ -114,7 +122,6 @@ func (app *Application) Start() {
 
 	log.Info("Cleaning")
 	_ = fiberInstance.Shutdown()
-	cacheService.Shutdown()
 	schdulerService.Shutdown()
 	dbService.Close()
 	log.Info("Application shutdown successfully!")
@@ -122,7 +129,7 @@ func (app *Application) Start() {
 }
 
 func (app *Application) initializeDependencies(dbService *pgxpool.Pool, cfg *cfg.Config,
-	router fiber.Router, cacheService *cache.CacheService, fileService *file.FileService) {
+	router fiber.Router, fileService *file.FileService) {
 
 	jwtSerivce := jwt.NewJwtService(jwt.JwtConfig{RefreshTokenExp: cfg.RefreshTokenExp, AccessTokenExp: cfg.AccessTokenExp, RefreshTokenSecret: cfg.RefreshTokenSecret, AccessTokenSecret: cfg.AccessTokenSecret})
 
@@ -137,6 +144,8 @@ func (app *Application) initializeDependencies(dbService *pgxpool.Pool, cfg *cfg
 	brandRepository := brand.NewBrandRepository(dbService)
 	productRepository := product.NewProductRepository(dbService)
 	optionRepository := option.NewOptionRepository(dbService)
+	feedbackRepository := feedback.NewFeedbackRepository(dbService)
+	wishRepository := wish.NewWishRepository(dbService)
 
 	roleService := role.NewRoleService(roleRepository)
 	categoryService := category.NewCategoryService(categoryRepository)
@@ -144,6 +153,8 @@ func (app *Application) initializeDependencies(dbService *pgxpool.Pool, cfg *cfg
 	brandService := brand.NewBrandService(brandRepository)
 	productService := product.NewProductService(productRepository, categoryService, brandService)
 	optionService := option.NewOptionService(optionRepository)
+	feedbackService := feedback.NewFeedbackService(feedbackRepository)
+	wishService := wish.NewWishService(wishRepository)
 
 	userService := user.NewUserService(userRepository, sessionService, mailService, passwordService)
 	authService := auth.NewAuthService(userService, sessionService, passwordService, mailService)
@@ -152,12 +163,15 @@ func (app *Application) initializeDependencies(dbService *pgxpool.Pool, cfg *cfg
 	roleGuard := guards.NewRoleGuard()
 
 	userHandler := user.NewUserHandler(userService, router, authGuard.CheckAuth)
-	roleHandler := role.NewRoleHandler(roleService, authGuard.CheckAuth, roleGuard, router)
+	roleHandler := role.NewRoleHandler(roleService, authGuard.CheckAuth, roleGuard.CheckRoles, router)
 	categoryHandler := category.NewCategoryHandler(categoryService, router, authGuard.CheckAuth)
 	authHandler := auth.NewAuthHandler(authService, router, authGuard.CheckAuth)
 	brandHandler := brand.NewBrandHandler(brandService, router)
-	productHandler := product.NewProductHandler(productService, router, authGuard.CheckAuth, roleGuard)
+	productHandler := product.NewProductHandler(productService, router, authGuard.CheckAuth, roleGuard.CheckRoles)
 	optionHandler := option.NewOptionHandler(optionService, router, authGuard.CheckAuth)
+	feedbackHandler := feedback.NewFeedbackHandler(feedbackService, router, authGuard.CheckAuth, roleGuard.CheckRoles)
+	wishHandler := wish.NewWishHandler(wishService, router, authGuard.CheckAuth)
+	fileHandler := file.NewFileHandler(fileService, router)
 
 	userHandler.InitRoutes()
 	roleHandler.InitRoutes()
@@ -165,6 +179,8 @@ func (app *Application) initializeDependencies(dbService *pgxpool.Pool, cfg *cfg
 	authHandler.InitRoutes()
 	brandHandler.InitRoutes()
 	productHandler.InitRoutes()
-	optionHandler.InitOptionRoutes()
-
+	optionHandler.InitRoutes()
+	feedbackHandler.InitRoutes()
+	wishHandler.InitRoutes()
+	fileHandler.InitRoutes()
 }

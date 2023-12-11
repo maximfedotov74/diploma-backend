@@ -7,7 +7,6 @@ import (
 	"github.com/maximfedotov74/fiber-psql/internal/domain/user"
 	exception "github.com/maximfedotov74/fiber-psql/internal/shared/error"
 	"github.com/maximfedotov74/fiber-psql/internal/shared/jwt"
-	"github.com/maximfedotov74/fiber-psql/internal/shared/messages"
 )
 
 type UserService interface {
@@ -16,8 +15,8 @@ type UserService interface {
 	Create(dto user.CreateUserDto) (*user.UserCreatedResponse, exception.Error)
 }
 type SessionService interface {
-	Parse(token string, tokenType jwt.TokenType) (*jwt.UserClaims, error)
-	Sign(claims jwt.UserClaims) (jwt.Tokens, error)
+	Parse(token string, tokenType jwt.TokenType) (*jwt.UserClaims, exception.Error)
+	Sign(claims jwt.UserClaims) (*jwt.Tokens, exception.Error)
 	CreateSession(dto session.CreateSessionDto) exception.Error
 	FindSession(agent string, token string) (*session.Session, exception.Error)
 }
@@ -55,13 +54,13 @@ func (as *AuthService) Login(dto LoginDto, userAgent string) (*LoginResponse, ex
 	}
 
 	if isPasswordCorrect := as.passwordService.ComparePasswords(user.PasswordHash, dto.Password); !isPasswordCorrect {
-		return nil, exception.NewErr(messages.INVALID_CREDENTIALS, 404)
+		return nil, exception.NewErr(invalidCredentials, exception.STATUS_NOT_FOUND)
 	}
 
-	tokens, err := as.sessionService.Sign(jwt.UserClaims{UserId: user.Id, UserAgent: userAgent})
+	tokens, ex := as.sessionService.Sign(jwt.UserClaims{UserId: user.Id, UserAgent: userAgent})
 
-	if err != nil {
-		return nil, exception.NewErr(err.Error(), 500)
+	if ex != nil {
+		return nil, ex
 	}
 
 	tokenDto := session.CreateSessionDto{UserId: user.Id, UserAgent: userAgent, Token: tokens.RefreshToken}
@@ -70,7 +69,7 @@ func (as *AuthService) Login(dto LoginDto, userAgent string) (*LoginResponse, ex
 		return nil, appErr
 	}
 
-	response := LoginResponse{Id: user.Id, Tokens: tokens}
+	response := LoginResponse{Id: user.Id, Tokens: *tokens}
 
 	return &response, nil
 }
@@ -79,7 +78,7 @@ func (as *AuthService) Registration(dto user.CreateUserDto) (*int, exception.Err
 	user, _ := as.userService.GetUserByEmail(dto.Email)
 
 	if user != nil {
-		return nil, exception.NewErr(messages.USER_EXISTS, 400)
+		return nil, exception.NewErr(userIsRegistered, exception.STATUS_BAD_REQUEST)
 	}
 
 	hash, err := as.passwordService.HashPassword(dto.Password)
@@ -105,10 +104,10 @@ func (as *AuthService) Registration(dto user.CreateUserDto) (*int, exception.Err
 
 func (as *AuthService) Refresh(refreshToken string, userAgent string) (*LoginResponse, exception.Error) {
 
-	_, err := as.sessionService.Parse(refreshToken, jwt.RefreshToken)
+	_, ex := as.sessionService.Parse(refreshToken, jwt.RefreshToken)
 
-	if err != nil {
-		return nil, exception.NewErr(err.Error(), 401)
+	if ex != nil {
+		return nil, ex
 	}
 
 	dbToken, appErr := as.sessionService.FindSession(userAgent, refreshToken)
@@ -124,10 +123,10 @@ func (as *AuthService) Refresh(refreshToken string, userAgent string) (*LoginRes
 
 	claims := jwt.UserClaims{UserId: user.Id, UserAgent: dbToken.UserAgent}
 
-	tokens, err := as.sessionService.Sign(claims)
+	tokens, ex := as.sessionService.Sign(claims)
 
-	if err != nil {
-		return nil, exception.NewErr(err.Error(), 500)
+	if ex != nil {
+		return nil, ex
 	}
 
 	tokenDto := session.CreateSessionDto{UserId: user.Id, UserAgent: dbToken.UserAgent, Token: tokens.RefreshToken}
@@ -137,7 +136,7 @@ func (as *AuthService) Refresh(refreshToken string, userAgent string) (*LoginRes
 		return nil, appErr
 	}
 
-	response := LoginResponse{Id: user.Id, Tokens: tokens}
+	response := LoginResponse{Id: user.Id, Tokens: *tokens}
 
 	return &response, nil
 }

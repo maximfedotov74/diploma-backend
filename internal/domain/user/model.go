@@ -1,8 +1,6 @@
 package user
 
-import (
-	"github.com/maximfedotov74/fiber-psql/internal/domain/role"
-)
+import "github.com/maximfedotov74/fiber-psql/internal/domain/role"
 
 type User struct {
 	Id           int         `json:"user_id" db:"user_id" example:"1"`

@@ -2,15 +2,13 @@ package user
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/role"
 	"github.com/maximfedotov74/fiber-psql/internal/shared/db"
-	"github.com/maximfedotov74/fiber-psql/internal/shared/messages"
+	exception "github.com/maximfedotov74/fiber-psql/internal/shared/error"
 )
 
 // TODO ADD erros and update find method
@@ -25,8 +23,8 @@ const (
 )
 
 type RoleRepository interface {
-	FindRoleByTitle(title string) (*role.Role, error)
-	AddRoleToUser(roleId int, userId int, tx *db.Transaction) error
+	FindRoleByTitle(title string) (*role.Role, exception.Error)
+	AddRoleToUser(roleId int, userId int, tx *db.Transaction) exception.Error
 }
 
 type UserRepository struct {
@@ -42,14 +40,14 @@ func (ur *UserRepository) GetAll() error {
 	return nil
 }
 
-func (ur *UserRepository) Create(password string, email string) (*UserCreatedResponse, error) {
-
+func (ur *UserRepository) Create(password string, email string) (*UserCreatedResponse, exception.Error) {
 	txCtx := context.Background()
+	commit := false
 
 	tx, err := ur.db.Begin(txCtx)
 
 	defer func() {
-		if err != nil {
+		if !commit {
 			tx.Rollback(txCtx)
 		} else {
 			tx.Commit(txCtx)
@@ -57,7 +55,7 @@ func (ur *UserRepository) Create(password string, email string) (*UserCreatedRes
 	}()
 
 	if err != nil {
-		return nil, err
+		return nil, exception.ServerError(err.Error())
 	}
 
 	query := "INSERT INTO public.user (email, password_hash) VALUES ($1, $2) RETURNING user_id, email;"
@@ -68,37 +66,40 @@ func (ur *UserRepository) Create(password string, email string) (*UserCreatedRes
 
 	err = row.Scan(&id, &userEmail)
 	if err != nil {
-		return nil, err
+		return nil, exception.ServerError(err.Error())
+	}
+	role, ex := ur.roleRepo.FindRoleByTitle(userRole)
+
+	if ex != nil {
+		return nil, ex
 	}
 
-	role, err := ur.roleRepo.FindRoleByTitle(userRole)
+	ex = ur.roleRepo.AddRoleToUser(role.Id, id, &db.Transaction{Executer: tx, Ctx: txCtx})
 
 	if err != nil {
-		return nil, err
+		return nil, ex
 	}
+
+	query = "INSERT INTO user_settings (user_id) VALUES ($1);"
+
+	_, err = tx.Exec(txCtx, query, id)
 
 	if err != nil {
-		return nil, err
+		return nil, exception.ServerError(err.Error())
 	}
 
-	err = ur.roleRepo.AddRoleToUser(role.Id, id, &db.Transaction{Executer: tx, Ctx: txCtx})
-
-	if err != nil {
-		return nil, err
-	}
-
-	query = "INSERT INTO public.user_settings (user_id, activation_account_link) VALUES ($1, uuid_generate_v4()) RETURNING activation_account_link;"
+	query = "INSERT INTO public.user_activation (user_id, activation_account_link) VALUES ($1, uuid_generate_v4()) RETURNING activation_account_link;"
 	row = tx.QueryRow(txCtx, query, id)
 	var link string
 	err = row.Scan(&link)
 	if err != nil {
-		return nil, err
+		return nil, exception.ServerError(err.Error())
 	}
-
+	commit = true
 	return &UserCreatedResponse{Id: id, ActivationAccountLink: link, Email: userEmail}, nil
 }
 
-func (ur *UserRepository) findByIdOrEmail(field string, value any) (*User, error) {
+func (ur *UserRepository) findByIdOrEmail(field string, value any) (*User, exception.Error) {
 
 	ctx := context.Background()
 
@@ -113,35 +114,37 @@ func (ur *UserRepository) findByIdOrEmail(field string, value any) (*User, error
 	rows, err := ur.db.Query(ctx, query, value)
 
 	if err != nil {
-		return nil, err
+		return nil, exception.ServerError(err.Error())
 	}
 
 	defer rows.Close()
 
 	user := User{}
-	processedRows := 0
+	founded := false
 	for rows.Next() {
 		role := role.Role{}
 		err := rows.Scan(&user.Id, &user.Email, &user.PasswordHash, &role.Title, &role.Id, &user.IsActivated)
 		if err != nil {
-			return nil, err
+			return nil, exception.ServerError(err.Error())
 		}
 		user.Roles = append(user.Roles, role)
-		processedRows++
+		if !founded {
+			founded = true
+		}
 	}
 
 	if rows.Err() != nil {
-		return nil, err
+		return nil, exception.ServerError(rows.Err().Error())
 	}
-	if processedRows == 0 {
-		return nil, nil
+	if !founded {
+		return nil, exception.NewErr(userNotFound, exception.STATUS_NOT_FOUND)
 	}
 
 	return &user, nil
 
 }
 
-func (ur *UserRepository) GetUserById(id int) (*User, error) {
+func (ur *UserRepository) GetUserById(id int) (*User, exception.Error) {
 	user, err := ur.findByIdOrEmail(userIdField, id)
 	if err != nil {
 		return nil, err
@@ -150,7 +153,7 @@ func (ur *UserRepository) GetUserById(id int) (*User, error) {
 	return user, nil
 }
 
-func (ur *UserRepository) GetUserByEmail(email string) (*User, error) {
+func (ur *UserRepository) GetUserByEmail(email string) (*User, exception.Error) {
 	user, err := ur.findByIdOrEmail(emailField, email)
 	if err != nil {
 		return nil, err
@@ -159,36 +162,58 @@ func (ur *UserRepository) GetUserByEmail(email string) (*User, error) {
 	return user, nil
 }
 
-func (ur *UserRepository) FindActivationLink(link string) (*int, error) {
+func (ur *UserRepository) FindActivationLink(link string) (*int, exception.Error) {
 	ctx := context.Background()
-	query := `SELECT "public"."user_settings".user_id FROM "public"."user_settings"
-	WHERE "public".user_settings.activation_account_link = $1;`
+	query := `SELECT user_activation.user_id FROM user_activation
+	WHERE user_activation.activation_account_link = $1;`
 	row := ur.db.QueryRow(ctx, query, link)
 	var id int
 	err := row.Scan(&id)
 	if err != nil {
-		return nil, err
+		return nil, exception.NewErr(activationNotFound, exception.STATUS_NOT_FOUND)
 	}
 
 	return &id, nil
 }
 
-func (ur *UserRepository) ActivateUser(id *int) error {
-	ctx := context.Background()
-	query := `UPDATE "public".user_settings
-	SET activation_account_link = NULL,
-	is_activated = TRUE
-	WHERE "public".user_settings.user_id = $1;`
+func (ur *UserRepository) ActivateUser(id *int) exception.Error {
 
-	_, err := ur.db.Exec(ctx, query, id)
+	txCtx := context.Background()
+
+	tx, err := ur.db.Begin(context.Background())
+	commit := false
+
 	if err != nil {
-		return errors.New(messages.ACTIVATION_ERROR)
+		return exception.ServerError(err.Error())
 	}
 
+	defer func() {
+		if !commit {
+			tx.Rollback(txCtx)
+		} else {
+			tx.Commit(txCtx)
+		}
+	}()
+
+	query := `UPDATE user_settings SET is_activated = TRUE WHERE user_id = $1;`
+
+	_, err = tx.Exec(txCtx, query, id)
+
+	if err != nil {
+		return exception.NewErr(activationError, exception.STATUS_INTERNAL_ERROR)
+	}
+
+	query = "DELETE FROM user_activation WHERE user_id = $1;"
+	_, err = tx.Exec(txCtx, query, id)
+
+	if err != nil {
+		return exception.NewErr(activationError, exception.STATUS_INTERNAL_ERROR)
+	}
+	commit = true
 	return nil
 }
 
-func (ur *UserRepository) ChangePassword(userId int, newPassword string) error {
+func (ur *UserRepository) ChangePassword(userId int, newPassword string) exception.Error {
 
 	txCtx := context.Background()
 
@@ -203,7 +228,7 @@ func (ur *UserRepository) ChangePassword(userId int, newPassword string) error {
 	}()
 
 	if err != nil {
-		return err
+		return exception.ServerError(err.Error())
 	}
 
 	query := `UPDATE public.user SET password_hash = $1,
@@ -211,18 +236,18 @@ func (ur *UserRepository) ChangePassword(userId int, newPassword string) error {
 
 	_, err = tx.Exec(txCtx, query, newPassword, userId)
 	if err != nil {
-		return errors.New(messages.UPDATE_PASSWORD_ERROR)
+		return exception.NewErr(updatePasswordError, exception.STATUS_INTERNAL_ERROR)
 	}
 
-	err = RemoveChangePasswordCode(userId, tx, txCtx)
+	err = removeChangePasswordCode(userId, tx, txCtx)
 	if err != nil {
-		return err
+		return exception.ServerError(err.Error())
 	}
 
 	return nil
 }
 
-func RemoveChangePasswordCode(userId int, tx pgx.Tx, ctx context.Context) error {
+func removeChangePasswordCode(userId int, tx pgx.Tx, ctx context.Context) error {
 	query := "DELETE FROM change_password_code WHERE user_id = $1"
 
 	_, err := tx.Exec(ctx, query, userId)
@@ -233,11 +258,8 @@ func RemoveChangePasswordCode(userId int, tx pgx.Tx, ctx context.Context) error 
 	return nil
 }
 
-func (ur *UserRepository) FindChangePasswordCode(userId int, code string) (*ChangePasswordCode, error) {
+func (ur *UserRepository) FindChangePasswordCode(userId int, code string) (*ChangePasswordCode, exception.Error) {
 	ctx := context.Background()
-
-	log.Println(userId)
-	log.Println(code)
 	query := `SELECT change_password_code_id, code, user_id FROM
 	change_password_code WHERE user_id = $1 AND code = $2 AND end_time > CURRENT_TIMESTAMP;`
 
@@ -248,15 +270,14 @@ func (ur *UserRepository) FindChangePasswordCode(userId int, code string) (*Chan
 	err := row.Scan(&codeModel.ChangePasswordCodeId, &codeModel.Code, &codeModel.UserId)
 
 	if err != nil {
-		log.Println(err.Error())
-		return nil, errors.New(messages.CHANGE_PASSWORD_CODE_NOT_FOUND)
+		return nil, exception.NewErr(changePasswordCodeNotFound, exception.STATUS_NOT_FOUND)
 	}
 
 	return &codeModel, nil
 
 }
 
-func (ur *UserRepository) CreateChangePasswordCode(userId int) (*string, error) {
+func (ur *UserRepository) CreateChangePasswordCode(userId int) (*string, exception.Error) {
 
 	txCtx := context.Background()
 
@@ -271,13 +292,13 @@ func (ur *UserRepository) CreateChangePasswordCode(userId int) (*string, error) 
 	}()
 
 	if err != nil {
-		return nil, err
+		return nil, exception.ServerError(err.Error())
 	}
 
-	err = RemoveChangePasswordCode(userId, tx, txCtx)
+	err = removeChangePasswordCode(userId, tx, txCtx)
 
 	if err != nil {
-		return nil, err
+		return nil, exception.ServerError(err.Error())
 	}
 
 	query := "INSERT INTO change_password_code (user_id) VALUES ($1) RETURNING code;"
@@ -289,7 +310,7 @@ func (ur *UserRepository) CreateChangePasswordCode(userId int) (*string, error) 
 	err = row.Scan(&code)
 
 	if err != nil {
-		return nil, err
+		return nil, exception.NewErr(createChangeCodeError, exception.STATUS_INTERNAL_ERROR)
 	}
 
 	return &code, nil

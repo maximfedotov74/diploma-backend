@@ -68,6 +68,48 @@ const docTemplate = `{
             }
         },
         "/api/brand/": {
+            "get": {
+                "description": "Get all brands",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "brand"
+                ],
+                "summary": "Get all brands",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/brand.Brand"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            },
             "post": {
                 "description": "Create brand with dto",
                 "consumes": [
@@ -94,6 +136,62 @@ const docTemplate = `{
                 "responses": {
                     "201": {
                         "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/brand/:id": {
+            "patch": {
+                "description": "Update brand",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "brand"
+                ],
+                "summary": "Update brand",
+                "parameters": [
+                    {
+                        "description": "Update brand dto",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/brand.UpdateBrandDto"
+                        }
+                    },
+                    {
+                        "type": "integer",
+                        "description": "id parameter",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -166,7 +264,49 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/category/create-category": {
+        "/api/category/": {
+            "get": {
+                "description": "Get all categories",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "category"
+                ],
+                "summary": "Get all categories",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/category.Category"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            },
             "post": {
                 "description": "Create category with dto",
                 "consumes": [
@@ -215,7 +355,208 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/category/:id": {
+            "patch": {
+                "description": "Update category",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "category"
+                ],
+                "summary": "Update category",
+                "parameters": [
+                    {
+                        "description": "Update category dto",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/category.UpdateCategoryDto"
+                        }
+                    },
+                    {
+                        "type": "integer",
+                        "description": "id parameter",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/category/with-sub/:slug": {
+            "get": {
+                "description": "Get by slug with sub categories",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "category"
+                ],
+                "summary": "Get by slug with sub categories",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "slug parameter",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/category.Category"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/colored-models/:slug": {
+            "get": {
+                "description": "Get color models",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Get color models",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Product slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/product.ProductModelColors"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
         "/api/option/": {
+            "get": {
+                "description": "Get all options",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "option"
+                ],
+                "summary": "Get all options",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/option.Option"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            },
             "post": {
                 "description": "Create option with dto",
                 "consumes": [
@@ -455,6 +796,154 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/option/catalog-filters/:categorySlug": {
+            "get": {
+                "description": "Get Catalog Filters",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "option"
+                ],
+                "summary": "Get get Catalog Filters by category slug",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "categorySlug parameter",
+                        "name": "categorySlug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/option.CatalogFilters"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/option/size": {
+            "post": {
+                "description": "Create size with dto",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "option"
+                ],
+                "summary": "Create size",
+                "parameters": [
+                    {
+                        "description": "Create size dto",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/option.CreateSizeDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/option/size/add-to-product-model": {
+            "post": {
+                "description": "Add size to product model",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "option"
+                ],
+                "summary": "Add size to product model",
+                "parameters": [
+                    {
+                        "description": "Add size to product model dto",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/option.AddSizeToProductModelDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
         "/api/option/value": {
             "post": {
                 "description": "Create value with dto",
@@ -600,9 +1089,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/product/:slug": {
-            "get": {
-                "description": "Get product by title",
+        "/api/product/:id": {
+            "delete": {
+                "description": "Delete product",
                 "consumes": [
                     "application/json"
                 ],
@@ -612,18 +1101,11 @@ const docTemplate = `{
                 "tags": [
                     "product"
                 ],
-                "summary": "Get product by title",
+                "summary": "Delete product",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "product slug parameter",
-                        "name": "slug",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
                         "type": "integer",
-                        "description": "model id parameter",
+                        "description": "product id parameter",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -631,10 +1113,61 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/product.Product"
+                            "$ref": "#/definitions/exception.ValidationError"
                         }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Update product",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Update product",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "product id parameter",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "update product dto",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/product.UpdateProductDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -706,6 +1239,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/product/admin/products-list": {
+            "get": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "description": "Get products for admin panel",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Get products for admin panel",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page for pagination",
+                        "name": "page",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/product.AdminProductResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
         "/api/product/model": {
             "post": {
                 "description": "Create product model with dto",
@@ -733,6 +1321,204 @@ const docTemplate = `{
                 "responses": {
                     "201": {
                         "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/product/model-full/:id": {
+            "get": {
+                "description": "Get product model by model id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Get product model by model id",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "model id parameter",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/product.Product"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/product/model/:id": {
+            "delete": {
+                "description": "Delete product model",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Delete product model",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "product model id parameter",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Update product model",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Update product model",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "model id parameter",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "update product-model dto",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/product.UpdateProductModelDto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/exception.ValidationError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/exception.AppErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/product/remove-photo/:photoId": {
+            "delete": {
+                "description": "Remove photo from product model",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Remove photo from product model",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Photo id",
+                        "name": "photoId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -1258,17 +2044,20 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "description": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "бренд одежды..."
                 },
                 "id": {
                     "type": "integer",
                     "example": 2
                 },
                 "img_path": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "/static/category/adidas.webp"
                 },
                 "slug": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "adidas"
                 },
                 "title": {
                     "type": "string",
@@ -1283,15 +2072,74 @@ const docTemplate = `{
             ],
             "properties": {
                 "description": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 10,
+                    "example": "бренд одежды"
                 },
                 "img_path": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "/static/category/adidas.webp"
                 },
                 "title": {
                     "type": "string",
                     "minLength": 2,
                     "example": "adidas"
+                }
+            }
+        },
+        "brand.UpdateBrandDto": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "minLength": 10,
+                    "example": "бренд одежды"
+                },
+                "img_path": {
+                    "type": "string",
+                    "example": "/static/category/adidas.webp"
+                },
+                "title": {
+                    "type": "string",
+                    "minLength": 2,
+                    "example": "adidas"
+                }
+            }
+        },
+        "category.Category": {
+            "type": "object",
+            "properties": {
+                "category_id": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "img_path": {
+                    "type": "string",
+                    "example": "/static/example.webp"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "parent_category_id": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "short_title": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "verhnia-odezhda"
+                },
+                "subcategories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/category.Category"
+                    }
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Верхняя одежда"
                 }
             }
         },
@@ -1309,6 +2157,25 @@ const docTemplate = `{
                 "parent_category_id": {
                     "type": "integer",
                     "example": 4
+                },
+                "short_title": {
+                    "type": "string",
+                    "minLength": 3,
+                    "example": "Верхняя одежда"
+                },
+                "title": {
+                    "type": "string",
+                    "minLength": 3,
+                    "example": "Мужская Верхняя одежда"
+                }
+            }
+        },
+        "category.UpdateCategoryDto": {
+            "type": "object",
+            "properties": {
+                "img_path": {
+                    "type": "string",
+                    "example": "/static/example.webp"
                 },
                 "short_title": {
                     "type": "string",
@@ -1396,6 +2263,90 @@ const docTemplate = `{
                 }
             }
         },
+        "option.AddSizeToProductModelDto": {
+            "type": "object",
+            "required": [
+                "in_stock",
+                "product_model_id",
+                "size_id"
+            ],
+            "properties": {
+                "in_stock": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "product_model_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "size_id": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "option.CatalogFilters": {
+            "type": "object",
+            "properties": {
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/option.CatalogOption"
+                    }
+                },
+                "sizes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/option.CatalogSize"
+                    }
+                }
+            }
+        },
+        "option.CatalogOption": {
+            "type": "object",
+            "properties": {
+                "option_id": {
+                    "type": "integer"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/option.CatalogValue"
+                    }
+                }
+            }
+        },
+        "option.CatalogSize": {
+            "type": "object",
+            "properties": {
+                "size_id": {
+                    "type": "integer"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "option.CatalogValue": {
+            "type": "object",
+            "properties": {
+                "option_id": {
+                    "type": "integer"
+                },
+                "value": {
+                    "type": "string"
+                },
+                "value_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "option.CreateOptionDto": {
             "type": "object",
             "required": [
@@ -1428,6 +2379,21 @@ const docTemplate = `{
                 "value": {
                     "type": "string",
                     "example": "Желтый"
+                }
+            }
+        },
+        "option.CreateSizeDto": {
+            "type": "object",
+            "required": [
+                "literal",
+                "numeric"
+            ],
+            "properties": {
+                "literal": {
+                    "type": "string"
+                },
+                "numeric": {
+                    "type": "string"
                 }
             }
         },
@@ -1487,6 +2453,82 @@ const docTemplate = `{
                 }
             }
         },
+        "product.AdminProduct": {
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "$ref": "#/definitions/product.ProductBrand"
+                },
+                "category": {
+                    "$ref": "#/definitions/product.ProductCategory"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Отлчиная куртка теплая"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "models": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product.AdminProductModelRelation"
+                    }
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Куртка теплая"
+                }
+            }
+        },
+        "product.AdminProductModelRelation": {
+            "type": "object",
+            "properties": {
+                "discount": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "image_path": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer",
+                    "example": 15000
+                },
+                "product_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "product.AdminProductResponse": {
+            "type": "object",
+            "properties": {
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product.AdminProduct"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "product.Color": {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
         "product.CreateProducModelImg": {
             "type": "object",
             "required": [
@@ -1496,9 +2538,6 @@ const docTemplate = `{
             "properties": {
                 "img_path": {
                     "type": "string"
-                },
-                "main": {
-                    "type": "boolean"
                 },
                 "product_model_id": {
                     "type": "integer",
@@ -1526,6 +2565,7 @@ const docTemplate = `{
                 },
                 "description": {
                     "type": "string",
+                    "minLength": 10,
                     "example": "Отлчиная куртка теплая"
                 },
                 "title": {
@@ -1546,8 +2586,11 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 10
                 },
+                "image_path": {
+                    "type": "string"
+                },
                 "price": {
-                    "type": "number",
+                    "type": "integer",
                     "minimum": 1,
                     "example": 15000
                 },
@@ -1577,12 +2620,6 @@ const docTemplate = `{
                 "id": {
                     "type": "integer",
                     "example": 1
-                },
-                "models": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/product.ProductModel"
-                    }
                 },
                 "slug": {
                     "type": "string"
@@ -1647,6 +2684,9 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 1
                 },
+                "image_path": {
+                    "type": "string"
+                },
                 "images": {
                     "type": "array",
                     "items": {
@@ -1660,11 +2700,35 @@ const docTemplate = `{
                     }
                 },
                 "price": {
-                    "type": "number",
+                    "type": "integer",
                     "example": 15000
                 },
                 "product_id": {
                     "type": "integer"
+                },
+                "sizes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product.ProductModelSize"
+                    }
+                }
+            }
+        },
+        "product.ProductModelColors": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "$ref": "#/definitions/product.Color"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "image_path": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
                 }
             }
         },
@@ -1677,12 +2741,6 @@ const docTemplate = `{
                 },
                 "img_path": {
                     "type": "string"
-                },
-                "main": {
-                    "type": "boolean"
-                },
-                "product_model_id": {
-                    "type": "integer"
                 }
             }
         },
@@ -1690,10 +2748,6 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "id": {
-                    "type": "integer",
-                    "example": 4
-                },
-                "model_id": {
                     "type": "integer",
                     "example": 4
                 },
@@ -1723,13 +2777,69 @@ const docTemplate = `{
                 "info": {
                     "type": "string"
                 },
-                "option_id": {
-                    "type": "integer",
-                    "example": 4
-                },
                 "value": {
                     "type": "string",
                     "example": "Желтый"
+                }
+            }
+        },
+        "product.ProductModelSize": {
+            "type": "object",
+            "properties": {
+                "in_stock": {
+                    "type": "integer"
+                },
+                "literal": {
+                    "type": "string"
+                },
+                "model_id": {
+                    "type": "integer"
+                },
+                "size_id": {
+                    "type": "integer"
+                },
+                "size_model_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "product.UpdateProductDto": {
+            "type": "object",
+            "required": [
+                "title"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "minLength": 10,
+                    "example": "Отлчиная куртка теплая"
+                },
+                "title": {
+                    "type": "string",
+                    "minLength": 3,
+                    "example": "Куртка теплая"
+                }
+            }
+        },
+        "product.UpdateProductModelDto": {
+            "type": "object",
+            "required": [
+                "discount",
+                "price"
+            ],
+            "properties": {
+                "discount": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 10
+                },
+                "image_path": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 15000
                 }
             }
         },

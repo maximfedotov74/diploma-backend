@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS public.user
   created_at timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   email VARCHAR(129) NOT NULL UNIQUE,
+  avatar_path TEXT,
   password_hash VARCHAR(255) NOT NULL
 );
 
@@ -22,13 +23,23 @@ CREATE TABLE IF NOT EXISTS public.user_role
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+CREATE TYPE user_gender AS enum ('men', 'women');
+
 CREATE TABLE IF NOT EXISTS public.user_settings (
   user_settings_id SERIAL PRIMARY KEY,
-  activation_account_link UUID DEFAULT NULL,
   is_activated boolean NOT NULL DEFAULT false,
+  patronymic VARCHAR(255),
+  first_name VARCHAR(255),  
+  last_name VARCHAR(255),
+  gender user_gender,
   user_id INT UNIQUE REFERENCES public.user (user_id) ON DELETE CASCADE NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS public.user_activation (
+  user_activation_id SERIAL PRIMARY KEY,
+  activation_account_link UUID DEFAULT NULL,
+  user_id INT UNIQUE REFERENCES public.user (user_id) ON DELETE CASCADE NOT NULL
+);
 
 INSERT INTO public.role (title) VALUES('ADMIN');
 INSERT INTO public.role (title) VALUES('USER');

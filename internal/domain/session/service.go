@@ -3,7 +3,6 @@ package session
 import (
 	exception "github.com/maximfedotov74/fiber-psql/internal/shared/error"
 	"github.com/maximfedotov74/fiber-psql/internal/shared/jwt"
-	"github.com/maximfedotov74/fiber-psql/internal/shared/messages"
 )
 
 // todo add remove sessions
@@ -11,8 +10,10 @@ import (
 type JwtTokenService interface{}
 
 type Repository interface {
-	CreateSession(CreateSessionDto) error
-	FindByAgentAndToken(agent string, token string) (*Session, error)
+	CreateSession(CreateSessionDto) exception.Error
+	FindByAgentAndToken(agent string, token string) (*Session, exception.Error)
+	RemoveSession(token string, agent string) exception.Error
+	RemoveExceptCurrentSession(userId int, agent string) exception.Error
 }
 
 type JwtService interface {
@@ -37,7 +38,7 @@ func (ts *TokenService) CreateSession(dto CreateSessionDto) exception.Error {
 	err := ts.repo.CreateSession(dto)
 
 	if err != nil {
-		return exception.NewErr(messages.TOKEN_CREATE_ERROR, 500)
+		return err
 	}
 
 	return nil
@@ -48,14 +49,20 @@ func (ts *TokenService) FindSession(agent string, token string) (*Session, excep
 	dbToken, err := ts.repo.FindByAgentAndToken(agent, token)
 
 	if err != nil {
-		return nil, exception.NewErr(messages.TOKEN_NOT_FOUND, 404)
+		return nil, err
 	}
 	return dbToken, nil
 
 }
 
-func (ts *TokenService) RemoveSession() error {
-	return nil
+func (ts *TokenService) RemoveSession(token string, agent string) exception.Error {
+	err := ts.repo.RemoveSession(token, agent)
+	return err
+}
+
+func (ts *TokenService) RemoveExceptCurrentSession(userId int, agent string) exception.Error {
+	err := ts.repo.RemoveExceptCurrentSession(userId, agent)
+	return err
 }
 
 func (ts *TokenService) Refresh(refreshToken string) error {
@@ -69,10 +76,20 @@ func (ts *TokenService) Refresh(refreshToken string) error {
 	return nil
 }
 
-func (ts *TokenService) Sign(claims jwt.UserClaims) (jwt.Tokens, error) {
-	return ts.jwtService.Sign(claims)
+func (ts *TokenService) Sign(claims jwt.UserClaims) (*jwt.Tokens, exception.Error) {
+
+	tokens, err := ts.jwtService.Sign(claims)
+
+	if err != nil {
+		return nil, exception.ServerError(err.Error())
+	}
+	return &tokens, nil
 }
 
-func (ts *TokenService) Parse(token string, tokenType jwt.TokenType) (*jwt.UserClaims, error) {
-	return ts.jwtService.Parse(token, tokenType)
+func (ts *TokenService) Parse(token string, tokenType jwt.TokenType) (*jwt.UserClaims, exception.Error) {
+	claims, err := ts.jwtService.Parse(token, tokenType)
+	if err != nil {
+		return nil, exception.NewErr(err.Error(), exception.STATUS_UNAUTHORIZED)
+	}
+	return claims, nil
 }

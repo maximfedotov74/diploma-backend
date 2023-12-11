@@ -21,3 +21,10 @@ func (err AppErr) Status() int {
 func (err AppErr) Message() string {
 	return err.MessageText
 }
+
+func ServerError(m string) AppErr {
+	return AppErr{
+		MessageText: "Internal Server Error \n" + m,
+		StatusCode:  STATUS_INTERNAL_ERROR,
+	}
+}

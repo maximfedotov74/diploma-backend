@@ -1,10 +1,10 @@
 package user
 
 import (
+	"github.com/maximfedotov74/fiber-psql/internal/cfg"
 	"github.com/maximfedotov74/fiber-psql/internal/domain/session"
 	exception "github.com/maximfedotov74/fiber-psql/internal/shared/error"
 	"github.com/maximfedotov74/fiber-psql/internal/shared/jwt"
-	"github.com/maximfedotov74/fiber-psql/internal/shared/messages"
 	"github.com/maximfedotov74/fiber-psql/internal/shared/models"
 )
 
@@ -14,18 +14,18 @@ type MailService interface {
 
 type SessionServie interface {
 	CreateSession(dto session.CreateSessionDto) exception.Error
-	Sign(claims jwt.UserClaims) (jwt.Tokens, error)
+	Sign(claims jwt.UserClaims) (*jwt.Tokens, exception.Error)
 }
 
 type Repository interface {
-	Create(password string, email string) (*UserCreatedResponse, error)
-	FindActivationLink(link string) (*int, error)
-	ActivateUser(id *int) error
-	GetUserById(id int) (*User, error)
-	GetUserByEmail(email string) (*User, error)
-	ChangePassword(userId int, newPassword string) error
-	FindChangePasswordCode(userId int, code string) (*ChangePasswordCode, error)
-	CreateChangePasswordCode(userId int) (*string, error)
+	Create(password string, email string) (*UserCreatedResponse, exception.Error)
+	FindActivationLink(link string) (*int, exception.Error)
+	ActivateUser(id *int) exception.Error
+	GetUserById(id int) (*User, exception.Error)
+	GetUserByEmail(email string) (*User, exception.Error)
+	ChangePassword(userId int, newPassword string) exception.Error
+	FindChangePasswordCode(userId int, code string) (*ChangePasswordCode, exception.Error)
+	CreateChangePasswordCode(userId int) (*string, exception.Error)
 }
 
 type PasswordService interface {
@@ -38,9 +38,11 @@ type UserService struct {
 	sessionService  SessionServie
 	passwordService PasswordService
 	mailService     MailService
+	cfgService      *cfg.Config
 }
 
-func NewUserService(repo Repository, sessionService SessionServie, mailService MailService, passwordService PasswordService) *UserService {
+func NewUserService(repo Repository, sessionService SessionServie, mailService MailService, passwordService PasswordService,
+) *UserService {
 	return &UserService{
 		repo:            repo,
 		sessionService:  sessionService,
@@ -56,7 +58,7 @@ func (us *UserService) Create(dto CreateUserDto) (*UserCreatedResponse, exceptio
 	response, err := us.repo.Create(dto.Password, dto.Email)
 
 	if err != nil {
-		return nil, exception.NewErr(err.Error(), 500)
+		return nil, err
 	}
 
 	return response, nil
@@ -67,40 +69,34 @@ func (us *UserService) Activate(activationLink string) exception.Error {
 	id, err := us.repo.FindActivationLink(activationLink)
 
 	if err != nil {
-		return exception.NewErr(err.Error(), 404)
+		return err
 	}
 
 	err = us.repo.ActivateUser(id)
 	if err != nil {
-		return exception.NewErr(err.Error(), 500)
+		return err
 	}
 
 	return nil
 }
 
 func (us *UserService) GetUserById(id int) (*User, exception.Error) {
+
 	user, err := us.repo.GetUserById(id)
 
 	if err != nil {
-		return nil, exception.NewErr(err.Error(), 500)
-	}
-
-	if user == nil {
-		return nil, exception.NewErr(messages.USER_NOT_FOUND, 404)
+		return nil, err
 	}
 
 	return user, nil
+
 }
 
 func (us *UserService) GetUserByEmail(email string) (*User, exception.Error) {
 	user, err := us.repo.GetUserByEmail(email)
 
 	if err != nil {
-		return nil, exception.NewErr(err.Error(), 500)
-	}
-
-	if user == nil {
-		return nil, exception.NewErr(messages.USER_NOT_FOUND, 404)
+		return nil, err
 	}
 
 	return user, nil
@@ -116,7 +112,7 @@ func (us *UserService) CreateChangePasswordCode(userId int) exception.Error {
 	code, err := us.repo.CreateChangePasswordCode(currentUser.Id)
 
 	if err != nil {
-		return exception.NewErr(err.Error(), 500)
+		return err
 	}
 
 	go us.mailService.SendChangePasswordEmail(currentUser.Email, "Код для смены пароля", *code)
@@ -135,38 +131,38 @@ func (us *UserService) ChangePassword(dto ChangePasswordDto, contextData *models
 	oldMatch := us.passwordService.ComparePasswords(user.PasswordHash, dto.OldPassword)
 
 	if !oldMatch {
-		return nil, exception.NewErr(messages.BAD_PASSWORD, 400)
+		return nil, exception.NewErr(badPassword, exception.STATUS_BAD_REQUEST)
 	}
 
 	newMatch := us.passwordService.ComparePasswords(user.PasswordHash, dto.NewPassword)
 
 	if newMatch {
-		return nil, exception.NewErr(messages.BAD_NEW_PASSWORD, 400)
+		return nil, exception.NewErr(badNewPassword, exception.STATUS_BAD_REQUEST)
 
 	}
 
 	newHash, err := us.passwordService.HashPassword(dto.NewPassword)
 
 	if err != nil {
-		return nil, exception.NewErr(err.Error(), 500)
+		return nil, exception.ServerError(err.Error())
 	}
 
-	_, err = us.repo.FindChangePasswordCode(user.Id, dto.Code)
+	_, ex := us.repo.FindChangePasswordCode(user.Id, dto.Code)
 
-	if err != nil {
-		return nil, exception.NewErr(err.Error(), 404)
+	if ex != nil {
+		return nil, ex
 	}
 
-	err = us.repo.ChangePassword(user.Id, newHash)
+	ex = us.repo.ChangePassword(user.Id, newHash)
 
-	if err != nil {
-		return nil, exception.NewErr(err.Error(), 500)
+	if ex != nil {
+		return nil, ex
 	}
 
-	tokens, err := us.sessionService.Sign(jwt.UserClaims{UserId: user.Id, UserAgent: contextData.UserAgent})
+	tokens, ex := us.sessionService.Sign(jwt.UserClaims{UserId: user.Id, UserAgent: contextData.UserAgent})
 
-	if err != nil {
-		return nil, exception.NewErr(err.Error(), 500)
+	if ex != nil {
+		return nil, ex
 	}
 
 	tokenDto := session.CreateSessionDto{UserId: user.Id, UserAgent: contextData.UserAgent, Token: tokens.RefreshToken}
@@ -176,5 +172,5 @@ func (us *UserService) ChangePassword(dto ChangePasswordDto, contextData *models
 		return nil, appErr
 	}
 
-	return &tokens, nil
+	return tokens, nil
 }

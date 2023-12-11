@@ -30,13 +30,16 @@ definitions:
   brand.Brand:
     properties:
       description:
+        example: бренд одежды...
         type: string
       id:
         example: 2
         type: integer
       img_path:
+        example: /static/category/adidas.webp
         type: string
       slug:
+        example: adidas
         type: string
       title:
         example: adidas
@@ -45,8 +48,11 @@ definitions:
   brand.CreateBrandDto:
     properties:
       description:
+        example: бренд одежды
+        minLength: 10
         type: string
       img_path:
+        example: /static/category/adidas.webp
         type: string
       title:
         example: adidas
@@ -54,6 +60,46 @@ definitions:
         type: string
     required:
     - title
+    type: object
+  brand.UpdateBrandDto:
+    properties:
+      description:
+        example: бренд одежды
+        minLength: 10
+        type: string
+      img_path:
+        example: /static/category/adidas.webp
+        type: string
+      title:
+        example: adidas
+        minLength: 2
+        type: string
+    type: object
+  category.Category:
+    properties:
+      category_id:
+        example: 3
+        type: integer
+      img_path:
+        example: /static/example.webp
+        type: string
+      level:
+        type: integer
+      parent_category_id:
+        example: 2
+        type: integer
+      short_title:
+        type: string
+      slug:
+        example: verhnia-odezhda
+        type: string
+      subcategories:
+        items:
+          $ref: '#/definitions/category.Category'
+        type: array
+      title:
+        example: Верхняя одежда
+        type: string
     type: object
   category.CreateCategoryDto:
     properties:
@@ -74,6 +120,20 @@ definitions:
     required:
     - short_title
     - title
+    type: object
+  category.UpdateCategoryDto:
+    properties:
+      img_path:
+        example: /static/example.webp
+        type: string
+      short_title:
+        example: Верхняя одежда
+        minLength: 3
+        type: string
+      title:
+        example: Мужская Верхняя одежда
+        minLength: 3
+        type: string
     type: object
   exception.AppErr:
     properties:
@@ -126,6 +186,62 @@ definitions:
     - product_model_id
     - value_id
     type: object
+  option.AddSizeToProductModelDto:
+    properties:
+      in_stock:
+        minimum: 0
+        type: integer
+      product_model_id:
+        minimum: 1
+        type: integer
+      size_id:
+        minimum: 1
+        type: integer
+    required:
+    - in_stock
+    - product_model_id
+    - size_id
+    type: object
+  option.CatalogFilters:
+    properties:
+      options:
+        items:
+          $ref: '#/definitions/option.CatalogOption'
+        type: array
+      sizes:
+        items:
+          $ref: '#/definitions/option.CatalogSize'
+        type: array
+    type: object
+  option.CatalogOption:
+    properties:
+      option_id:
+        type: integer
+      slug:
+        type: string
+      title:
+        type: string
+      values:
+        items:
+          $ref: '#/definitions/option.CatalogValue'
+        type: array
+    type: object
+  option.CatalogSize:
+    properties:
+      size_id:
+        type: integer
+      value:
+        type: string
+    type: object
+  option.CatalogValue:
+    properties:
+      option_id:
+        type: integer
+      value:
+        type: string
+      value_id:
+        type: integer
+    type: object
   option.CreateOptionDto:
     properties:
       slug:
@@ -150,6 +266,16 @@ definitions:
       value:
         example: Желтый
         type: string
+    type: object
+  option.CreateSizeDto:
+    properties:
+      literal:
+        type: string
+      numeric:
+        type: string
+    required:
+    - literal
+    - numeric
     type: object
   option.Option:
     properties:
@@ -190,12 +316,61 @@ definitions:
     required:
     - title
     type: object
+  product.AdminProduct:
+    properties:
+      brand:
+        $ref: '#/definitions/product.ProductBrand'
+      category:
+        $ref: '#/definitions/product.ProductCategory'
+      description:
+        example: Отлчиная куртка теплая
+        type: string
+      id:
+        example: 1
+        type: integer
+      models:
+        items:
+          $ref: '#/definitions/product.AdminProductModelRelation'
+        type: array
+      slug:
+        type: string
+      title:
+        example: Куртка теплая
+        type: string
+    type: object
+  product.AdminProductModelRelation:
+    properties:
+      discount:
+        type: integer
+      id:
+        example: 1
+        type: integer
+      image_path:
+        type: string
+      price:
+        example: 15000
+        type: integer
+      product_id:
+        type: integer
+    type: object
+  product.AdminProductResponse:
+    properties:
+      products:
+        items:
+          $ref: '#/definitions/product.AdminProduct'
+        type: array
+      total:
+        type: integer
+    type: object
+  product.Color:
+    properties:
+      value:
+        type: string
+    type: object
   product.CreateProducModelImg:
     properties:
       img_path:
         type: string
-      main:
-        type: boolean
       product_model_id:
         minimum: 1
         type: integer
@@ -215,6 +390,7 @@ definitions:
         type: integer
       description:
         example: Отлчиная куртка теплая
+        minLength: 10
         type: string
       title:
         example: Куртка теплая
@@ -230,10 +406,12 @@ definitions:
       discount:
         example: 10
         type: integer
+      image_path:
+        type: string
       price:
         example: 15000
         minimum: 1
-        type: number
+        type: integer
       product_id:
         example: 10
         minimum: 1
@@ -256,10 +434,6 @@ definitions:
       id:
         example: 1
         type: integer
-      models:
-        items:
-          $ref: '#/definitions/product.ProductModel'
-        type: array
       slug:
         type: string
       title:
@@ -304,6 +478,8 @@ definitions:
       id:
         example: 1
         type: integer
+      image_path:
+        type: string
       images:
         items:
           $ref: '#/definitions/product.ProductModelImg'
@@ -314,9 +490,25 @@ definitions:
         type: array
       price:
         example: 15000
-        type: number
+        type: integer
       product_id:
         type: integer
+      sizes:
+        items:
+          $ref: '#/definitions/product.ProductModelSize'
+        type: array
+    type: object
+  product.ProductModelColors:
+    properties:
+      color:
+        $ref: '#/definitions/product.Color'
+      id:
+        example: 1
+        type: integer
+      image_path:
+        type: string
+      slug:
+        type: string
     type: object
   product.ProductModelImg:
     properties:
@@ -325,17 +517,10 @@ definitions:
         type: integer
       img_path:
         type: string
-      main:
-        type: boolean
-      product_model_id:
-        type: integer
     type: object
   product.ProductModelOption:
     properties:
       id:
-        example: 4
-        type: integer
-      model_id:
         example: 4
         type: integer
       slug:
@@ -356,12 +541,51 @@ definitions:
         type: integer
       info:
         type: string
-      option_id:
-        example: 4
-        type: integer
       value:
         example: Желтый
         type: string
+    type: object
+  product.ProductModelSize:
+    properties:
+      in_stock:
+        type: integer
+      literal:
+        type: string
+      model_id:
+        type: integer
+      size_id:
+        type: integer
+      size_model_id:
+        type: integer
+    type: object
+  product.UpdateProductDto:
+    properties:
+      description:
+        example: Отлчиная куртка теплая
+        minLength: 10
+        type: string
+      title:
+        example: Куртка теплая
+        minLength: 3
+        type: string
+    required:
+    - title
+    type: object
+  product.UpdateProductModelDto:
+    properties:
+      discount:
+        example: 10
+        minimum: 1
+        type: integer
+      image_path:
+        type: string
+      price:
+        example: 15000
+        minimum: 1
+        type: integer
+    required:
+    - discount
+    - price
     type: object
   role.AddRoleToUserDto:
     properties:
@@ -488,6 +712,34 @@ paths:
       tags:
       - auth
   /api/brand/:
+    get:
+      consumes:
+      - application/json
+      description: Get all brands
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/brand.Brand'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Get all brands
+      tags:
+      - brand
     post:
       consumes:
       - application/json
@@ -517,6 +769,43 @@ paths:
           schema:
             $ref: '#/definitions/exception.AppErr'
       summary: Create brand
+      tags:
+      - brand
+  /api/brand/:id:
+    patch:
+      consumes:
+      - application/json
+      description: Update brand
+      parameters:
+      - description: Update brand dto
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/brand.UpdateBrandDto'
+      - description: id parameter
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Update brand
       tags:
       - brand
   /api/brand/:title:
@@ -552,7 +841,35 @@ paths:
       summary: Get brand by title
       tags:
       - brand
-  /api/category/create-category:
+  /api/category/:
+    get:
+      consumes:
+      - application/json
+      description: Get all categories
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/category.Category'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Get all categories
+      tags:
+      - category
     post:
       consumes:
       - application/json
@@ -584,7 +901,140 @@ paths:
       summary: Create category
       tags:
       - category
+  /api/category/:id:
+    patch:
+      consumes:
+      - application/json
+      description: Update category
+      parameters:
+      - description: Update category dto
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/category.UpdateCategoryDto'
+      - description: id parameter
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Update category
+      tags:
+      - category
+  /api/category/with-sub/:slug:
+    get:
+      consumes:
+      - application/json
+      description: Get by slug with sub categories
+      parameters:
+      - description: slug parameter
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/category.Category'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Get by slug with sub categories
+      tags:
+      - category
+  /api/colored-models/:slug:
+    get:
+      consumes:
+      - application/json
+      description: Get color models
+      parameters:
+      - description: Product slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/product.ProductModelColors'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Get color models
+      tags:
+      - product
   /api/option/:
+    get:
+      consumes:
+      - application/json
+      description: Get all options
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/option.Option'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Get all options
+      tags:
+      - option
     post:
       consumes:
       - application/json
@@ -742,6 +1192,103 @@ paths:
       summary: Add option to product model
       tags:
       - option
+  /api/option/catalog-filters/:categorySlug:
+    get:
+      consumes:
+      - application/json
+      description: Get Catalog Filters
+      parameters:
+      - description: categorySlug parameter
+        in: path
+        name: categorySlug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/option.CatalogFilters'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Get get Catalog Filters by category slug
+      tags:
+      - option
+  /api/option/size:
+    post:
+      consumes:
+      - application/json
+      description: Create size with dto
+      parameters:
+      - description: Create size dto
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/option.CreateSizeDto'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Create size
+      tags:
+      - option
+  /api/option/size/add-to-product-model:
+    post:
+      consumes:
+      - application/json
+      description: Add size to product model
+      parameters:
+      - description: Add size to product model dto
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/option.AddSizeToProductModelDto'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Add size to product model
+      tags:
+      - option
   /api/option/value:
     post:
       consumes:
@@ -837,18 +1384,13 @@ paths:
       summary: Create product
       tags:
       - product
-  /api/product/:slug:
-    get:
+  /api/product/:id:
+    delete:
       consumes:
       - application/json
-      description: Get product by title
+      description: Delete product
       parameters:
-      - description: product slug parameter
-        in: path
-        name: slug
-        required: true
-        type: string
-      - description: model id parameter
+      - description: product id parameter
         in: path
         name: id
         required: true
@@ -858,8 +1400,6 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            $ref: '#/definitions/product.Product'
         "400":
           description: Bad Request
           schema:
@@ -872,7 +1412,43 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/exception.AppErr'
-      summary: Get product by title
+      summary: Delete product
+      tags:
+      - product
+    patch:
+      consumes:
+      - application/json
+      description: Update product
+      parameters:
+      - description: product id parameter
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: update product dto
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/product.UpdateProductDto'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Update product
       tags:
       - product
   /api/product/add-photo:
@@ -907,6 +1483,41 @@ paths:
       summary: Add photo to product model
       tags:
       - product
+  /api/product/admin/products-list:
+    get:
+      consumes:
+      - application/json
+      description: Get products for admin panel
+      parameters:
+      - description: Page for pagination
+        in: query
+        name: page
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/product.AdminProductResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      security:
+      - BearerToken: []
+      summary: Get products for admin panel
+      tags:
+      - product
   /api/product/model:
     post:
       consumes:
@@ -937,6 +1548,137 @@ paths:
           schema:
             $ref: '#/definitions/exception.AppErr'
       summary: Create product-model
+      tags:
+      - product
+  /api/product/model-full/:id:
+    get:
+      consumes:
+      - application/json
+      description: Get product model by model id
+      parameters:
+      - description: model id parameter
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/product.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Get product model by model id
+      tags:
+      - product
+  /api/product/model/:id:
+    delete:
+      consumes:
+      - application/json
+      description: Delete product model
+      parameters:
+      - description: product model id parameter
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Delete product model
+      tags:
+      - product
+    patch:
+      consumes:
+      - application/json
+      description: Update product model
+      parameters:
+      - description: model id parameter
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: update product-model dto
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/product.UpdateProductModelDto'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Update product model
+      tags:
+      - product
+  /api/product/remove-photo/:photoId:
+    delete:
+      consumes:
+      - application/json
+      description: Remove photo from product model
+      parameters:
+      - description: Photo id
+        in: path
+        name: photoId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/exception.ValidationError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/exception.AppErr'
+      summary: Remove photo from product model
       tags:
       - product
   /api/role/:

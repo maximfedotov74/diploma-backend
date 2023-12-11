@@ -14,7 +14,7 @@ import (
 )
 
 type SessionService interface {
-	Parse(token string, tokenType jwt.TokenType) (*jwt.UserClaims, error)
+	Parse(token string, tokenType jwt.TokenType) (*jwt.UserClaims, exception.Error)
 }
 
 type UserService interface {
@@ -41,7 +41,7 @@ func (ag *AuthGuard) CheckAuth(ctx *fiber.Ctx) error {
 
 	splittedHeader := strings.Split(authHeader, " ")
 
-	authError := exception.NewErr(messages.UNAUTHORIZED, 401)
+	authError := exception.NewErr(messages.UNAUTHORIZED, exception.STATUS_UNAUTHORIZED)
 
 	if len(splittedHeader) != 2 {
 		return ctx.Status(authError.Status()).JSON(authError)

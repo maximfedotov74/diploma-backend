@@ -26,6 +26,7 @@ type Config struct {
 	RedisPassword      string
 	DaDataKey          string
 	StaticPath         string
+	ClientUrl          string
 }
 
 func createPanicMessage(key string) string {
@@ -55,10 +56,9 @@ func MustGetCfg() *Config {
 			SmtpHost:           getEnv("SMTP_HOST"),
 			SmtpMail:           getEnv("SMTP_MAIl"),
 			AppLink:            getEnv("APP_LINK"),
-			RedisAddr:          getEnv("REDIS_ADDR"),
-			RedisPassword:      getEnv("REDIS_PASSWORD"),
 			DaDataKey:          getEnv("DADATA_API_KEY"),
 			StaticPath:         getEnv("STATIC_FILES_PATH"),
+			ClientUrl:          getEnv("CLIENT_URL"),
 		}
 	})
 	return config

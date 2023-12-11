@@ -15,13 +15,15 @@ type Service interface {
 	Refresh(refreshToken string, userAgent string) (*LoginResponse, exception.Error)
 }
 
+type AuthGuard fiber.Handler
+
 type AuthHandler struct {
 	service   Service
 	router    fiber.Router
-	authGuard fiber.Handler
+	authGuard AuthGuard
 }
 
-func NewAuthHandler(service Service, router fiber.Router, authGuard fiber.Handler) *AuthHandler {
+func NewAuthHandler(service Service, router fiber.Router, authGuard AuthGuard) *AuthHandler {
 	return &AuthHandler{
 		service:   service,
 		router:    router,
@@ -55,7 +57,8 @@ func (ah *AuthHandler) registration(ctx *fiber.Ctx) error {
 	err := ctx.BodyParser(&dto)
 
 	if err != nil {
-		return ctx.Status(400).SendString(err.Error())
+		appErr := exception.NewErr(messages.INVALID_BODY, exception.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
 	validate := validator.New()
@@ -67,7 +70,7 @@ func (ah *AuthHandler) registration(ctx *fiber.Ctx) error {
 		items := exception.ValidationMessages(error_messages)
 		validError := exception.NewValidErr(items)
 
-		return ctx.Status(400).JSON(validError)
+		return ctx.Status(exception.STATUS_BAD_REQUEST).JSON(validError)
 	}
 
 	id, appErr := ah.service.Registration(dto)
@@ -76,7 +79,7 @@ func (ah *AuthHandler) registration(ctx *fiber.Ctx) error {
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
-	return ctx.Status(201).JSON(RegistrationResponse{Id: *id})
+	return ctx.Status(exception.STATUS_CREATED).JSON(RegistrationResponse{Id: *id})
 }
 
 // @Summary Login
@@ -96,7 +99,7 @@ func (ah *AuthHandler) login(ctx *fiber.Ctx) error {
 
 	err := ctx.BodyParser(&dto)
 	if err != nil {
-		return ctx.Status(400).SendString(err.Error())
+		return ctx.Status(exception.STATUS_BAD_REQUEST).SendString(err.Error())
 	}
 
 	validate := validator.New()
@@ -123,7 +126,7 @@ func (ah *AuthHandler) login(ctx *fiber.Ctx) error {
 	ctx.Cookie(access_cookie)
 	ctx.Cookie(refresh_cookie)
 
-	return ctx.Status(201).JSON(resp)
+	return ctx.Status(exception.STATUS_CREATED).JSON(resp)
 
 }
 
@@ -140,8 +143,8 @@ func (ah *AuthHandler) login(ctx *fiber.Ctx) error {
 func (ah *AuthHandler) refreshToken(ctx *fiber.Ctx) error {
 	refreshToken := ctx.Cookies("refresh_token")
 	if refreshToken == "" {
-		appErr := exception.NewErr(messages.UNAUTHORIZED, 400)
-		return ctx.Status(401).JSON(appErr)
+		appErr := exception.NewErr(messages.UNAUTHORIZED, exception.STATUS_UNAUTHORIZED)
+		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
 	userAgent := ctx.Get("User-Agent")
@@ -156,5 +159,5 @@ func (ah *AuthHandler) refreshToken(ctx *fiber.Ctx) error {
 
 	ctx.Cookie(access_cookie)
 	ctx.Cookie(refresh_cookie)
-	return ctx.Status(202).JSON(response)
+	return ctx.Status(exception.STATUS_ACCEPTED).JSON(response)
 }

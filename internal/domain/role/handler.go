@@ -3,6 +3,7 @@ package role
 import (
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"github.com/maximfedotov74/fiber-psql/internal/shared/constants"
 	exception "github.com/maximfedotov74/fiber-psql/internal/shared/error"
 	"github.com/maximfedotov74/fiber-psql/internal/shared/models"
 )
@@ -13,18 +14,17 @@ type Service interface {
 	RemoveRoleFromUser(title string, userId int) exception.Error
 }
 
-type RoleGuard interface {
-	CheckRoles(roles ...string) fiber.Handler
-}
+type RoleGuard func(roles ...string) fiber.Handler
+type AuthGuard fiber.Handler
 
 type RoleHandler struct {
 	service   Service
 	router    fiber.Router
-	authGuard fiber.Handler
+	authGuard AuthGuard
 	roleGuard RoleGuard
 }
 
-func NewRoleHandler(service Service, authGuard fiber.Handler, roleGuard RoleGuard, router fiber.Router) *RoleHandler {
+func NewRoleHandler(service Service, authGuard AuthGuard, roleGuard RoleGuard, router fiber.Router) *RoleHandler {
 
 	return &RoleHandler{
 		service:   service,
@@ -37,9 +37,9 @@ func NewRoleHandler(service Service, authGuard fiber.Handler, roleGuard RoleGuar
 func (rh *RoleHandler) InitRoutes() {
 	roleRouter := rh.router.Group("/role")
 	{
-		roleRouter.Post("/", rh.authGuard, rh.roleGuard.CheckRoles("ADMIN"), rh.createRole)
-		roleRouter.Post("/add-to-user", rh.addRoleToUser)
-		roleRouter.Delete("/remove-from-user", rh.removeRoleFromUser)
+		roleRouter.Post("/", rh.authGuard, rh.roleGuard(constants.ADMIN_ROLE), rh.createRole)
+		roleRouter.Post("/add-to-user", rh.authGuard, rh.roleGuard(constants.ADMIN_ROLE), rh.addRoleToUser)
+		roleRouter.Delete("/remove-from-user", rh.authGuard, rh.roleGuard(constants.ADMIN_ROLE), rh.removeRoleFromUser)
 	}
 }
 
@@ -62,7 +62,7 @@ func (h *RoleHandler) createRole(ctx *fiber.Ctx) error {
 	err := ctx.BodyParser(&body)
 
 	if err != nil {
-		appErr := exception.NewErr(err.Error(), 400)
+		appErr := exception.NewErr(err.Error(), exception.STATUS_BAD_REQUEST)
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
@@ -72,7 +72,7 @@ func (h *RoleHandler) createRole(ctx *fiber.Ctx) error {
 		return ctx.Status(appErr.Status()).SendString(appErr.Message())
 	}
 
-	return ctx.Status(201).JSON(role)
+	return ctx.Status(exception.STATUS_CREATED).JSON(role)
 }
 
 // @Summary Add role to user
@@ -93,7 +93,7 @@ func (h *RoleHandler) addRoleToUser(ctx *fiber.Ctx) error {
 	err := ctx.BodyParser(&body)
 
 	if err != nil {
-		appErr := exception.NewErr(err.Error(), 400)
+		appErr := exception.NewErr(err.Error(), exception.STATUS_BAD_REQUEST)
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
@@ -114,7 +114,7 @@ func (h *RoleHandler) addRoleToUser(ctx *fiber.Ctx) error {
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
-	return ctx.Status(201).JSON(models.СompletedOperation{Completed: true})
+	return ctx.Status(exception.STATUS_CREATED).JSON(models.СompletedOperation{Completed: true})
 
 }
 
@@ -136,7 +136,7 @@ func (h *RoleHandler) removeRoleFromUser(ctx *fiber.Ctx) error {
 	err := ctx.BodyParser(&body)
 
 	if err != nil {
-		appErr := exception.NewErr(err.Error(), 400)
+		appErr := exception.NewErr(err.Error(), exception.STATUS_BAD_REQUEST)
 		return ctx.Status(appErr.Status()).JSON(appErr.Message())
 	}
 
@@ -157,6 +157,6 @@ func (h *RoleHandler) removeRoleFromUser(ctx *fiber.Ctx) error {
 		return ctx.Status(appErr.Status()).SendString(appErr.Message())
 	}
 
-	return ctx.Status(200).JSON(models.СompletedOperation{Completed: true})
+	return ctx.Status(exception.STATUS_OK).JSON(models.СompletedOperation{Completed: true})
 
 }
