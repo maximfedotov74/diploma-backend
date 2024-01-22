@@ -1,0 +1,12 @@
+redis_data
+.env
+docs
+.prod.env
+bin
+*.log
+.DS_Store
+.vscode/
+.idea/
+pgdata
+sql
+static
