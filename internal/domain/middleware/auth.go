@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -11,15 +12,15 @@ import (
 	"github.com/maximfedotov74/diploma-backend/internal/shared/utils"
 )
 
-type SessionService interface {
+type sessionService interface {
 	Parse(token string, tokenType jwt.TokenType) (*jwt.UserClaims, fall.Error)
 }
 
-type UserService interface {
-	GetUserById(id int) (*model.User, fall.Error)
+type userService interface {
+	FindById(ctx context.Context, id int) (*model.User, fall.Error)
 }
 
-func CreateAuthMiddleware(session SessionService, user UserService) fiber.Handler {
+func CreateAuthMiddleware(session sessionService, user userService) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		ctx.Locals(utils.LocalSessionKey, nil)
 		userAgent := ctx.Get(keys.UserAgentHeader)
@@ -45,12 +46,12 @@ func CreateAuthMiddleware(session SessionService, user UserService) fiber.Handle
 			return ctx.Status(authError.Status()).JSON(authError)
 		}
 
-		currentUser, _ := user.GetUserById(claims.UserId)
+		currentUser, _ := user.FindById(ctx.Context(), claims.UserId)
 		if currentUser == nil {
 			return ctx.Status(authError.Status()).JSON(authError)
 		}
 
-		contextData := utils.LocalSession{UserId: currentUser.Id, UserAgent: claims.UserAgent}
+		contextData := model.LocalSession{UserId: currentUser.Id, UserAgent: claims.UserAgent, Roles: currentUser.Roles}
 
 		ctx.Locals(utils.LocalSessionKey, contextData)
 		return ctx.Next()

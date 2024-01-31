@@ -10,9 +10,9 @@ type validationErrorItem struct {
 }
 
 type ValidationError struct {
-	Status  int                   `json:"status" example:"400"`
+	Status  int                   `json:"status" example:"400" validate:"required"`
 	Errors  []validationErrorItem `json:"errors"`
-	Message string                `json:"message"`
+	Message string                `json:"message" validate:"required"`
 }
 
 func NewValidErr(e []validationErrorItem) ValidationError {

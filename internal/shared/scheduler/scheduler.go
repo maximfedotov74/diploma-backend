@@ -12,10 +12,10 @@ func New(cron *gocron.Scheduler) *SchedulerService {
 	return &SchedulerService{Cron: cron}
 }
 
-func (cs *SchedulerService) Start() {
-	cs.Cron.StartAsync()
+func (s *SchedulerService) Start() {
+	s.Cron.StartAsync()
 }
 
-func (cs *SchedulerService) Shutdown() {
-	cs.Cron.Stop()
+func (s *SchedulerService) Shutdown() {
+	s.Cron.Stop()
 }

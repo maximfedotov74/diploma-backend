@@ -1,0 +1,2 @@
+ALTER TABLE IF EXISTS product
+ADD brand_id INT REFERENCES public.brand (brand_id) ON DELETE CASCADE NOT NULL; 

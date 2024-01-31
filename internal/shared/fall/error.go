@@ -6,11 +6,11 @@ type Error interface {
 }
 
 type AppErr struct {
-	MessageText string `json:"message" example:"some error"`
-	StatusCode  int    `json:"status" example:"404"`
+	MessageText string `json:"message" example:"some error" validate:"required"`
+	StatusCode  int    `json:"status" example:"404" validate:"required"`
 }
 
-func NewErr(m string, s int) AppErr {
+func NewErr(m string, s int) Error {
 	return AppErr{MessageText: m, StatusCode: s}
 }
 
