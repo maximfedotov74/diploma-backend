@@ -12,4 +12,5 @@ const (
 	ProductInStockCannotBeLessThanZero = "Количество товара на складе не может быть меньше 0"
 	ProductDeleteError                 = "Ошибка при удалении товара!"
 	ProductModelDeleteError            = "Ошибка при удалении модели товара!"
+	ProductInvalidCategory             = "Категория товара не должна иметь потомков!"
 )

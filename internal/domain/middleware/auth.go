@@ -51,7 +51,8 @@ func CreateAuthMiddleware(session sessionService, user userService) fiber.Handle
 			return ctx.Status(authError.Status()).JSON(authError)
 		}
 
-		contextData := model.LocalSession{UserId: currentUser.Id, UserAgent: claims.UserAgent, Roles: currentUser.Roles}
+		contextData := model.LocalSession{UserId: currentUser.Id, UserAgent: claims.UserAgent,
+			Roles: currentUser.Roles, Email: currentUser.Email}
 
 		ctx.Locals(utils.LocalSessionKey, contextData)
 		return ctx.Next()

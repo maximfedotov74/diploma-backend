@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -19,8 +20,10 @@ import (
 	"github.com/maximfedotov74/diploma-backend/internal/domain/repository"
 	"github.com/maximfedotov74/diploma-backend/internal/domain/service"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/db"
+	"github.com/maximfedotov74/diploma-backend/internal/shared/file"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/jwt"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/mail"
+	"github.com/maximfedotov74/diploma-backend/internal/shared/payment"
 	fiberSwagger "github.com/swaggo/fiber-swagger"
 )
 
@@ -50,9 +53,13 @@ func Start() {
 
 	postgresClient := db.NewPostgresConnection(configuration.DatabaseUrl)
 
+	fileContext := context.Background()
+
+	fileClient := file.New(configuration.MinioApiUrl, configuration.MinioUser, configuration.MinioPassword, "images", fileContext)
+
 	router := fiberApp.Group("/api")
 
-	initDeps(router, postgresClient, configuration)
+	initDeps(router, postgresClient, configuration, fileClient)
 
 	log.Infof("Swagger Api docs working on : %s", "/swagger")
 	log.Infof("Server started on PORT: %s", configuration.Port)
@@ -72,7 +79,7 @@ func Start() {
 	log.Info("Application shutdown successfully!")
 }
 
-func initDeps(router fiber.Router, postgresClient db.PostgresClient, config *config.Config) {
+func initDeps(router fiber.Router, postgresClient db.PostgresClient, config *config.Config, fileClient *file.FileClient) {
 
 	jwtService := jwt.NewJwtService(jwt.JwtConfig{
 		RefreshTokenExp:    config.RefreshTokenExp,
@@ -80,6 +87,8 @@ func initDeps(router fiber.Router, postgresClient db.PostgresClient, config *con
 		RefreshTokenSecret: config.RefreshTokenSecret,
 		AccessTokenSecret:  config.AccessTokenSecret,
 	})
+
+	paymentService := payment.NewPaymentService(config.YouKassaShopId, config.YouKassaSecret, config.AppLink)
 
 	mailService := mail.NewMailService(mail.MailConfig{SmtpKey: config.SmtpKey, SenderEmail: config.SmtpMail, SmtpHost: config.SmtpHost, SmtpPort: config.SmtpPort, AppLink: config.AppLink})
 
@@ -94,6 +103,8 @@ func initDeps(router fiber.Router, postgresClient db.PostgresClient, config *con
 	optionRepo := repository.NewOptionRepository(postgresClient)
 	productRepo := repository.NewProductRepository(postgresClient)
 	feedbackRepo := repository.NewFeedbackRepository(postgresClient)
+	wishRepo := repository.NewWishRepository(postgresClient)
+	orderRepo := repository.NewOrderRepository(postgresClient, wishRepo, productRepo)
 
 	roleService := service.NewRoleService(roleRepo)
 	userService := service.NewUserService(userRepo)
@@ -102,6 +113,8 @@ func initDeps(router fiber.Router, postgresClient db.PostgresClient, config *con
 	optionService := service.NewOptionService(optionRepo)
 	productService := service.NewProductService(productRepo, brandService, categoryService)
 	feedbackService := service.NewFeedbackService(feedbackRepo)
+	wishService := service.NewWishService(wishRepo)
+	orderService := service.NewOrderService(orderRepo, wishService, userService, deliveryRepo, mailService, paymentService)
 
 	authMiddleware := middleware.CreateAuthMiddleware(sessionService, userService)
 	//roleMiddleware := middleware.CreateRoleMiddleware()
@@ -116,6 +129,9 @@ func initDeps(router fiber.Router, postgresClient db.PostgresClient, config *con
 	optionHandler := handler.NewOptionHandler(optionService, router, authMiddleware)
 	productHandler := handler.NewProductHandler(productService, router, authMiddleware)
 	feedbackHandler := handler.NewFeedbackHandler(feedbackService, router, authMiddleware)
+	wishHandler := handler.NewWishHandler(wishService, router, authMiddleware)
+	orderHandler := handler.NewOrderHandler(orderService, router, authMiddleware)
+	fileHandler := handler.NewFileHandler(fileClient, router, authMiddleware)
 
 	roleHandler.InitRoutes()
 	userHandler.InitRoutes()
@@ -126,4 +142,7 @@ func initDeps(router fiber.Router, postgresClient db.PostgresClient, config *con
 	optionHandler.InitRoutes()
 	productHandler.InitRoutes()
 	feedbackHandler.InitRoutes()
+	wishHandler.InitRoutes()
+	orderHandler.InitRoutes()
+	fileHandler.InitRoutes()
 }

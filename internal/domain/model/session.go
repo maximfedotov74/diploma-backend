@@ -16,5 +16,6 @@ type CreateSessionDto struct {
 type LocalSession struct {
 	UserId    int
 	UserAgent string
+	Email     string
 	Roles     []UserRole
 }

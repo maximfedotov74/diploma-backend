@@ -7,6 +7,7 @@ import (
 	"github.com/maximfedotov74/diploma-backend/internal/domain/model"
 	"github.com/maximfedotov74/diploma-backend/internal/domain/msg"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/fall"
+	"github.com/maximfedotov74/diploma-backend/internal/shared/generator"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/utils"
 )
 
@@ -24,12 +25,15 @@ type productRepository interface {
 	DeleteProduct(ctx context.Context, id int) fall.Error
 	CreateModel(ctx context.Context, dto model.CreateProductModelDto, slug string) fall.Error
 	CreateProduct(ctx context.Context, dto model.CreateProductDto) fall.Error
-	AdminGetProducts(page int, brandId *int, categoryId *int) (*model.AdminProductResponse, fall.Error)
+	AdminGetProducts(ctx context.Context, page int, brandId *int, categoryId *int) (*model.AdminProductResponse, fall.Error)
+	AdminGetProductModels(ctx context.Context, id int) ([]model.AdminProductModelRelation, fall.Error)
+	GetCatalogModels(ctx context.Context, categorySlug string, sql generator.GeneratedCatalogQuery) (*model.CatalogResponse, fall.Error)
 }
 
 type productCategoryService interface {
 	FindById(ctx context.Context, id int) (*model.CategoryModel, fall.Error)
 	GetParentSubLevel(ctx context.Context, id int) (*model.CategoryModel, fall.Error)
+	CheckForChildren(ctx context.Context, id int) (*int, fall.Error)
 }
 
 type productBrandService interface {
@@ -49,11 +53,24 @@ func NewProductService(repo productRepository, brandService productBrandService,
 		categoryService: categoryService,
 	}
 }
+func (s *ProductService) AdminGetProductModels(ctx context.Context, id int) ([]model.AdminProductModelRelation, fall.Error) {
+	return s.repo.AdminGetProductModels(ctx, id)
+}
 
 func (s *ProductService) CreateProduct(ctx context.Context, dto model.CreateProductDto) fall.Error {
-	_, ex := s.categoryService.FindById(ctx, dto.CategoryId)
+	cat, ex := s.categoryService.FindById(ctx, dto.CategoryId)
 	if ex != nil {
 		return ex
+	}
+
+	count, ex := s.categoryService.CheckForChildren(ctx, cat.Id)
+
+	if ex != nil {
+		return ex
+	}
+
+	if *count != 0 {
+		return fall.NewErr(msg.ProductInvalidCategory, fall.STATUS_BAD_REQUEST)
 	}
 
 	_, ex = s.brandService.FindById(ctx, dto.BrandId)
@@ -141,6 +158,13 @@ func (s *ProductService) FindModelsColored(ctx context.Context, id int) ([]model
 	return s.repo.FindModelsColored(ctx, id)
 }
 
-func (s *ProductService) AdminGetProducts(page int, brandId *int, categoryId *int) (*model.AdminProductResponse, fall.Error) {
-	return s.repo.AdminGetProducts(page, brandId, categoryId)
+func (s *ProductService) AdminGetProducts(ctx context.Context, page int, brandId *int, categoryId *int) (*model.AdminProductResponse, fall.Error) {
+	return s.repo.AdminGetProducts(ctx, page, brandId, categoryId)
+}
+
+func (ps *ProductService) GetCatalogModels(ctx context.Context, query generator.CatalogFilters) (*model.CatalogResponse, fall.Error) {
+
+	sql := generator.GenerateCatalogQuery(query)
+
+	return ps.repo.GetCatalogModels(ctx, query.Slug, sql)
 }

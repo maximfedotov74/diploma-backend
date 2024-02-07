@@ -21,6 +21,52 @@ func NewCategoryRepository(db db.PostgresClient) *CategoryRepository {
 	return &CategoryRepository{db: db}
 }
 
+func (r *CategoryRepository) GetChildrenCount(ctx context.Context, id int) (*int, fall.Error) {
+	q := "select count(*) from category where parent_category_id = $1;"
+
+	row := r.db.QueryRow(ctx, q, id)
+
+	var count int
+
+	err := row.Scan(&count)
+
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+	return &count, nil
+}
+
+func (r *CategoryRepository) GetTopLevels(ctx context.Context) ([]model.CategoryModel, fall.Error) {
+	q := "SELECT category_id, parent_category_id, slug, title, short_title, img_path FROM category  WHERE parent_category_id IS NULL;"
+
+	rows, err := r.db.Query(ctx, q)
+
+	defer rows.Close()
+
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	var cats []model.CategoryModel
+
+	for rows.Next() {
+		c := model.CategoryModel{}
+		err := rows.Scan(&c.Id, &c.ParentId, &c.Slug, &c.Title, &c.ShortTitle, &c.ImgPath)
+
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+
+		cats = append(cats, c)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	return cats, nil
+}
+
 func (r *CategoryRepository) Create(ctx context.Context, dto model.CreateCategoryDto, slug string) fall.Error {
 	query := "INSERT INTO category (title, img_path, parent_category_id, slug, short_title) VALUES ($1, $2, $3, $4, $5);"
 
@@ -71,10 +117,11 @@ func (r *CategoryRepository) FindByFieldRelation(ctx context.Context, field stri
 
 	rows, err := r.db.Query(ctx, query, value)
 
+	defer rows.Close()
+
 	if err != nil {
 		return nil, fall.ServerError(err.Error())
 	}
-	defer rows.Close()
 
 	result := model.Category{}
 	secondMap := make(map[int]*model.Category)
@@ -240,10 +287,11 @@ func (r *CategoryRepository) GetAll(ctx context.Context) ([]*model.Category, fal
 
 	rows, err := r.db.Query(ctx, query)
 
+	defer rows.Close()
+
 	if err != nil {
 		return nil, fall.ServerError(err.Error())
 	}
-	defer rows.Close()
 
 	firstMap := make(map[int]*model.Category)
 	var firstOrder []int
@@ -384,10 +432,11 @@ func (cr *CategoryRepository) GetCatalogCategories(ctx context.Context, id int, 
 `
 	rows, err := cr.db.Query(ctx, query, id)
 
+	defer rows.Close()
+
 	if err != nil {
 		return nil, fall.ServerError(err.Error())
 	}
-	defer rows.Close()
 
 	result := model.СatalogCategory{}
 	secondMap := make(map[int]*model.СatalogCategory)

@@ -22,9 +22,17 @@ func (err AppErr) Message() string {
 	return err.MessageText
 }
 
-func ServerError(m string) AppErr {
+func ServerError(m string) Error {
 	return AppErr{
 		MessageText: "Internal Server Error \n" + m,
 		StatusCode:  STATUS_INTERNAL_ERROR,
 	}
+}
+
+func GetCreated() Error {
+	return AppErr{StatusCode: STATUS_CREATED, MessageText: "Created"}
+}
+
+func GetOk() Error {
+	return AppErr{StatusCode: STATUS_OK, MessageText: "OK"}
 }

@@ -22,13 +22,14 @@ type Config struct {
 	SmtpPort           int
 	SmtpMail           string
 	AppLink            string
-	RedisAddr          string
-	RedisPassword      string
 	DaDataKey          string
 	StaticPath         string
 	ClientUrl          string
 	YouKassaShopId     string
 	YouKassaSecret     string
+	MinioApiUrl        string
+	MinioUser          string
+	MinioPassword      string
 }
 
 func createPanicMessage(key string) string {
@@ -63,6 +64,9 @@ func MustLoadConfig() *Config {
 			ClientUrl:          getEnv("CLIENT_URL"),
 			YouKassaShopId:     getEnv("YOUKASSA_SHOP_ID"),
 			YouKassaSecret:     getEnv("YOUKASSA_SECRET"),
+			MinioApiUrl:        getEnv("MINIO_API_URL"),
+			MinioUser:          getEnv("MINIO_USER"),
+			MinioPassword:      getEnv("MINIO_PASSWORD"),
 		}
 	})
 	return config

@@ -8,5 +8,6 @@ bin
 .vscode/
 .idea/
 pgdata
+minio
 sql
 static

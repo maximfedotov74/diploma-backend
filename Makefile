@@ -25,8 +25,3 @@ migrate-force:
 create-migration:
 	migrate create -ext sql -dir ./migrations -seq $(SEQ)
 
-
-
-
-
-

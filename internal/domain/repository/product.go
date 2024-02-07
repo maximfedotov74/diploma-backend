@@ -13,6 +13,7 @@ import (
 	"github.com/maximfedotov74/diploma-backend/internal/domain/msg"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/db"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/fall"
+	"github.com/maximfedotov74/diploma-backend/internal/shared/generator"
 )
 
 type ProductRepository struct {
@@ -65,11 +66,11 @@ func (r *ProductRepository) CreateModel(ctx context.Context, dto model.CreatePro
 	return nil
 }
 
-func (pr *ProductRepository) DeleteProduct(ctx context.Context, id int) fall.Error {
+func (r *ProductRepository) DeleteProduct(ctx context.Context, id int) fall.Error {
 	query := `
 	DELETE FROM product WHERE product_id = $1;
 	`
-	_, err := pr.db.Exec(ctx, query, id)
+	_, err := r.db.Exec(ctx, query, id)
 
 	if err != nil {
 		return fall.ServerError(fmt.Sprintf("%s, details: %s", msg.ProductDeleteError, err.Error()))
@@ -77,12 +78,12 @@ func (pr *ProductRepository) DeleteProduct(ctx context.Context, id int) fall.Err
 	return nil
 }
 
-func (pr *ProductRepository) DeleteProductModel(ctx context.Context, id int) fall.Error {
+func (r *ProductRepository) DeleteProductModel(ctx context.Context, id int) fall.Error {
 	query := `
 	DELETE FROM product_model WHERE product_model_id = $1;
 	`
 
-	_, err := pr.db.Exec(ctx, query, id)
+	_, err := r.db.Exec(ctx, query, id)
 
 	if err != nil {
 		return fall.ServerError(fmt.Sprintf("%s, details: %s", msg.ProductModelDeleteError, err.Error()))
@@ -95,11 +96,11 @@ func (r *ProductRepository) UpdateProduct(ctx context.Context, dto model.UpdateP
 	var queries []string
 
 	if dto.Description != nil {
-		queries = append(queries, fmt.Sprintf("description = %s", *dto.Description))
+		queries = append(queries, fmt.Sprintf("description = '%s'", *dto.Description))
 	}
 
 	if dto.Title != nil {
-		queries = append(queries, fmt.Sprintf("title = %s", *dto.Title))
+		queries = append(queries, fmt.Sprintf("title = '%s'", *dto.Title))
 	}
 
 	if len(queries) > 0 {
@@ -199,10 +200,10 @@ func (r *ProductRepository) findProductModelByField(ctx context.Context, field s
 	return &m, nil
 }
 
-func (pr *ProductRepository) AddPhoto(ctx context.Context, dto model.CreateProducModelImg) fall.Error {
+func (r *ProductRepository) AddPhoto(ctx context.Context, dto model.CreateProducModelImg) fall.Error {
 	query := "INSERT INTO product_model_img (img_path, product_model_id) VALUES ($1,$2);"
 
-	_, err := pr.db.Exec(ctx, query, dto.ImgPath, dto.ProductModelId)
+	_, err := r.db.Exec(ctx, query, dto.ImgPath, dto.ProductModelId)
 	if err != nil {
 		return fall.NewErr(msg.ProductAddPhotoError, fall.STATUS_INTERNAL_ERROR)
 	}
@@ -210,10 +211,10 @@ func (pr *ProductRepository) AddPhoto(ctx context.Context, dto model.CreateProdu
 	return nil
 }
 
-func (pr *ProductRepository) RemovePhoto(ctx context.Context, photoId int) fall.Error {
+func (r *ProductRepository) RemovePhoto(ctx context.Context, photoId int) fall.Error {
 	query := "DELETE FROM product_model_img WHERE product_img_id = $1;"
 
-	_, err := pr.db.Exec(ctx, query, photoId)
+	_, err := r.db.Exec(ctx, query, photoId)
 	if err != nil {
 		return fall.NewErr(msg.ProductAddPhotoError, fall.STATUS_INTERNAL_ERROR)
 	}
@@ -221,7 +222,7 @@ func (pr *ProductRepository) RemovePhoto(ctx context.Context, photoId int) fall.
 	return nil
 }
 
-func (pr *ProductRepository) GetProductPage(ctx context.Context, slug string) (*model.ProductRelation, fall.Error) {
+func (r *ProductRepository) GetProductPage(ctx context.Context, slug string) (*model.ProductRelation, fall.Error) {
 
 	query := `
 	select p.product_id as p_id, p.title as p_title,
@@ -247,7 +248,7 @@ func (pr *ProductRepository) GetProductPage(ctx context.Context, slug string) (*
   inner join sizes as sz on ms.size_id = sz.size_id
 	where pm.slug = $1;
 	`
-	rows, err := pr.db.Query(ctx, query, slug)
+	rows, err := r.db.Query(ctx, query, slug)
 
 	if err != nil {
 		return nil, fall.ServerError(err.Error())
@@ -415,9 +416,39 @@ func (pr *ProductRepository) FindModelsColored(ctx context.Context, id int) ([]m
 
 }
 
-func (r *ProductRepository) AdminGetProducts(page int, brandId *int, categoryId *int) (*model.AdminProductResponse, fall.Error) {
+func (r *ProductRepository) AdminGetProductModels(ctx context.Context, id int) ([]model.AdminProductModelRelation, fall.Error) {
+
+	q := "SELECT product_model_id,price,slug,article,discount,main_image_path,product_id FROM product_model WHERE product_id = $1;"
+
+	rows, err := r.db.Query(ctx, q, id)
+	defer rows.Close()
+
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	var models = []model.AdminProductModelRelation{}
+
+	for rows.Next() {
+		m := model.AdminProductModelRelation{}
+
+		err := rows.Scan(&m.Id, &m.Price, &m.Slug, &m.Article, &m.Discount, &m.ImagePath, &m.ProductId)
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+		models = append(models, m)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	return models, nil
+}
+
+func (r *ProductRepository) AdminGetProducts(ctx context.Context, page int, brandId *int, categoryId *int) (*model.AdminProductResponse, fall.Error) {
 	//todo add sort
-	limit := 32
+	limit := 8
 
 	offset := page*limit - limit
 
@@ -444,27 +475,24 @@ func (r *ProductRepository) AdminGetProducts(page int, brandId *int, categoryId 
 		FROM category c
 		INNER JOIN category_tree ct ON c.parent_category_id = ct.category_id
 	)
-	SELECT p.product_id as p_id, p.title as p_title, p.description as p_descr,
+	SELECT distinct p.product_id as p_id, p.title as p_title, p.description as p_descr,
 	ct.category_id as c_id, ct.title as c_title, ct.slug as c_slug, ct.short_title as c_short,
 	ct.img_path as c_img, ct.parent_category_id as ct_parent_id,
 	b.brand_id as b_id, b.title as b_title,  b.slug as b_slug,  b.img_path as b_img, b.description as b_description,
-	m.product_model_id as m_id,  m.slug as m_slug, m.article as m_article, m.price as m_price, m.discount as m_discount, m.main_image_path as m_img, 
-	m.product_id as m_pid,
 	(select count(distinct p.product_id)
 		from product as p
 		inner join category_tree as ct on ct.category_id = p.category_id
 		inner join brand as b on b.brand_id = p.brand_id
-		left join product_model as m on p.product_id = m.product_id
 		%s
 	) as total
 	from product as p
 	inner join category_tree as ct on ct.category_id = p.category_id
 	inner join brand as b on b.brand_id = p.brand_id
-	left join product_model as m on p.product_id = m.product_id
 	%s
+	ORDER BY p.product_id
 	LIMIT $1 OFFSET $2;
 	`, whereCategory, whereBrand, whereBrand)
-	rows, err := r.db.Query(context.Background(), query, limit, offset)
+	rows, err := r.db.Query(ctx, query, limit, offset)
 
 	if err != nil {
 		return nil, fall.ServerError(err.Error())
@@ -474,39 +502,22 @@ func (r *ProductRepository) AdminGetProducts(page int, brandId *int, categoryId 
 
 	var founded bool = false
 
-	modelsMap := make(map[int]model.AdminProductModelRelation)
-	var modelsOrder []int
-	productsMap := make(map[int]*model.AdminProduct)
-	var productOrder []int
+	var products []*model.AdminProduct
 	var totalCount int
 	for rows.Next() {
 
 		product := model.AdminProduct{}
-		model := model.AdminProductModelRelation{}
 
 		err := rows.Scan(&product.Id, &product.Title, &product.Description, &product.Category.Id,
 			&product.Category.Title, &product.Category.Slug, &product.Category.ShortTitle, &product.Category.ImgPath, &product.Category.ParentId,
-			&product.Brand.Id, &product.Brand.Title, &product.Brand.Slug, &product.Brand.ImgPath, &product.Brand.Description,
-			&model.Id, &model.Slug, &model.Article, &model.Price, &model.Discount, &model.ImagePath, &model.ProductId, &totalCount,
+			&product.Brand.Id, &product.Brand.Title, &product.Brand.Slug, &product.Brand.ImgPath, &product.Brand.Description, &totalCount,
 		)
 
 		if err != nil {
 			return nil, fall.ServerError(err.Error())
 		}
 
-		_, ok := productsMap[product.Id]
-		if !ok {
-			productsMap[product.Id] = &product
-			productOrder = append(productOrder, product.Id)
-		}
-
-		if model.Id != nil {
-			_, ok := modelsMap[*model.Id]
-			if !ok {
-				modelsMap[*model.Id] = model
-				modelsOrder = append(modelsOrder, *model.Id)
-			}
-		}
+		products = append(products, &product)
 
 		if !founded {
 			founded = true
@@ -521,17 +532,183 @@ func (r *ProductRepository) AdminGetProducts(page int, brandId *int, categoryId 
 		return &model.AdminProductResponse{Total: 0, Products: []*model.AdminProduct{}}, nil
 	}
 
-	for _, key := range modelsOrder {
-		m := modelsMap[key]
-		p := productsMap[*m.ProductId]
-		p.Models = append(p.Models, m)
+	return &model.AdminProductResponse{Products: products, Total: totalCount}, nil
+}
+
+func (r *ProductRepository) GetCatalogModels(ctx context.Context, categorySlug string, sql generator.GeneratedCatalogQuery) (*model.CatalogResponse, fall.Error) {
+
+	// TODO: сначала получить id подходящих моделей, а потом их получить и вернуть.
+
+	mainJoins := `FROM product p INNER JOIN category_tree ct ON p.category_id = ct.category_id 
+	INNER JOIN brand b on p.brand_id = b.brand_id
+	INNER JOIN product_model pm ON pm.product_id = p.product_id
+	inner join model_sizes ms on ms.product_model_id = pm.product_model_id
+	inner join sizes sz on ms.size_id = sz.size_id
+	inner join product_model_img as pimg on pimg.product_model_id = pm.product_model_id
+	`
+
+	query := fmt.Sprintf(`
+	WITH RECURSIVE category_tree AS (
+		SELECT category_id, title, slug, parent_category_id
+		FROM category
+		WHERE slug = $1
+		UNION ALL
+		SELECT c.category_id, c.title, c.slug, c.parent_category_id
+		FROM category c
+		INNER JOIN category_tree ct ON c.parent_category_id = ct.category_id
+	)
+	SELECT p.product_id as p_id, p.title as p_title,
+	b.brand_id as b_id, b.title as b_title, b.slug as b_slug, ct.category_id as ct_id, ct.title as ct_title, ct.slug as ct_slug,
+	pm.product_model_id as model_id, pm.slug as m_slug, pm_artice as m_artice, pm.price as model_price, pm.discount as model_discount,
+	pm.main_image_path as pm_main_img,
+	pimg.product_img_id as pimg_id, pimg.product_model_id as pimg_model_id, pimg.img_path as pimg_img_path, 
+	sz.size_id as size_id, sz.size_value as size_value, ms.literal_size as literal_size,
+	ms.product_model_id as ms_pm_id, ms.in_stock as ms_in_stock,
+	ms.model_size_id as ms_m_sz_id,
+	(select count(distinct pm.product_model_id)%s %s
+	) as total_count
+	%s %s %s %s;`, mainJoins, sql.MainQuery, mainJoins, sql.MainQuery, sql.SortStatement, sql.Pagination)
+
+	rows, err := r.db.Query(ctx, query, categorySlug)
+
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+	defer rows.Close()
+
+	imagesMap := make(map[int]*model.ProductModelImg)
+	sizesMap := make(map[int]*model.ProductModelSize)
+	modelsMap := make(map[int]*model.CatalogProductModel)
+	var total int
+	var modelOrder []int
+	var imgOrder []int
+	var sizeOrder []int
+
+	for rows.Next() {
+		sz := model.ProductModelSize{}
+		img := model.ProductModelImg{}
+		m := model.CatalogProductModel{}
+
+		err := rows.Scan(&m.ProductId, &m.Title, &m.Brand.Id, &m.Brand.Title, &m.Brand.Slug,
+			&m.Category.Id, &m.Category.Title, &m.Category.Slug, &m.ModelId, &m.Slug, &m.Article, &m.Price, &m.Discount,
+			&m.MainImagePath, &img.Id, &img.ProductModelId, &img.ImgPath, &sz.SizeId, &sz.Value, &sz.Literal, &sz.ModelId, &sz.InStock, &sz.SizeModelId, &total,
+		)
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+		_, ok := modelsMap[m.ModelId]
+		if !ok {
+			modelsMap[m.ModelId] = &m
+			modelOrder = append(modelOrder, m.ModelId)
+		}
+		_, ok = imagesMap[img.Id]
+		if !ok {
+			imagesMap[img.Id] = &img
+			imgOrder = append(imgOrder, img.Id)
+		}
+		_, ok = sizesMap[sz.SizeModelId]
+		if !ok {
+			sizesMap[sz.SizeModelId] = &sz
+			sizeOrder = append(sizeOrder, sz.SizeModelId)
+		}
 	}
 
-	result := make([]*model.AdminProduct, 0, len(productsMap))
-
-	for _, v := range productOrder {
-		p := productsMap[v]
-		result = append(result, p)
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
 	}
-	return &model.AdminProductResponse{Products: result, Total: totalCount}, nil
+
+	for _, v := range imgOrder {
+		img := imagesMap[v]
+		m := modelsMap[img.ProductModelId]
+		m.Images = append(m.Images, img)
+	}
+
+	for _, v := range sizeOrder {
+		sz := sizesMap[v]
+		m := modelsMap[sz.ModelId]
+		m.Sizes = append(m.Sizes, sz)
+	}
+
+	var result []*model.CatalogProductModel
+
+	for _, id := range modelOrder {
+		m := modelsMap[id]
+		result = append(result, m)
+	}
+
+	return &model.CatalogResponse{
+		Models:     result,
+		TotalCount: total,
+	}, nil
+
+}
+
+func (r *ProductRepository) FindModelSizeById(ctx context.Context, id int) (*model.OrderProductModelSize, fall.Error) {
+	query := `
+	SELECT ms.model_size_id,ms.product_model_id,ms.in_stock, m.price, m.discount
+	FROM model_sizes as ms
+	INNER JOIN product_model as m ON ms.product_model_id = m.product_model_id
+	WHERE ms.model_size_id = $1;
+	`
+	row := r.db.QueryRow(ctx, query, id)
+	m := model.OrderProductModelSize{}
+
+	err := row.Scan(&m.SizeModelId, &m.ModelId, &m.InStock, &m.Price, &m.Discount)
+	if err != nil {
+		return nil, fall.NewErr(msg.ProductNotFound, fall.STATUS_NOT_FOUND)
+	}
+	return &m, nil
+}
+
+func (r *ProductRepository) ReduceQuantityInStock(ctx context.Context, modelSizeId int, quantity int, tx db.Transaction) fall.Error {
+	m, ex := r.FindModelSizeById(ctx, modelSizeId)
+	if ex != nil {
+		return ex
+	}
+
+	newQuantity := m.InStock - quantity
+
+	if newQuantity < 0 {
+		return fall.NewErr(msg.ProductInStockCannotBeLessThanZero, fall.STATUS_BAD_REQUEST)
+	}
+
+	query := "UPDATE model_sizes SET in_stock = $1 WHERE model_size_id = $2"
+
+	if tx != nil {
+		_, err := tx.Exec(ctx, query, newQuantity, modelSizeId)
+		if err != nil {
+			return fall.ServerError(err.Error())
+		}
+		return nil
+	}
+	_, err := r.db.Exec(ctx, query, newQuantity, modelSizeId)
+	if err != nil {
+		return fall.ServerError(err.Error())
+	}
+	return nil
+}
+
+func (r *ProductRepository) ReturnQuantityInStock(ctx context.Context, modelSizeId int, quantity int, tx db.Transaction) fall.Error {
+	m, ex := r.FindModelSizeById(ctx, modelSizeId)
+
+	if ex != nil {
+		return ex
+	}
+
+	newQuantity := m.InStock + quantity
+
+	query := "UPDATE model_sizes SET in_stock = $1 WHERE model_size_id = $2"
+
+	if tx != nil {
+		_, err := tx.Exec(ctx, query, newQuantity, modelSizeId)
+		if err != nil {
+			return fall.ServerError(err.Error())
+		}
+		return nil
+	}
+	_, err := r.db.Exec(ctx, query, newQuantity, modelSizeId)
+	if err != nil {
+		return fall.ServerError(err.Error())
+	}
+	return nil
 }

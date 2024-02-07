@@ -19,6 +19,8 @@ type categoryRepository interface {
 	GetAll(ctx context.Context) ([]*model.Category, fall.Error)
 	GetCatalogCategories(ctx context.Context, id int, activeSlug string) (*model.СatalogCategory, fall.Error)
 	Delete(ctx context.Context, slug string) fall.Error
+	GetTopLevels(ctx context.Context) ([]model.CategoryModel, fall.Error)
+	GetChildrenCount(ctx context.Context, id int) (*int, fall.Error)
 }
 
 type CategoryService struct {
@@ -27,6 +29,14 @@ type CategoryService struct {
 
 func NewCategoryService(repo categoryRepository) *CategoryService {
 	return &CategoryService{repo: repo}
+}
+
+func (s *CategoryService) CheckForChildren(ctx context.Context, id int) (*int, fall.Error) {
+	return s.repo.GetChildrenCount(ctx, id)
+}
+
+func (s *CategoryService) GetTopLevels(ctx context.Context) ([]model.CategoryModel, fall.Error) {
+	return s.repo.GetTopLevels(ctx)
 }
 
 func (s *CategoryService) Create(ctx context.Context, dto model.CreateCategoryDto) fall.Error {

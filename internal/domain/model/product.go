@@ -6,8 +6,8 @@ type CreateProducModelImg struct {
 }
 
 type UpdateProductDto struct {
-	Title       *string `json:"title" example:"Куртка теплая" validate:"omitempty"`
-	Description *string `json:"description" example:"Отлчиная куртка теплая" validate:"omitempty"`
+	Title       *string `json:"title" example:"Куртка теплая" validate:"omitempty,min=3"`
+	Description *string `json:"description" example:"Отлчиная куртка теплая" validate:"omitempty,min=10"`
 }
 
 type UpdateProductModelDto struct {
@@ -18,7 +18,7 @@ type UpdateProductModelDto struct {
 
 type CreateProductDto struct {
 	Title       string  `json:"title" example:"Куртка теплая" validate:"required,min=3"`
-	Description *string `json:"description" example:"Отлчиная куртка теплая" validate:"min=10,omitempty"`
+	Description *string `json:"description" example:"Отлчиная куртка теплая" validate:"omitempty,min=10"`
 	CategoryId  int     `json:"category_id" example:"10" validate:"required,min=1"`
 	BrandId     int     `json:"brand_id" example:"10" validate:"required,min=1"`
 }
@@ -26,7 +26,7 @@ type CreateProductDto struct {
 type CreateProductModelDto struct {
 	Price     int32  `json:"price" example:"15000" validate:"required,min=1"`
 	Discount  *byte  `json:"discount" example:"10"`
-	ImagePath string `json:"image_path" validate:"filepath"`
+	ImagePath string `json:"image_path" validate:"required,filepath"`
 	ProductId int    `json:"product_id" example:"10" validate:"required,min=1"`
 }
 
@@ -62,8 +62,8 @@ type ProductModelRelation struct {
 	Price     *int32                `json:"price" example:"15000"`
 	Discount  *byte                 `json:"discount"`
 	ProductId *int                  `json:"product_id"`
-	Slug      string                `json:"slug" validate:"required"`
-	Article   string                `json:"article" validate:"required,min=1"`
+	Slug      *string               `json:"slug" validate:"required"`
+	Article   *string               `json:"article" validate:"required,min=1"`
 	ImagePath string                `json:"image_path" validate:"required"`
 	Sizes     []ProductModelSize    `json:"sizes" validate:"required"`
 	Options   []*ProductModelOption `json:"options"`
@@ -77,6 +77,14 @@ type ProductModelSize struct {
 	Literal     string `json:"literal" example:"M" validate:"required"`
 	Value       string `json:"size_value" example:"44" validate:"required"`
 	InStock     int    `json:"in_stock" example:"120" validate:"required"`
+}
+
+type OrderProductModelSize struct {
+	SizeModelId int   `json:"size_model_id" validate:"required"`
+	ModelId     int   `json:"model_id" validate:"required"`
+	Price       int   `json:"price" validate:"required"`
+	Discount    *byte `json:"discount"`
+	InStock     int   `json:"in_stock" validate:"required"`
 }
 
 type ProductModelOption struct {
@@ -119,20 +127,39 @@ type AdminProductResponse struct {
 }
 
 type AdminProduct struct {
-	Id          int                         `json:"id" example:"1" validate:"required"`
-	Title       string                      `json:"title" example:"Куртка теплая" validate:"required"`
-	Description *string                     `json:"description" example:"Отлчиная куртка теплая"`
-	Category    CategoryModel               `json:"category" validate:"required"`
-	Brand       Brand                       `json:"brand" validate:"required"`
-	Models      []AdminProductModelRelation `json:"models" validate:"required"`
+	Id          int           `json:"id" example:"1" validate:"required"`
+	Title       string        `json:"title" example:"Куртка теплая" validate:"required"`
+	Description *string       `json:"description" example:"Отлчиная куртка теплая"`
+	Category    CategoryModel `json:"category" validate:"required"`
+	Brand       Brand         `json:"brand" validate:"required"`
 }
 
 type AdminProductModelRelation struct {
-	Id        *int    `json:"id" example:"1"`
-	Price     *int32  `json:"price" example:"15000"`
-	Discount  *byte   `json:"discount"`
-	Slug      string  `json:"slug" validate:"required"`
-	Article   string  `json:"article" validate:"required,min=1"`
-	ImagePath *string `json:"image_path"`
-	ProductId *int    `json:"product_id"`
+	Id        int    `json:"id" example:"1" validate:"required"`
+	Price     int32  `json:"price" example:"15000" validate:"required"`
+	Discount  *byte  `json:"discount"`
+	Slug      string `json:"slug" validate:"required"`
+	Article   string `json:"article" validate:"required,min=1"`
+	ImagePath string `json:"image_path" validate:"required"`
+	ProductId int    `json:"product_id" validate:"required"`
+}
+
+type CatalogProductModel struct {
+	ProductId     int                 `json:"product_id" example:"1" validate:"required"`
+	Title         string              `json:"product_title" example:"Ботинки" validate:"required"`
+	Slug          string              `json:"product_slug" example:"botinki" validate:"required"`
+	Article       string              `json:"article" validate:"required,min=1"`
+	ModelId       int                 `json:"model_id" example:"1" validate:"required"`
+	Price         int                 `json:"model_price" example:"10000" validate:"required"`
+	Discount      *byte               `json:"model_discount" example:"15"`
+	MainImagePath string              `json:"model_main_image_path" example:"/static/category/test.webp" validate:"required"`
+	Brand         Brand               `json:"brand" validate:"required"`
+	Category      CategoryModel       `json:"category" validate:"required"`
+	Images        []*ProductModelImg  `json:"images"`
+	Sizes         []*ProductModelSize `json:"sizes"`
+}
+
+type CatalogResponse struct {
+	Models     []*CatalogProductModel `json:"models"`
+	TotalCount int                    `json:"total_count" example:"100" validate:"required"`
 }

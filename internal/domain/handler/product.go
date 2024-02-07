@@ -8,6 +8,7 @@ import (
 	"github.com/maximfedotov74/diploma-backend/internal/domain/middleware"
 	"github.com/maximfedotov74/diploma-backend/internal/domain/model"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/fall"
+	"github.com/maximfedotov74/diploma-backend/internal/shared/generator"
 )
 
 type productService interface {
@@ -23,7 +24,9 @@ type productService interface {
 	UpdateProduct(ctx context.Context, dto model.UpdateProductDto, id int) fall.Error           // +
 	UpdateProductModel(ctx context.Context, dto model.UpdateProductModelDto, id int) fall.Error // +
 	FindModelsColored(ctx context.Context, id int) ([]model.ProductModelColors, fall.Error)     // +
-	AdminGetProducts(page int, brandId *int, categoryId *int) (*model.AdminProductResponse, fall.Error)
+	AdminGetProducts(ctx context.Context, page int, brandId *int, categoryId *int) (*model.AdminProductResponse, fall.Error)
+	AdminGetProductModels(ctx context.Context, id int) ([]model.AdminProductModelRelation, fall.Error)
+	GetCatalogModels(ctx context.Context, query generator.CatalogFilters) (*model.CatalogResponse, fall.Error)
 }
 
 type ProductHandler struct {
@@ -55,10 +58,119 @@ func (h *ProductHandler) InitRoutes() {
 		productRouter.Patch("/:id", h.updateProduct)
 
 		productRouter.Get("/admin", h.adminGetProducts)
+		productRouter.Get("/admin/models/:productId", h.adminGetProductModels)
+		productRouter.Get("/catalog/:categorySlug", h.getCatalogModels)
 
 		productRouter.Get("/model/colors/:id", h.findModelsColored)
 		productRouter.Get("/model/page/:slug", h.getProductPage)
 	}
+}
+
+// @Summary Get catalog models
+// @Description Get catalog models
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param categorySlug path string true "Category slug"
+// @Param size query string false "sizes"
+// @Param brands query string false "brands"
+// @Param sort query string false "sort by"
+// @Param is_sale query string false "get items with sale"
+// @Param price query string false "from - to"
+// @Param page query string false "pagination page"
+// @Router /api/product/catalog/{categorySlug} [get]
+// @Success 200 {object} model.CatalogResponse
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ProductHandler) getCatalogModels(ctx *fiber.Ctx) error {
+
+	slug := ctx.Params("categorySlug")
+
+	query := ctx.Queries()
+
+	sizes, ok := query["size"]
+
+	if ok {
+		delete(query, "size")
+	}
+
+	brands, ok := query["brands"]
+
+	if ok {
+		delete(query, "brands")
+	}
+
+	sortBy, ok := query["sort"]
+
+	if ok {
+		delete(query, "sort")
+	}
+
+	onlyWithDiscount, ok := query["is_sale"]
+
+	if ok {
+		delete(query, "is_sale")
+	}
+
+	price, ok := query["price"]
+
+	if ok {
+		delete(query, "price")
+	}
+
+	page, ok := query["page"]
+
+	if ok {
+		delete(query, "page")
+	}
+
+	filters := generator.CatalogFilters{
+		Options:          query,
+		Slug:             slug,
+		Sizes:            sizes,
+		Brands:           brands,
+		SortBy:           sortBy,
+		OnlyWithDiscount: onlyWithDiscount,
+		Price:            price,
+		Page:             page,
+	}
+
+	res, ex := h.service.GetCatalogModels(ctx.Context(), filters)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(res)
+}
+
+// @Summary Get product models
+// @Security BearerToken
+// @Description Get product models
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param productId path int true "product id"
+// @Router /api/product/admin/models/{productId} [get]
+// @Success 200 {array} model.AdminProductModelRelation
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ProductHandler) adminGetProductModels(ctx *fiber.Ctx) error {
+
+	productId, err := ctx.ParamsInt("productId")
+
+	if err != nil {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	models, ex := h.service.AdminGetProductModels(ctx.Context(), productId)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(models)
 }
 
 // @Summary Get products for admin panel
@@ -91,7 +203,7 @@ func (h *ProductHandler) adminGetProducts(ctx *fiber.Ctx) error {
 		categoryId = &category
 	}
 
-	prods, ex := h.service.AdminGetProducts(page, brandId, categoryId)
+	prods, ex := h.service.AdminGetProducts(ctx.Context(), page, brandId, categoryId)
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
@@ -137,7 +249,7 @@ func (h *ProductHandler) findModelsColored(ctx *fiber.Ctx) error {
 // @Param dto body model.UpdateProductModelDto true "Update product model with body dto"
 // @Param id path int true "product model id"
 // @Router /api/product/model/{id} [patch]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -177,7 +289,8 @@ func (h *ProductHandler) updateProductModel(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Update product
@@ -188,7 +301,7 @@ func (h *ProductHandler) updateProductModel(ctx *fiber.Ctx) error {
 // @Param dto body model.UpdateProductDto true "Update product with body dto"
 // @Param id path int true "product id"
 // @Router /api/product/{id} [patch]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -228,7 +341,8 @@ func (h *ProductHandler) updateProduct(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Delete product
@@ -238,7 +352,7 @@ func (h *ProductHandler) updateProduct(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param id path int true "Product id"
 // @Router /api/product/{id} [delete]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -257,7 +371,8 @@ func (h *ProductHandler) deleteProduct(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Delete product model
@@ -267,7 +382,7 @@ func (h *ProductHandler) deleteProduct(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param modelId path int true "Product model id"
 // @Router /api/product/model/{modelId} [delete]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -286,7 +401,8 @@ func (h *ProductHandler) deleteModel(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Delete product model img
@@ -296,7 +412,7 @@ func (h *ProductHandler) deleteModel(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param imgId path int true "Product model img id"
 // @Router /api/product/model/img/{imgId} [delete]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -315,7 +431,8 @@ func (h *ProductHandler) removePhoto(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Get product model page
@@ -349,7 +466,7 @@ func (h *ProductHandler) getProductPage(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param dto body model.CreateProducModelImg true "Add product model img with body dto"
 // @Router /api/product/model/img [post]
-// @Success 201
+// @Success 201 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -380,7 +497,8 @@ func (h *ProductHandler) addPhoto(ctx *fiber.Ctx) error {
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
-	return ctx.SendStatus(fall.STATUS_CREATED)
+	resp := fall.GetCreated()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Create product
@@ -390,7 +508,7 @@ func (h *ProductHandler) addPhoto(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param dto body model.CreateProductDto true "Create product with body dto"
 // @Router /api/product/ [post]
-// @Success 201
+// @Success 201 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -421,7 +539,8 @@ func (h *ProductHandler) createProduct(ctx *fiber.Ctx) error {
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
-	return ctx.SendStatus(fall.STATUS_CREATED)
+	resp := fall.GetCreated()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Create product model
@@ -431,7 +550,7 @@ func (h *ProductHandler) createProduct(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param dto body model.CreateProductModelDto true "Create product model with body dto"
 // @Router /api/product/model/ [post]
-// @Success 201
+// @Success 201 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -462,5 +581,6 @@ func (h *ProductHandler) createProductModel(ctx *fiber.Ctx) error {
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
-	return ctx.SendStatus(fall.STATUS_CREATED)
+	resp := fall.GetCreated()
+	return ctx.Status(resp.Status()).JSON(resp)
 }

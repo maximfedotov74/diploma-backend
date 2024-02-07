@@ -18,6 +18,7 @@ type categoryService interface {
 	Delete(ctx context.Context, slug string) fall.Error
 	GetAll(ctx context.Context) ([]*model.Category, fall.Error)
 	GetCatalogCategories(ctx context.Context, slug string) (*model.СatalogCategory, fall.Error)
+	GetTopLevels(ctx context.Context) ([]model.CategoryModel, fall.Error)
 }
 
 type CategoryHandler struct {
@@ -39,6 +40,7 @@ func (h *CategoryHandler) InitRoutes() {
 	{
 		{
 			categoryRouter.Get("/", h.getAll)
+			categoryRouter.Get("/top", h.getTopLevels)
 			categoryRouter.Get("/catalog/:slug", h.catalog)
 			categoryRouter.Get("/relation/:slug", h.findBySlugRelation)
 			categoryRouter.Post("/", h.create)
@@ -95,6 +97,27 @@ func (h *CategoryHandler) findBySlug(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Status(fall.STATUS_OK).JSON(category)
+}
+
+// @Summary Get top level categories
+// @Description Get top level categories
+// @Tags category
+// @Accept json
+// @Produce json
+// @Router /api/category/top [get]
+// @Success 200 {array} model.CategoryModel
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *CategoryHandler) getTopLevels(ctx *fiber.Ctx) error {
+
+	categories, err := h.service.GetTopLevels(ctx.Context())
+
+	if err != nil {
+		return ctx.Status(err.Status()).JSON(err)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(categories)
 }
 
 // @Summary Get all categories

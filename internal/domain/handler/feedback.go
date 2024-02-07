@@ -103,7 +103,7 @@ func (fh *FeedbackHandler) getAll(ctx *fiber.Ctx) error {
 // @Tags feedback
 // @Accept json
 // @Produce json
-// @Param id path int true "Feedback Slug"
+// @Param id path int true "Feedback Id"
 // @Router /api/feedback/{id} [delete]
 // @Success 200
 // @Failure 400 {object} fall.ValidationError

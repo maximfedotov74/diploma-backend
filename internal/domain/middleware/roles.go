@@ -8,7 +8,6 @@ import (
 	"github.com/maximfedotov74/diploma-backend/internal/shared/utils"
 )
 
-// TODO add correct Role struct
 func CreateRoleMiddleware() RoleMiddleware {
 	return func(roles ...string) fiber.Handler {
 		return func(ctx *fiber.Ctx) error {
