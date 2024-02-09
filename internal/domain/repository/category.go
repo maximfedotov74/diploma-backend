@@ -282,7 +282,7 @@ func (r *CategoryRepository) GetAll(ctx context.Context) ([]*model.Category, fal
 		FROM category c
 		INNER JOIN category_tree ct ON c.parent_category_id = ct.category_id
 	)
-	SELECT * FROM category_tree;
+	SELECT * FROM category_tree ORDER BY category_id;
 `
 
 	rows, err := r.db.Query(ctx, query)

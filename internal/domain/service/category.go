@@ -50,7 +50,7 @@ func (s *CategoryService) Create(ctx context.Context, dto model.CreateCategoryDt
 }
 
 func (s *CategoryService) Update(ctx context.Context, dto model.UpdateCategoryDto, id int) fall.Error {
-	_, err := s.FindById(ctx, id)
+	current, err := s.FindById(ctx, id)
 
 	if err != nil {
 		return err
@@ -59,12 +59,14 @@ func (s *CategoryService) Update(ctx context.Context, dto model.UpdateCategoryDt
 	var slug *string
 
 	if dto.Title != nil {
-		exist, _ := s.FindByTitle(ctx, *dto.Title)
-		if exist != nil {
-			return fall.NewErr(msg.CategoryTitleUnique, fall.STATUS_BAD_REQUEST)
+		if current.Title != *dto.Title {
+			exist, _ := s.FindByTitle(ctx, *dto.Title)
+			if exist != nil {
+				return fall.NewErr(msg.CategoryTitleUnique, fall.STATUS_BAD_REQUEST)
+			}
+			newSlug := utils.GenerateSlug(*dto.Title)
+			slug = &newSlug
 		}
-		newSlug := utils.GenerateSlug(*dto.Title)
-		slug = &newSlug
 	}
 	err = s.repo.Update(ctx, dto, slug, id)
 	return err

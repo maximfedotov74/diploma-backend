@@ -172,7 +172,7 @@ func (h *CategoryHandler) catalog(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param dto body model.CreateCategoryDto true "Create category with body dto"
 // @Router /api/category/ [post]
-// @Success 201
+// @Success 201 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 401 {object} fall.AppErr
 // @Failure 403 {object} fall.AppErr
@@ -206,7 +206,8 @@ func (h *CategoryHandler) create(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_CREATED)
+	resp := fall.GetCreated()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Update category
@@ -217,7 +218,7 @@ func (h *CategoryHandler) create(ctx *fiber.Ctx) error {
 // @Param dto body model.UpdateCategoryDto true "Update category with body dto"
 // @Param id path int true "Category Id"
 // @Router /api/category/{id} [patch]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 401 {object} fall.AppErr
 // @Failure 403 {object} fall.AppErr
@@ -259,7 +260,8 @@ func (h *CategoryHandler) update(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Delete category by slug
@@ -269,7 +271,7 @@ func (h *CategoryHandler) update(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param slug path string true "Category Slug"
 // @Router /api/category/{slug} [delete]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -283,5 +285,6 @@ func (h *CategoryHandler) delete(ctx *fiber.Ctx) error {
 		return ctx.Status(err.Status()).JSON(err)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }

@@ -41,7 +41,7 @@ func (s *BrandService) Create(ctx context.Context, dto model.CreateBrandDto) fal
 }
 
 func (s *BrandService) Update(ctx context.Context, dto model.UpdateBrandDto, id int) fall.Error {
-	_, err := s.FindById(ctx, id)
+	current, err := s.FindById(ctx, id)
 
 	if err != nil {
 		return err
@@ -50,12 +50,15 @@ func (s *BrandService) Update(ctx context.Context, dto model.UpdateBrandDto, id 
 	var slug *string
 
 	if dto.Title != nil {
-		b, _ := s.FindByTitle(ctx, *dto.Title)
-		if b != nil {
-			return fall.NewErr(msg.BrandExists, fall.STATUS_BAD_REQUEST)
+		if current.Title != *dto.Title {
+			b, _ := s.FindByTitle(ctx, *dto.Title)
+			if b != nil {
+				return fall.NewErr(msg.BrandExists, fall.STATUS_BAD_REQUEST)
+			}
+			newSlug := utils.GenerateSlug(*dto.Title)
+			slug = &newSlug
 		}
-		newSlug := utils.GenerateSlug(*dto.Title)
-		slug = &newSlug
+
 	}
 
 	err = s.repo.UpdateBrand(ctx, dto, slug, id)

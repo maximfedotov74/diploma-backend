@@ -50,6 +50,7 @@ func (r *BrandRepository) FindByFeild(ctx context.Context, field string, value a
 func (r *BrandRepository) GetAll(ctx context.Context) ([]model.Brand, fall.Error) {
 	query := `
 	SELECT brand_id, title, slug, description, img_path FROM brand
+	ORDER BY brand_id;
 	`
 
 	rows, err := r.db.Query(ctx, query)

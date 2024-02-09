@@ -50,7 +50,7 @@ func (h *BrandHandler) InitRoutes() {
 // @Produce json
 // @Param slug path string true "Brand Slug"
 // @Router /api/brand/{slug} [delete]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -64,7 +64,8 @@ func (h *BrandHandler) delete(ctx *fiber.Ctx) error {
 		return ctx.Status(err.Status()).JSON(err)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Get brand by slug
@@ -120,7 +121,7 @@ func (h *BrandHandler) getAll(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param dto body model.CreateBrandDto true "Create brand with body dto"
 // @Router /api/brand/ [post]
-// @Success 201
+// @Success 201 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -152,7 +153,8 @@ func (h *BrandHandler) create(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_CREATED)
+	resp := fall.GetCreated()
+	return ctx.Status(resp.Status()).JSON(resp)
 
 }
 
@@ -164,7 +166,7 @@ func (h *BrandHandler) create(ctx *fiber.Ctx) error {
 // @Param dto body model.UpdateBrandDto true "Update brand with body dto"
 // @Param id path int true "Brand id"
 // @Router /api/brand/{id} [patch]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -204,6 +206,7 @@ func (h *BrandHandler) update(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 
 }
