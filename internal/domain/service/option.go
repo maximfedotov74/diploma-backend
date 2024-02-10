@@ -25,6 +25,7 @@ type optionRepository interface {
 	AddSizeToProductModel(ctx context.Context, dto model.AddSizeToProductModelDto) fall.Error
 	GetCatalogFilters(ctx context.Context, categorySlug string) (*model.CatalogFilters, fall.Error)
 	CheckValueInOption(ctx context.Context, valueId int, optionId int) fall.Error
+	GetAllSizes(ctx context.Context) ([]model.Size, fall.Error)
 }
 
 type OptionService struct {
@@ -33,6 +34,10 @@ type OptionService struct {
 
 func NewOptionService(repo optionRepository) *OptionService {
 	return &OptionService{repo: repo}
+}
+
+func (s *OptionService) GetAllSizes(ctx context.Context) ([]model.Size, fall.Error) {
+	return s.repo.GetAllSizes(ctx)
 }
 
 func (s *OptionService) GetCatalogFilters(ctx context.Context, slug string) (*model.CatalogFilters, fall.Error) {
@@ -108,10 +113,18 @@ func (s *OptionService) AddSizeToProductModel(ctx context.Context, dto model.Add
 
 func (s *OptionService) UpdateOption(ctx context.Context, dto model.UpdateOptionDto, id int) fall.Error {
 
+	current, err := s.FindOptionById(ctx, id)
+
+	if err != nil {
+		return err
+	}
+
 	if dto.Slug != nil {
-		opt, _ := s.FindOptionBySlug(ctx, *dto.Slug)
-		if opt != nil {
-			return fall.NewErr(msg.OptionAlreadyExists, fall.STATUS_BAD_REQUEST)
+		if current.Slug != *dto.Slug {
+			opt, _ := s.FindOptionBySlug(ctx, *dto.Slug)
+			if opt != nil {
+				return fall.NewErr(msg.OptionAlreadyExists, fall.STATUS_BAD_REQUEST)
+			}
 		}
 	}
 	return s.repo.UpdateOption(ctx, dto, id)

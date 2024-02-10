@@ -127,10 +127,9 @@ func (r *OptionRepository) DeleteOptionFromProductModel(ctx context.Context, pro
 
 func (r *OptionRepository) GetAll(ctx context.Context) ([]model.Option, fall.Error) {
 	query := `
-	SELECT op.option_id as op_id, op.title as op_title, op.slug as op_slug, op.for_catalog,
-  v.option_value_id as v_id, v.value as v_value, v.info as v_info, v.option_id as v_option_id
+	SELECT op.option_id as op_id, op.title as op_title, op.slug as op_slug, op.for_catalog
   FROM option as op
-  LEFT JOIN option_value as v ON v.option_id = op.option_id
+	ORDER BY op.option_id;
 	`
 	rows, err := r.db.Query(ctx, query)
 
@@ -140,63 +139,26 @@ func (r *OptionRepository) GetAll(ctx context.Context) ([]model.Option, fall.Err
 
 	defer rows.Close()
 
-	optionsMap := make(map[int]model.Option)
-	valuesMap := make(map[int]model.OptionValue)
-	var optionsOrder []int
-	var valuesOrder []int
-
-	var founded bool = false
+	var options []model.Option
 
 	for rows.Next() {
 		opt := model.Option{}
-		v := model.OptionValue{}
 
-		err := rows.Scan(&opt.Id, &opt.Title, &opt.Slug, &opt.ForCatalog, &v.Id, &v.Value, &v.Info, &v.OptionId)
+		err := rows.Scan(&opt.Id, &opt.Title, &opt.Slug, &opt.ForCatalog)
 
 		if err != nil {
 			return nil, fall.ServerError(err.Error())
 		}
 
-		if v.Id != nil {
-			_, ok := valuesMap[*v.Id]
-			if !ok {
-				valuesMap[*v.Id] = v
-				valuesOrder = append(valuesOrder, *v.Id)
-			}
-		}
-		_, ok := optionsMap[opt.Id]
-		if !ok {
-			optionsMap[opt.Id] = opt
-			optionsOrder = append(optionsOrder, opt.Id)
-		}
-		if !founded {
-			founded = true
-		}
+		options = append(options, opt)
+
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, fall.ServerError(err.Error())
 	}
 
-	result := make([]model.Option, 0, len(optionsMap))
-
-	if !founded {
-		return result, nil
-	}
-
-	for _, v := range valuesOrder {
-		val := valuesMap[v]
-		opt := optionsMap[*val.OptionId]
-		opt.Values = append(opt.Values, val)
-		optionsMap[opt.Id] = opt
-	}
-
-	for _, v := range optionsOrder {
-		opt := optionsMap[v]
-		result = append(result, opt)
-	}
-
-	return result, nil
+	return options, nil
 
 }
 
@@ -477,4 +439,33 @@ func (r *OptionRepository) UpdateOptionValue(ctx context.Context, dto model.Upda
 		}
 	}
 	return nil
+}
+
+func (r *OptionRepository) GetAllSizes(ctx context.Context) ([]model.Size, fall.Error) {
+
+	q := "SELECT size_id,size_value FROM sizes ORDER BY size_value;"
+
+	rows, err := r.db.Query(ctx, q)
+	defer rows.Close()
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	var sizes []model.Size
+
+	for rows.Next() {
+		s := model.Size{}
+
+		err := rows.Scan(&s.Id, &s.Value)
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+		sizes = append(sizes, s)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	return sizes, nil
 }

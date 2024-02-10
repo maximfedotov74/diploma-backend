@@ -18,7 +18,7 @@ type UpdateOptionValueDto struct {
 
 type CreateOptionValueDto struct {
 	Value    string  `json:"value" example:"Желтый" validate:"required,min=1"`
-	Info     *string `json:"info"`
+	Info     *string `json:"info" validate:"omitempty,min=3"`
 	OptionId int     `json:"option_id" example:"4" validate:"required,min=1"`
 }
 
@@ -48,16 +48,15 @@ type Option struct {
 }
 
 type OptionValue struct {
-	Id       *int    `json:"id" example:"44"`
-	Value    *string `json:"value" example:"Желтый"`
+	Id       *int    `json:"id" example:"44" validate:"required"`
+	Value    *string `json:"value" example:"Желтый" validate:"required"`
 	Info     *string `json:"info"`
-	OptionId *int    `json:"option_id" example:"4"`
+	OptionId *int    `json:"option_id" example:"4" validate:"required"`
 }
 
 type Size struct {
-	Id      int    `json:"id" example:"44" validate:"required"`
-	Numeric string `json:"numeric" validate:"required"`
-	Literal string `json:"literal" validate:"required"`
+	Id    int    `json:"id" example:"1" validate:"required"`
+	Value string `json:"value" validate:"44"`
 }
 
 type CatalogOption struct {

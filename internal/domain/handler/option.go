@@ -13,7 +13,7 @@ import (
 type optionService interface {
 	GetCatalogFilters(ctx context.Context, slug string) (*model.CatalogFilters, fall.Error)
 	GetAll(ctx context.Context) ([]model.Option, fall.Error)
-	FindOptionBySlug(ctx context.Context, slug string) (*model.Option, fall.Error)                // +
+	FindOptionById(ctx context.Context, id int) (*model.Option, fall.Error)                       // +
 	CreateOption(ctx context.Context, dto model.CreateOptionDto) fall.Error                       // +
 	CreateSize(ctx context.Context, dto model.CreateSizeDto) fall.Error                           // +
 	CreateValue(ctx context.Context, dto model.CreateOptionValueDto) fall.Error                   // +
@@ -26,6 +26,7 @@ type optionService interface {
 	AddSizeToProductModel(ctx context.Context, dto model.AddSizeToProductModelDto) fall.Error     // +
 	UpdateOption(ctx context.Context, dto model.UpdateOptionDto, id int) fall.Error               // +
 	UpdateOptionValue(ctx context.Context, dto model.UpdateOptionValueDto, id int) fall.Error     // +
+	GetAllSizes(ctx context.Context) ([]model.Size, fall.Error)
 }
 
 type OptionHandler struct {
@@ -59,7 +60,8 @@ func (h *OptionHandler) InitRoutes() {
 		optionRouter.Patch("/value/:id", h.updateOptionValue)
 		optionRouter.Get("/catalog/:slug", h.getCatalogFilters)
 		optionRouter.Get("/option", h.getAll)
-		optionRouter.Get("/option/:slug", h.findBySlug)
+		optionRouter.Get("/option/:id", h.findById)
+		optionRouter.Get("/size", h.getAllSizes)
 
 	}
 }
@@ -88,6 +90,28 @@ func (h *OptionHandler) getCatalogFilters(ctx *fiber.Ctx) error {
 	return ctx.Status(fall.STATUS_OK).JSON(filters)
 }
 
+// @Summary Get all sizes
+// @Description Get all sizes
+// @Tags characteristics
+// @Accept json
+// @Produce json
+// @Router /api/characteristics/size [get]
+// @Success 200 {array} model.Size
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *OptionHandler) getAllSizes(ctx *fiber.Ctx) error {
+
+	sizes, err := h.service.GetAllSizes(ctx.Context())
+
+	if err != nil {
+		return ctx.Status(err.Status()).JSON(err)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(sizes)
+
+}
+
 // @Summary Get all options
 // @Description Get all options
 // @Tags characteristics
@@ -110,25 +134,30 @@ func (h *OptionHandler) getAll(ctx *fiber.Ctx) error {
 
 }
 
-// @Summary Get option by slug
-// @Description Get option by slug
+// @Summary Get option by id
+// @Description Get option by id
 // @Tags characteristics
 // @Accept json
 // @Produce json
-// @Param slug path string true "Option Slug"
-// @Router /api/characteristics/option/{slug} [get]
+// @Param id path int true "Option id"
+// @Router /api/characteristics/option/{id} [get]
 // @Success 200 {object} model.Option
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
-func (h *OptionHandler) findBySlug(ctx *fiber.Ctx) error {
+func (h *OptionHandler) findById(ctx *fiber.Ctx) error {
 
-	slug := ctx.Params("slug")
-
-	opt, err := h.service.FindOptionBySlug(ctx.Context(), slug)
+	id, err := ctx.ParamsInt("id")
 
 	if err != nil {
-		return ctx.Status(err.Status()).JSON(err)
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	opt, ex := h.service.FindOptionById(ctx.Context(), id)
+
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
 	return ctx.Status(fall.STATUS_OK).JSON(opt)
@@ -141,7 +170,7 @@ func (h *OptionHandler) findBySlug(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param id path int true "Product Model Option id"
 // @Router /api/characteristics/size/model/{id} [delete]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -160,7 +189,8 @@ func (h *OptionHandler) deleteSizeFromProductModel(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Delete option from product model by id
@@ -170,7 +200,7 @@ func (h *OptionHandler) deleteSizeFromProductModel(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param id path int true "Product Model Option id"
 // @Router /api/characteristics/option/model/{id} [delete]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -189,7 +219,8 @@ func (h *OptionHandler) deleteOptionFromProductModel(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Add size to product model
@@ -199,7 +230,7 @@ func (h *OptionHandler) deleteOptionFromProductModel(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param dto body model.AddSizeToProductModelDto true "Add size to product model with body dto"
 // @Router /api/characteristics/size/model [post]
-// @Success 201
+// @Success 201 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -231,7 +262,8 @@ func (h *OptionHandler) addSizeToProductModel(ctx *fiber.Ctx) error {
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
-	return ctx.SendStatus(fall.STATUS_CREATED)
+	resp := fall.GetCreated()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Add option to product model
@@ -241,7 +273,7 @@ func (h *OptionHandler) addSizeToProductModel(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param dto body model.AddOptionToProductModelDto true "Add option to product model with body dto"
 // @Router /api/characteristics/option/model [post]
-// @Success 201
+// @Success 201 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -273,7 +305,8 @@ func (h *OptionHandler) addOptionToProductModel(ctx *fiber.Ctx) error {
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
-	return ctx.SendStatus(fall.STATUS_CREATED)
+	resp := fall.GetCreated()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Delete size by id
@@ -283,7 +316,7 @@ func (h *OptionHandler) addOptionToProductModel(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param id path int true "Size id"
 // @Router /api/characteristics/size/{id} [delete]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -302,7 +335,8 @@ func (h *OptionHandler) deleteSize(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Delete option by id
@@ -312,7 +346,7 @@ func (h *OptionHandler) deleteSize(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param id path int true "Option id"
 // @Router /api/characteristics/option/{id} [delete]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -331,7 +365,8 @@ func (h *OptionHandler) deleteOption(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Delete option value by id
@@ -341,7 +376,7 @@ func (h *OptionHandler) deleteOption(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param id path int true "Option id"
 // @Router /api/characteristics/value/{id} [delete]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -360,7 +395,8 @@ func (h *OptionHandler) deleteValue(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Create size
@@ -370,7 +406,7 @@ func (h *OptionHandler) deleteValue(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param dto body model.CreateSizeDto true "Create size with body dto"
 // @Router /api/characteristics/size [post]
-// @Success 201
+// @Success 201 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -402,7 +438,8 @@ func (h *OptionHandler) createSize(ctx *fiber.Ctx) error {
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
-	return ctx.SendStatus(fall.STATUS_CREATED)
+	resp := fall.GetCreated()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Create option
@@ -412,7 +449,7 @@ func (h *OptionHandler) createSize(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param dto body model.CreateOptionDto true "Create option with body dto"
 // @Router /api/characteristics/option [post]
-// @Success 201
+// @Success 201 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -444,7 +481,8 @@ func (h *OptionHandler) createOption(ctx *fiber.Ctx) error {
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
-	return ctx.SendStatus(fall.STATUS_CREATED)
+	resp := fall.GetCreated()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Create option value
@@ -454,7 +492,7 @@ func (h *OptionHandler) createOption(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param dto body model.CreateOptionValueDto true "Create option value with body dto"
 // @Router /api/characteristics/value [post]
-// @Success 201
+// @Success 201 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -486,7 +524,8 @@ func (h *OptionHandler) createOptionValue(ctx *fiber.Ctx) error {
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
-	return ctx.SendStatus(fall.STATUS_CREATED)
+	resp := fall.GetCreated()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Update option
@@ -497,7 +536,7 @@ func (h *OptionHandler) createOptionValue(ctx *fiber.Ctx) error {
 // @Param dto body model.UpdateOptionDto true "Update option with body dto"
 // @Param id path int true "Option id"
 // @Router /api/characteristics/option/{id} [patch]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -535,7 +574,8 @@ func (h *OptionHandler) updateOption(ctx *fiber.Ctx) error {
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Update option value
@@ -546,7 +586,7 @@ func (h *OptionHandler) updateOption(ctx *fiber.Ctx) error {
 // @Param dto body model.UpdateOptionValueDto true "Update option value with body dto"
 // @Param id path int true "Value id"
 // @Router /api/characteristics/value/{id} [patch]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -584,5 +624,6 @@ func (h *OptionHandler) updateOptionValue(ctx *fiber.Ctx) error {
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
