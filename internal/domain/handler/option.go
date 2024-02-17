@@ -11,8 +11,8 @@ import (
 )
 
 type optionService interface {
-	GetCatalogFilters(ctx context.Context, slug string) (*model.CatalogFilters, fall.Error)
-	GetAll(ctx context.Context) ([]model.Option, fall.Error)
+	GetCatalogFilters(ctx context.Context, categorySlug *string, brandSlug *string, actionId *string) (*model.CatalogFilters, fall.Error)
+	GetAll(ctx context.Context) ([]*model.Option, fall.Error)
 	FindOptionById(ctx context.Context, id int) (*model.Option, fall.Error)                       // +
 	CreateOption(ctx context.Context, dto model.CreateOptionDto) fall.Error                       // +
 	CreateSize(ctx context.Context, dto model.CreateSizeDto) fall.Error                           // +
@@ -60,7 +60,6 @@ func (h *OptionHandler) InitRoutes() {
 		optionRouter.Patch("/value/:id", h.updateOptionValue)
 		optionRouter.Get("/catalog/:slug", h.getCatalogFilters)
 		optionRouter.Get("/option", h.getAll)
-		optionRouter.Get("/option/:id", h.findById)
 		optionRouter.Get("/size", h.getAllSizes)
 
 	}
@@ -81,7 +80,7 @@ func (h *OptionHandler) getCatalogFilters(ctx *fiber.Ctx) error {
 
 	slug := ctx.Params("slug")
 
-	filters, err := h.service.GetCatalogFilters(ctx.Context(), slug)
+	filters, err := h.service.GetCatalogFilters(ctx.Context(), &slug, nil, nil)
 
 	if err != nil {
 		return ctx.Status(err.Status()).JSON(err)
@@ -132,35 +131,6 @@ func (h *OptionHandler) getAll(ctx *fiber.Ctx) error {
 
 	return ctx.Status(fall.STATUS_OK).JSON(options)
 
-}
-
-// @Summary Get option by id
-// @Description Get option by id
-// @Tags characteristics
-// @Accept json
-// @Produce json
-// @Param id path int true "Option id"
-// @Router /api/characteristics/option/{id} [get]
-// @Success 200 {object} model.Option
-// @Failure 400 {object} fall.ValidationError
-// @Failure 404 {object} fall.AppErr
-// @Failure 500 {object} fall.AppErr
-func (h *OptionHandler) findById(ctx *fiber.Ctx) error {
-
-	id, err := ctx.ParamsInt("id")
-
-	if err != nil {
-		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
-		return ctx.Status(appErr.Status()).JSON(appErr)
-	}
-
-	opt, ex := h.service.FindOptionById(ctx.Context(), id)
-
-	if ex != nil {
-		return ctx.Status(ex.Status()).JSON(ex)
-	}
-
-	return ctx.Status(fall.STATUS_OK).JSON(opt)
 }
 
 // @Summary Delete size from product model by id

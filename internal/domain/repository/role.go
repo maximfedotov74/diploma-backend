@@ -42,11 +42,11 @@ func (r *RoleRepository) FindRoleByTitle(ctx context.Context, title string) (*mo
 	LEFT JOIN public.user as u ON u.user_id = ur.user_id
 	WHERE r.title = $1;`
 	rows, err := r.db.Query(ctx, query, title)
-	defer rows.Close()
 
 	if err != nil {
 		return nil, fall.ServerError(err.Error())
 	}
+	defer rows.Close()
 	founded := false
 	role := model.Role{}
 
@@ -88,11 +88,11 @@ func (r *RoleRepository) Find(ctx context.Context) ([]model.Role, fall.Error) {
 	LEFT JOIN public.user as u ON u.user_id = ur.user_id;`
 
 	rows, err := r.db.Query(ctx, query)
-	defer rows.Close()
 
 	if err != nil {
 		return nil, fall.ServerError(err.Error())
 	}
+	defer rows.Close()
 
 	founded := false
 	rolesMap := make(map[int]model.Role)

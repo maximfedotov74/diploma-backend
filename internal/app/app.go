@@ -7,7 +7,9 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
+	"github.com/go-co-op/gocron"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -18,6 +20,7 @@ import (
 	"github.com/maximfedotov74/diploma-backend/internal/domain/handler"
 	"github.com/maximfedotov74/diploma-backend/internal/domain/middleware"
 	"github.com/maximfedotov74/diploma-backend/internal/domain/repository"
+	"github.com/maximfedotov74/diploma-backend/internal/domain/scheduler"
 	"github.com/maximfedotov74/diploma-backend/internal/domain/service"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/db"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/file"
@@ -59,7 +62,11 @@ func Start() {
 
 	router := fiberApp.Group("/api")
 
-	initDeps(router, postgresClient, configuration, fileClient)
+	cron := gocron.NewScheduler(time.UTC)
+
+	cron.StartAsync()
+
+	initDeps(router, postgresClient, configuration, fileClient, cron)
 
 	log.Infof("Swagger Api docs working on : %s", "/swagger")
 	log.Infof("Server started on PORT: %s", configuration.Port)
@@ -76,10 +83,12 @@ func Start() {
 	log.Info("Cleaning")
 	fiberApp.Shutdown()
 	postgresClient.Close()
+	cron.Stop()
 	log.Info("Application shutdown successfully!")
 }
 
-func initDeps(router fiber.Router, postgresClient db.PostgresClient, config *config.Config, fileClient *file.FileClient) {
+func initDeps(router fiber.Router, postgresClient db.PostgresClient,
+	config *config.Config, fileClient *file.FileClient, cron *gocron.Scheduler) {
 
 	jwtService := jwt.NewJwtService(jwt.JwtConfig{
 		RefreshTokenExp:    config.RefreshTokenExp,
@@ -105,6 +114,7 @@ func initDeps(router fiber.Router, postgresClient db.PostgresClient, config *con
 	feedbackRepo := repository.NewFeedbackRepository(postgresClient)
 	wishRepo := repository.NewWishRepository(postgresClient)
 	orderRepo := repository.NewOrderRepository(postgresClient, wishRepo, productRepo)
+	actionRepo := repository.NewActionRepository(postgresClient)
 
 	roleService := service.NewRoleService(roleRepo)
 	userService := service.NewUserService(userRepo)
@@ -115,13 +125,14 @@ func initDeps(router fiber.Router, postgresClient db.PostgresClient, config *con
 	feedbackService := service.NewFeedbackService(feedbackRepo)
 	wishService := service.NewWishService(wishRepo)
 	orderService := service.NewOrderService(orderRepo, wishService, userService, deliveryRepo, mailService, paymentService)
+	actionService := service.NewActionService(actionRepo, productService)
 
 	authMiddleware := middleware.CreateAuthMiddleware(sessionService, userService)
-	//roleMiddleware := middleware.CreateRoleMiddleware()
+	roleMiddleware := middleware.CreateRoleMiddleware()
 
 	authService := service.NewAuthService(userService, sessionService, mailService)
-	roleHandler := handler.NewRoleHandler(roleService, router)
-	userHandler := handler.NewUserHandler(userService, router)
+	roleHandler := handler.NewRoleHandler(roleService, router, authMiddleware, roleMiddleware)
+	userHandler := handler.NewUserHandler(userService, router, authMiddleware)
 	authHandler := handler.NewAuthHandler(authService, router, authMiddleware)
 	brandHandler := handler.NewBrandHandler(brandService, router, authMiddleware)
 	categoryHandler := handler.NewCategoryHandler(categoryService, router, authMiddleware)
@@ -132,6 +143,14 @@ func initDeps(router fiber.Router, postgresClient db.PostgresClient, config *con
 	wishHandler := handler.NewWishHandler(wishService, router, authMiddleware)
 	orderHandler := handler.NewOrderHandler(orderService, router, authMiddleware)
 	fileHandler := handler.NewFileHandler(fileClient, router, authMiddleware)
+	actionHandler := handler.NewActionHandler(actionService, router, authMiddleware)
+
+	// TODO: add popular products handler
+	// TODO: add last views products
+	// TODO: add similar products
+
+	actionScheduler := scheduler.NewActionScheduler(cron, postgresClient)
+	actionScheduler.Start()
 
 	roleHandler.InitRoutes()
 	userHandler.InitRoutes()
@@ -145,4 +164,5 @@ func initDeps(router fiber.Router, postgresClient db.PostgresClient, config *con
 	wishHandler.InitRoutes()
 	orderHandler.InitRoutes()
 	fileHandler.InitRoutes()
+	actionHandler.InitRoutes()
 }

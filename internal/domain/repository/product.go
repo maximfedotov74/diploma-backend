@@ -40,7 +40,7 @@ func (r *ProductRepository) CreateProduct(ctx context.Context, dto model.CreateP
 
 func (r *ProductRepository) CreateModel(ctx context.Context, dto model.CreateProductModelDto, slug string) fall.Error {
 
-	q := fmt.Sprintf(`
+	q := `
 	WITH generated AS (
 		SELECT uuid_generate_v4() AS generated_article,
 		$1::integer as price_param,
@@ -54,7 +54,7 @@ func (r *ProductRepository) CreateModel(ctx context.Context, dto model.CreatePro
 	$5 || '-' || LEFT(REPLACE(generated_article::text, '-', ''), 12),
 	price_param,discount_param,img_param,product_id_param
 	FROM generated;
-	`)
+	`
 
 	_, err := r.db.Exec(ctx, q, dto.Price, dto.Discount, dto.ImagePath, dto.ProductId, slug)
 
@@ -232,7 +232,7 @@ func (r *ProductRepository) GetProductPage(ctx context.Context, slug string) (*m
 	b.brand_id as b_id, b.title as b_title, b.slug as b_slug, b.img_path as b_img_path, b.description as d_description,
 	pm.product_model_id as pm_id, pm.slug as pm_slug, pm.article as pm_article, pm.price as pm_price, pm.discount as pm_discount, pm.product_id as pm_product_id, pm.main_image_path as pm_image_main,
 	pimg.product_img_id as pimg_id, pimg.img_path as pimg_img_path,pimg.product_model_id as pimg_model_id,
-	op.option_id as op_id, op.title as op_title, op.slug as op_slug, pmop.product_model_id as pmop_model_id,
+	op.option_id as op_id, op.title as op_title, op.slug as op_slug, pmop.product_model_id as pmop_model_id, pmop.product_model_option_id as pmop_id,
 	v.option_value_id as v_id, v.value as v_value, v.info as v_info, v.option_id as v_option_id, pmop.product_model_id as pmop_model_id_v,
   sz.size_id as size_id, sz.size_value as sz_value, ms.literal_size as ls, ms.in_stock as in_stock, ms.product_model_id as size_model_id,
 	ms.model_size_id as order_model_size
@@ -280,7 +280,7 @@ func (r *ProductRepository) GetProductPage(ctx context.Context, slug string) (*m
 			&p.Brand.Id, &p.Brand.Title, &p.Brand.Slug, &p.Brand.ImgPath, &p.Brand.Description,
 			&productModel.Id, &productModel.Slug, &productModel.Article, &productModel.Price, &productModel.Discount, &productModel.ProductId, &productModel.ImagePath,
 			&productModelImg.Id, &productModelImg.ImgPath, &productModelImg.ProductModelId,
-			&opt.Id, &opt.Title, &opt.Slug, &opt.ProductModelId,
+			&opt.Id, &opt.Title, &opt.Slug, &opt.ProductModelId, &opt.ProductModelOptionId,
 			&val.Id, &val.Value, &val.Info, &val.OptionId, &val.ProductModelId,
 			&size.SizeId, &size.Value, &size.Literal, &size.InStock, &size.ModelId, &size.SizeModelId,
 		)
@@ -324,7 +324,7 @@ func (r *ProductRepository) GetProductPage(ctx context.Context, slug string) (*m
 		return nil, fall.NewErr(msg.ProductNotFound, fall.STATUS_NOT_FOUND)
 	}
 
-	for _, key := range optionsOrder {
+	for _, key := range valuesOrder {
 		value := valuesMap[key]
 		opt := optionsMap[value.OptionId]
 		opt.Values = append(opt.Values, value)
@@ -418,14 +418,15 @@ func (pr *ProductRepository) FindModelsColored(ctx context.Context, id int) ([]m
 
 func (r *ProductRepository) AdminGetProductModels(ctx context.Context, id int) ([]model.AdminProductModelRelation, fall.Error) {
 
-	q := "SELECT product_model_id,price,slug,article,discount,main_image_path,product_id FROM product_model WHERE product_id = $1;"
+	q := `SELECT product_model_id,price,slug,article,discount,main_image_path,product_id FROM product_model
+	WHERE product_id = $1 ORDER BY product_model_id;`
 
 	rows, err := r.db.Query(ctx, q, id)
-	defer rows.Close()
 
 	if err != nil {
 		return nil, fall.ServerError(err.Error())
 	}
+	defer rows.Close()
 
 	var models = []model.AdminProductModelRelation{}
 
@@ -710,5 +711,143 @@ func (r *ProductRepository) ReturnQuantityInStock(ctx context.Context, modelSize
 	if err != nil {
 		return fall.ServerError(err.Error())
 	}
+	return nil
+}
+
+func (r *ProductRepository) GetModelImages(ctx context.Context, modelId int) ([]model.ProductModelImg, fall.Error) {
+	q := "select product_img_id,img_path,product_model_id from product_model_img where product_model_id = $1 order by product_img_id;"
+
+	rows, err := r.db.Query(ctx, q, modelId)
+
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	defer rows.Close()
+
+	var images []model.ProductModelImg
+
+	for rows.Next() {
+		img := model.ProductModelImg{}
+
+		err := rows.Scan(&img.Id, &img.ImgPath, &img.ProductModelId)
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+		images = append(images, img)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+	return images, nil
+}
+
+func (r *ProductRepository) GetModelSizes(ctx context.Context, modelId int) ([]model.ProductModelSize, fall.Error) {
+	q := `
+	select s.size_id, m.product_model_id, ms.model_size_id, ms.literal_size, s.size_value, ms.in_stock from product_model as m
+	inner join model_sizes as ms on m.product_model_id = ms.product_model_id
+	inner join sizes as s on ms.size_id = s.size_id where m.product_model_id = $1 ORDER BY s.size_value;
+	`
+
+	rows, err := r.db.Query(ctx, q, modelId)
+
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+	defer rows.Close()
+
+	var sizes []model.ProductModelSize
+
+	for rows.Next() {
+		s := model.ProductModelSize{}
+
+		err := rows.Scan(&s.SizeId, &s.ModelId, &s.SizeModelId, &s.Literal, &s.Value, &s.InStock)
+
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+
+		sizes = append(sizes, s)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	return sizes, nil
+
+}
+
+func (r *ProductRepository) GetModelOptions(ctx context.Context, modelId int) ([]*model.ProductModelOption, fall.Error) {
+
+	q := `
+		select 
+		pmop.product_model_option_id as pmop_id, pm.product_model_id as pm_id,  op.option_id as op_id, op.title as op_title, op.slug as op_slug,
+		v.option_value_id as v_id,v.value as v_value, v.option_id as v_option_id
+		from product as p
+		inner join product_model as pm on pm.product_id = p.product_id
+		inner join product_model_option as pmop on pmop.product_model_id = pm.product_model_id
+		inner join option as op on op.option_id = pmop.option_id
+		inner join option_value as v on v.option_value_id = pmop.option_value_id
+		where pm.product_model_id = $1;
+		`
+	rows, err := r.db.Query(ctx, q, modelId)
+
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+	defer rows.Close()
+
+	optionsMap := make(map[int]*model.ProductModelOption)
+	var optionsOrder []int
+	valsMap := make(map[int]model.ProductModelOptionValue)
+	var valsOrder []int
+
+	for rows.Next() {
+		o := model.ProductModelOption{}
+		v := model.ProductModelOptionValue{}
+
+		err := rows.Scan(&o.ProductModelOptionId, &o.ProductModelId, &o.Id, &o.Title, &o.Slug, &v.Id, &v.Value, &v.OptionId)
+
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+
+		_, ok := optionsMap[o.Id]
+		if !ok {
+			optionsMap[o.Id] = &o
+			optionsOrder = append(optionsOrder, o.Id)
+		}
+
+		_, ok = valsMap[v.Id]
+		if !ok {
+			valsMap[v.Id] = v
+			valsOrder = append(valsOrder, v.Id)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	for _, key := range valsOrder {
+		v := valsMap[key]
+		o := optionsMap[v.OptionId]
+		o.Values = append(o.Values, v)
+	}
+
+	options := make([]*model.ProductModelOption, 0, len(optionsMap))
+
+	for _, key := range optionsOrder {
+		o := optionsMap[key]
+		options = append(options, o)
+	}
+
+	return options, nil
+}
+
+// TODO: implement
+func (r *ProductRepository) SearchByArticle(ctx context.Context, article string) fall.Error {
 	return nil
 }

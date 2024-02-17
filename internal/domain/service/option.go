@@ -9,7 +9,7 @@ import (
 )
 
 type optionRepository interface {
-	GetAll(ctx context.Context) ([]model.Option, fall.Error)
+	GetAll(ctx context.Context) ([]*model.Option, fall.Error)
 	CreateOption(ctx context.Context, dto model.CreateOptionDto) fall.Error
 	UpdateOption(ctx context.Context, dto model.UpdateOptionDto, id int) fall.Error
 	UpdateOptionValue(ctx context.Context, dto model.UpdateOptionValueDto, id int) fall.Error
@@ -23,7 +23,7 @@ type optionRepository interface {
 	FindByField(ctx context.Context, field string, value any) (*model.Option, fall.Error)
 	AddOptionToProductModel(ctx context.Context, dto model.AddOptionToProductModelDto) fall.Error
 	AddSizeToProductModel(ctx context.Context, dto model.AddSizeToProductModelDto) fall.Error
-	GetCatalogFilters(ctx context.Context, categorySlug string) (*model.CatalogFilters, fall.Error)
+	GetCatalogFilters(ctx context.Context, categorySlug *string, brandSlug *string, actionId *string) (*model.CatalogFilters, fall.Error)
 	CheckValueInOption(ctx context.Context, valueId int, optionId int) fall.Error
 	GetAllSizes(ctx context.Context) ([]model.Size, fall.Error)
 }
@@ -40,11 +40,11 @@ func (s *OptionService) GetAllSizes(ctx context.Context) ([]model.Size, fall.Err
 	return s.repo.GetAllSizes(ctx)
 }
 
-func (s *OptionService) GetCatalogFilters(ctx context.Context, slug string) (*model.CatalogFilters, fall.Error) {
-	return s.repo.GetCatalogFilters(ctx, slug)
+func (s *OptionService) GetCatalogFilters(ctx context.Context, categorySlug *string, brandSlug *string, actionId *string) (*model.CatalogFilters, fall.Error) {
+	return s.repo.GetCatalogFilters(ctx, categorySlug, brandSlug, actionId)
 }
 
-func (s *OptionService) GetAll(ctx context.Context) ([]model.Option, fall.Error) {
+func (s *OptionService) GetAll(ctx context.Context) ([]*model.Option, fall.Error) {
 	return s.repo.GetAll(ctx)
 }
 

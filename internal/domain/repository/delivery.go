@@ -38,7 +38,7 @@ func (r *DeliveryRepository) SearchPoints(ctx context.Context, text string, with
 	filter := ""
 
 	if withFitting {
-		filter = fmt.Sprintf("AND with_fitting = true")
+		filter = "AND with_fitting = true"
 	}
 
 	query := fmt.Sprintf(`

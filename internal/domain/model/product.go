@@ -88,11 +88,12 @@ type OrderProductModelSize struct {
 }
 
 type ProductModelOption struct {
-	Id             int                       `json:"id" example:"4" validate:"required"`
-	Title          string                    `json:"title" example:"Цвет" validate:"required"`
-	Slug           string                    `json:"slug" example:"color" validate:"required"`
-	ProductModelId int                       `json:"-" example:"4" validate:"required"`
-	Values         []ProductModelOptionValue `json:"values"`
+	Id                   int                       `json:"id" example:"4" validate:"required"`
+	Title                string                    `json:"title" example:"Цвет" validate:"required"`
+	Slug                 string                    `json:"slug" example:"color" validate:"required"`
+	ProductModelId       int                       `json:"-" example:"4" validate:"required"`
+	ProductModelOptionId int                       `json:"pmop_id" example:"4" validate:"required"`
+	Values               []ProductModelOptionValue `json:"values"`
 }
 
 type ProductModelOptionValue struct {

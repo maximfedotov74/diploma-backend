@@ -79,14 +79,14 @@ func (r *WishRepository) UpdateCartItem(ctx context.Context, cartItemId int, new
 	_, err := r.db.Exec(ctx, query, newQuantity, cartItemId)
 
 	if err != nil {
-		fall.ServerError(err.Error())
+		return fall.ServerError(err.Error())
 	}
 	return nil
 }
 
 func (r *WishRepository) RemoveSeveralItems(ctx context.Context, tx db.Transaction, cartIds []int) fall.Error {
 
-	query := `DELETE FROM cart WHERE cart_id ANY ($1);`
+	query := `DELETE FROM cart WHERE cart_id = ANY ($1);`
 
 	if tx != nil {
 		_, err := tx.Exec(ctx, query, cartIds)

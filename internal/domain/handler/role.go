@@ -26,16 +26,14 @@ type RoleHandler struct {
 	roleMiddleware middleware.RoleMiddleware
 }
 
-// authMiddleware middleware.AuthMiddleware,
-//
-//	roleMiddleware middleware.RoleMiddleware,
-func NewRoleHandler(service roleService, router fiber.Router) *RoleHandler {
+func NewRoleHandler(service roleService, router fiber.Router, authMiddleware middleware.AuthMiddleware,
+	roleMiddleware middleware.RoleMiddleware) *RoleHandler {
 
 	return &RoleHandler{
-		service: service,
-		router:  router,
-		// authMiddleware: authMiddleware,
-		// roleMiddleware: roleMiddleware,
+		service:        service,
+		router:         router,
+		authMiddleware: authMiddleware,
+		roleMiddleware: roleMiddleware,
 	}
 }
 

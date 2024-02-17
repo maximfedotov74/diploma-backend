@@ -36,16 +36,52 @@ func (r *CategoryRepository) GetChildrenCount(ctx context.Context, id int) (*int
 	return &count, nil
 }
 
+func (r *CategoryRepository) GetWithoutChildren(ctx context.Context) ([]model.CategoryModel, fall.Error) {
+	q := `SELECT category_id, parent_category_id, slug, title, short_title, img_path
+	FROM category c
+	WHERE NOT EXISTS (
+		SELECT 1
+		FROM category
+		WHERE parent_category_id = c.category_id
+	);`
+
+	rows, err := r.db.Query(ctx, q)
+
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	defer rows.Close()
+
+	var cats []model.CategoryModel
+
+	for rows.Next() {
+		c := model.CategoryModel{}
+		err := rows.Scan(&c.Id, &c.ParentId, &c.Slug, &c.Title, &c.ShortTitle, &c.ImgPath)
+
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+
+		cats = append(cats, c)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	return cats, nil
+}
+
 func (r *CategoryRepository) GetTopLevels(ctx context.Context) ([]model.CategoryModel, fall.Error) {
 	q := "SELECT category_id, parent_category_id, slug, title, short_title, img_path FROM category  WHERE parent_category_id IS NULL;"
 
 	rows, err := r.db.Query(ctx, q)
 
-	defer rows.Close()
-
 	if err != nil {
 		return nil, fall.ServerError(err.Error())
 	}
+	defer rows.Close()
 
 	var cats []model.CategoryModel
 
@@ -117,11 +153,10 @@ func (r *CategoryRepository) FindByFieldRelation(ctx context.Context, field stri
 
 	rows, err := r.db.Query(ctx, query, value)
 
-	defer rows.Close()
-
 	if err != nil {
 		return nil, fall.ServerError(err.Error())
 	}
+	defer rows.Close()
 
 	result := model.Category{}
 	secondMap := make(map[int]*model.Category)
@@ -149,15 +184,12 @@ func (r *CategoryRepository) FindByFieldRelation(ctx context.Context, field stri
 		switch category.Level {
 		case 1:
 			result = category
-			break
 		case 2:
 			secondMap[category.Id] = &category
 			secondOrder = append(secondOrder, category.Id)
-			break
 		case 3:
 			thirdMap[category.Id] = &category
 			thirdOrder = append(thirdOrder, category.Id)
-			break
 		case 4:
 			fourthMap[category.Id] = &category
 			fourthOrder = append(fourthOrder, category.Id)
@@ -287,11 +319,11 @@ func (r *CategoryRepository) GetAll(ctx context.Context) ([]*model.Category, fal
 
 	rows, err := r.db.Query(ctx, query)
 
-	defer rows.Close()
-
 	if err != nil {
 		return nil, fall.ServerError(err.Error())
 	}
+
+	defer rows.Close()
 
 	firstMap := make(map[int]*model.Category)
 	var firstOrder []int
@@ -321,15 +353,12 @@ func (r *CategoryRepository) GetAll(ctx context.Context) ([]*model.Category, fal
 		case 1:
 			firstMap[category.Id] = &category
 			firstOrder = append(firstOrder, category.Id)
-			break
 		case 2:
 			secondMap[category.Id] = &category
 			secondOrder = append(secondOrder, category.Id)
-			break
 		case 3:
 			thirdMap[category.Id] = &category
 			thirdOrder = append(thirdOrder, category.Id)
-			break
 		case 4:
 			fourthMap[category.Id] = &category
 			fourthOrder = append(fourthOrder, category.Id)
@@ -432,11 +461,11 @@ func (cr *CategoryRepository) GetCatalogCategories(ctx context.Context, id int, 
 `
 	rows, err := cr.db.Query(ctx, query, id)
 
-	defer rows.Close()
-
 	if err != nil {
 		return nil, fall.ServerError(err.Error())
 	}
+
+	defer rows.Close()
 
 	result := model.СatalogCategory{}
 	secondMap := make(map[int]*model.СatalogCategory)
@@ -470,15 +499,12 @@ func (cr *CategoryRepository) GetCatalogCategories(ctx context.Context, id int, 
 		switch category.Level {
 		case 1:
 			result = category
-			break
 		case 2:
 			secondMap[category.Id] = &category
 			secondOrder = append(secondOrder, category.Id)
-			break
 		case 3:
 			thirdMap[category.Id] = &category
 			thirdOrder = append(thirdOrder, category.Id)
-			break
 		case 4:
 			fourthMap[category.Id] = &category
 			fourthOrder = append(fourthOrder, category.Id)
@@ -504,7 +530,7 @@ func (cr *CategoryRepository) GetCatalogCategories(ctx context.Context, id int, 
 		p := fiveMap[id]
 		fourth := fourthMap[*p.ParentId]
 		fourth.Subcategories = append(fourth.Subcategories, p)
-		if p.Active && fourth.Active == false {
+		if p.Active && !fourth.Active {
 			fourth.Active = true
 		}
 	}
@@ -513,7 +539,7 @@ func (cr *CategoryRepository) GetCatalogCategories(ctx context.Context, id int, 
 		p := fourthMap[id]
 		third := thirdMap[*p.ParentId]
 		third.Subcategories = append(third.Subcategories, p)
-		if p.Active && third.Active == false {
+		if p.Active && !third.Active {
 			third.Active = true
 		}
 	}
@@ -522,14 +548,14 @@ func (cr *CategoryRepository) GetCatalogCategories(ctx context.Context, id int, 
 		p := thirdMap[id]
 		second := secondMap[*p.ParentId]
 		second.Subcategories = append(second.Subcategories, p)
-		if p.Active && second.Active == false {
+		if p.Active && !second.Active {
 			second.Active = true
 		}
 	}
 
 	for _, id := range secondOrder {
 		p := secondMap[id]
-		if p.Active && result.Active == false {
+		if p.Active && !result.Active {
 			result.Active = true
 		}
 		result.Subcategories = append(result.Subcategories, p)

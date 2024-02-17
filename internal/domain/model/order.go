@@ -122,10 +122,7 @@ func OrderConditionsEnumValidation(fl validator.FieldLevel) bool {
 }
 
 func ConvertFittingToBool(f OrderConditions) bool {
-	if f == WithFitting {
-		return true
-	}
-	return false
+	return f == WithFitting
 }
 
 type CreateOrderDto struct {

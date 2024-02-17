@@ -27,6 +27,9 @@ type productService interface {
 	AdminGetProducts(ctx context.Context, page int, brandId *int, categoryId *int) (*model.AdminProductResponse, fall.Error)
 	AdminGetProductModels(ctx context.Context, id int) ([]model.AdminProductModelRelation, fall.Error)
 	GetCatalogModels(ctx context.Context, query generator.CatalogFilters) (*model.CatalogResponse, fall.Error)
+	GetModelImages(ctx context.Context, modelId int) ([]model.ProductModelImg, fall.Error)
+	GetModelSizes(ctx context.Context, modelId int) ([]model.ProductModelSize, fall.Error)
+	GetModelOptions(ctx context.Context, modelId int) ([]*model.ProductModelOption, fall.Error)
 }
 
 type ProductHandler struct {
@@ -63,6 +66,9 @@ func (h *ProductHandler) InitRoutes() {
 
 		productRouter.Get("/model/colors/:id", h.findModelsColored)
 		productRouter.Get("/model/page/:slug", h.getProductPage)
+		productRouter.Get("/model/img/:id", h.getProductModelImg)
+		productRouter.Get("/model/sizes/:id", h.getProductModelSizes)
+		productRouter.Get("/model/options/:id", h.getModelOptions)
 	}
 }
 
@@ -171,6 +177,89 @@ func (h *ProductHandler) adminGetProductModels(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Status(fall.STATUS_OK).JSON(models)
+}
+
+// @Summary Get product model options
+// @Description Get product model options
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param id path int true "model id"
+// @Router /api/product/model/options/{id} [get]
+// @Success 200 {array} model.ProductModelOption
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ProductHandler) getModelOptions(ctx *fiber.Ctx) error {
+	id, err := ctx.ParamsInt("id")
+
+	if err != nil {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	options, ex := h.service.GetModelOptions(ctx.Context(), id)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(options)
+}
+
+// @Summary Get product model images
+// @Description Get product model images
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param id path int true "model id"
+// @Router /api/product/model/img/{id} [get]
+// @Success 200 {array} model.ProductModelImg
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ProductHandler) getProductModelImg(ctx *fiber.Ctx) error {
+
+	id, err := ctx.ParamsInt("id")
+
+	if err != nil {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	images, ex := h.service.GetModelImages(ctx.Context(), id)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(images)
+}
+
+// @Summary Get product model sizes
+// @Description Get product model sizes
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param id path int true "model id"
+// @Router /api/product/model/sizes/{id} [get]
+// @Success 200 {array} model.ProductModelSize
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ProductHandler) getProductModelSizes(ctx *fiber.Ctx) error {
+
+	id, err := ctx.ParamsInt("id")
+
+	if err != nil {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	sizes, ex := h.service.GetModelSizes(ctx.Context(), id)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(sizes)
 }
 
 // @Summary Get products for admin panel

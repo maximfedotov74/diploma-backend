@@ -28,6 +28,9 @@ type productRepository interface {
 	AdminGetProducts(ctx context.Context, page int, brandId *int, categoryId *int) (*model.AdminProductResponse, fall.Error)
 	AdminGetProductModels(ctx context.Context, id int) ([]model.AdminProductModelRelation, fall.Error)
 	GetCatalogModels(ctx context.Context, categorySlug string, sql generator.GeneratedCatalogQuery) (*model.CatalogResponse, fall.Error)
+	GetModelImages(ctx context.Context, modelId int) ([]model.ProductModelImg, fall.Error)
+	GetModelSizes(ctx context.Context, modelId int) ([]model.ProductModelSize, fall.Error)
+	GetModelOptions(ctx context.Context, modelId int) ([]*model.ProductModelOption, fall.Error)
 }
 
 type productCategoryService interface {
@@ -53,6 +56,19 @@ func NewProductService(repo productRepository, brandService productBrandService,
 		categoryService: categoryService,
 	}
 }
+
+func (s *ProductService) GetModelOptions(ctx context.Context, modelId int) ([]*model.ProductModelOption, fall.Error) {
+	return s.repo.GetModelOptions(ctx, modelId)
+}
+
+func (s *ProductService) GetModelSizes(ctx context.Context, modelId int) ([]model.ProductModelSize, fall.Error) {
+	return s.repo.GetModelSizes(ctx, modelId)
+}
+
+func (s *ProductService) GetModelImages(ctx context.Context, modelId int) ([]model.ProductModelImg, fall.Error) {
+	return s.repo.GetModelImages(ctx, modelId)
+}
+
 func (s *ProductService) AdminGetProductModels(ctx context.Context, id int) ([]model.AdminProductModelRelation, fall.Error) {
 	return s.repo.AdminGetProductModels(ctx, id)
 }

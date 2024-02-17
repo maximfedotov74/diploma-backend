@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -125,13 +126,15 @@ func (r *OptionRepository) DeleteOptionFromProductModel(ctx context.Context, pro
 	return nil
 }
 
-func (r *OptionRepository) GetAll(ctx context.Context) ([]model.Option, fall.Error) {
+func (r *OptionRepository) GetAll(ctx context.Context) ([]*model.Option, fall.Error) {
 	query := `
-	SELECT op.option_id as op_id, op.title as op_title, op.slug as op_slug, op.for_catalog
+	SELECT op.option_id as op_id, op.title as op_title, op.slug as op_slug, op.for_catalog,
+  v.option_value_id as v_id, v.value as v_value, v.info as v_info, v.option_id as v_option_id
   FROM option as op
-	ORDER BY op.option_id;
+  LEFT JOIN option_value as v ON v.option_id = op.option_id
+	ORDER BY op.title;
 	`
-	rows, err := r.db.Query(ctx, query)
+	rows, err := r.db.Query(context.Background(), query)
 
 	if err != nil {
 		return nil, fall.ServerError(err.Error())
@@ -139,26 +142,67 @@ func (r *OptionRepository) GetAll(ctx context.Context) ([]model.Option, fall.Err
 
 	defer rows.Close()
 
-	var options []model.Option
+	optionsMap := make(map[int]*model.Option)
+	valuesMap := make(map[int]model.OptionValue)
+	var optionsOrder []int
+	var valuesOrder []int
+
+	var founded bool = false
 
 	for rows.Next() {
 		opt := model.Option{}
+		v := model.OptionValue{}
 
-		err := rows.Scan(&opt.Id, &opt.Title, &opt.Slug, &opt.ForCatalog)
+		err := rows.Scan(&opt.Id, &opt.Title, &opt.Slug, &opt.ForCatalog, &v.Id, &v.Value, &v.Info, &v.OptionId)
 
 		if err != nil {
 			return nil, fall.ServerError(err.Error())
 		}
 
-		options = append(options, opt)
-
+		if v.Id != nil {
+			_, ok := valuesMap[*v.Id]
+			if !ok {
+				valuesMap[*v.Id] = v
+				valuesOrder = append(valuesOrder, *v.Id)
+			}
+		}
+		_, ok := optionsMap[opt.Id]
+		if !ok {
+			optionsMap[opt.Id] = &opt
+			optionsOrder = append(optionsOrder, opt.Id)
+		}
+		if !founded {
+			founded = true
+		}
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fall.ServerError(err.Error())
+	if rows.Err() != nil {
+		return nil, fall.ServerError(rows.Err().Error())
 	}
 
-	return options, nil
+	if !founded {
+		return nil, fall.NewErr(msg.OptionNotFound, fall.STATUS_NOT_FOUND)
+	}
+
+	for _, v := range valuesOrder {
+		val := valuesMap[v]
+		opt := optionsMap[*val.OptionId]
+		opt.Values = append(opt.Values, val)
+	}
+
+	result := make([]*model.Option, 0, len(optionsMap))
+
+	for _, v := range optionsOrder {
+		opt := optionsMap[v]
+
+		sort.Slice(opt.Values, func(i, j int) bool {
+			return *opt.Values[i].Value < *opt.Values[j].Value
+		})
+
+		result = append(result, opt)
+	}
+
+	return result, nil
 
 }
 
@@ -259,7 +303,27 @@ func (r *OptionRepository) CreateSize(ctx context.Context, value string) fall.Er
 	return nil
 }
 
-func (r *OptionRepository) GetCatalogFilters(ctx context.Context, categorySlug string) (*model.CatalogFilters, fall.Error) {
+func (r *OptionRepository) GetCatalogFilters(ctx context.Context, categorySlug *string, brandSlug *string, actionId *string) (*model.CatalogFilters, fall.Error) {
+
+	categoryFilter := ""
+	brandFilter := ""
+	actionFilter := ""
+
+	if categorySlug != nil {
+		categoryFilter = "WHERE slug = " + *categorySlug
+	}
+
+	if brandSlug != nil {
+		brandFilter = "AND b.slug = " + *brandSlug
+	}
+
+	if actionId != nil {
+		actionFilter = "AND act.action_id = " + *actionId
+	}
+
+	log.Println(categoryFilter)
+	log.Println(brandFilter)
+	log.Println(actionFilter)
 
 	mainQuery := `
 	FROM product as p
@@ -293,10 +357,10 @@ func (r *OptionRepository) GetCatalogFilters(ctx context.Context, categorySlug s
 	%[1]s
 	) as min_price
 	%[1]s
-	where op.for_catalog = true;
+	where op.for_catalog = true ;
 	`, mainQuery)
 
-	rows, err := r.db.Query(ctx, query, categorySlug)
+	rows, err := r.db.Query(ctx, query)
 
 	if err != nil {
 		return nil, fall.ServerError(err.Error())
@@ -443,13 +507,15 @@ func (r *OptionRepository) UpdateOptionValue(ctx context.Context, dto model.Upda
 
 func (r *OptionRepository) GetAllSizes(ctx context.Context) ([]model.Size, fall.Error) {
 
-	q := "SELECT size_id,size_value FROM sizes ORDER BY size_value;"
+	q := "SELECT size_id,size_value FROM sizes;"
 
 	rows, err := r.db.Query(ctx, q)
-	defer rows.Close()
+
 	if err != nil {
 		return nil, fall.ServerError(err.Error())
 	}
+
+	defer rows.Close()
 
 	var sizes []model.Size
 
@@ -466,6 +532,17 @@ func (r *OptionRepository) GetAllSizes(ctx context.Context) ([]model.Size, fall.
 	if err := rows.Err(); err != nil {
 		return nil, fall.ServerError(err.Error())
 	}
+
+	sort.Slice(sizes, func(i, j int) bool {
+		a := sizes[i].Value
+		b := sizes[j].Value
+		aSize, aErr := strconv.Atoi(a)
+		bSize, bErr := strconv.Atoi(b)
+		if aErr != nil || bErr != nil {
+			return false
+		}
+		return aSize > bSize
+	})
 
 	return sizes, nil
 }

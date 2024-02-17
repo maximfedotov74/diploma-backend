@@ -67,7 +67,7 @@ func (s *WishService) IncreaseNumber(ctx context.Context, userId int, modelSizeI
 	newQuantity := item.Quantity + 1
 
 	if item.InStock < newQuantity {
-		fall.NewErr(msg.QuantityMoreThanInStock, fall.STATUS_BAD_REQUEST)
+		return fall.NewErr(msg.QuantityMoreThanInStock, fall.STATUS_BAD_REQUEST)
 	}
 
 	return s.repo.UpdateCartItem(ctx, item.CartItemId, newQuantity)
