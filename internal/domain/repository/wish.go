@@ -111,7 +111,7 @@ func (r *WishRepository) GetUserCart(ctx context.Context, userId int) ([]model.C
 	ms.model_size_id as ms_id,
 	ms.literal_size as ms_ls, ms.in_stock as ms_in_stock, sz.size_id as sz_id, sz.size_value as sz_value,
 	pm.product_model_id as pm_id, pm.price as price, pm.discount as discount, pm.main_image_path as pm_img,
-	p.product_id as p_id, p.title as p_title, p.slug as p_slug,
+	p.product_id as p_id, p.title as p_title, pm.slug as pm_slug,
 	ct.category_id as ct_id, ct.title as ct_title, ct.short_title as ct_short_title, ct.slug as ct_slug,
 	b.brand_id as b_id, b.title as b_title, b.slug as b_slug
 	FROM cart as cr
@@ -128,7 +128,7 @@ func (r *WishRepository) GetUserCart(ctx context.Context, userId int) ([]model.C
 		return nil, fall.ServerError(err.Error())
 	}
 	defer rows.Close()
-	var result []model.CartItem
+	result := []model.CartItem{}
 	for rows.Next() {
 		item := model.CartItem{}
 		err := rows.Scan(&item.Id, &item.Quantity, &item.ModelSize.Id, &item.ModelSize.LiteralSize, &item.ModelSize.InStock,
@@ -206,14 +206,15 @@ func (r *WishRepository) GetUserWish(ctx context.Context, userId int) ([]*model.
 	query := `
 	SELECT p.product_id as p_id, p.title as p_title,
 	b.brand_id as b_id, b.title as b_title, b.slug as b_slug, ct.category_id as ct_id, ct.title as ct_title, ct.slug as ct_slug,
-	pm.product_model_id as model_id,pm.slug as m_slug, pm_artice as m_artice, pm.price as model_price, pm.discount as model_discount,
+	ct.short_title as ct_short_title,
+	pm.product_model_id as model_id, pm.slug as m_slug, pm.article as m_article, pm.price as model_price, pm.discount as model_discount,
 	pm.main_image_path as pm_main_img,
 	pimg.product_img_id as pimg_id, pimg.product_model_id as pimg_model_id, pimg.img_path as pimg_img_path,
 	sz.size_id as size_id, sz.size_value as size_value, ms.literal_size as literal_size,
 	ms.product_model_id as ms_pm_id, ms.in_stock as ms_in_stock,
 	ms.model_size_id as ms_m_sz_id
 	FROM wish w
-	INNER JOIN product_model pm ON pm.product_model_id = w.product_model_id
+	INNER JOIN product_model as pm ON pm.product_model_id = w.product_model_id
 	INNER JOIN product p ON pm.product_id = p.product_id
 	INNER JOIN category ct ON p.category_id = ct.category_id
 	INNER JOIN brand b on p.brand_id = b.brand_id
@@ -244,7 +245,7 @@ func (r *WishRepository) GetUserWish(ctx context.Context, userId int) ([]*model.
 		m := model.CatalogProductModel{}
 
 		err := rows.Scan(&m.ProductId, &m.Title, &m.Brand.Id, &m.Brand.Title, &m.Brand.Slug,
-			&m.Category.Id, &m.Category.Title, &m.Category.Slug, &m.ModelId, &m.Slug, &m.Article, &m.Price, &m.Discount,
+			&m.Category.Id, &m.Category.Title, &m.Category.Slug, &m.Category.ShortTitle, &m.ModelId, &m.Slug, &m.Article, &m.Price, &m.Discount,
 			&m.MainImagePath, &img.Id, &img.ProductModelId, &img.ImgPath, &sz.SizeId, &sz.Value, &sz.Literal, &sz.ModelId, &sz.InStock, &sz.SizeModelId,
 		)
 		if err != nil {

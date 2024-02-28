@@ -65,7 +65,7 @@ func (wh *WishHandler) InitRoutes() {
 // @Produce json
 // @Param dto body model.AddToWishDto true "Toggle with dto"
 // @Router /api/wish/ [post]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -101,7 +101,9 @@ func (wh *WishHandler) toggleWish(ctx *fiber.Ctx) error {
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
-	return ctx.SendStatus(fall.STATUS_OK)
+
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Get user cart items
@@ -162,7 +164,7 @@ func (wh *WishHandler) getUserWish(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param modelSizeId path int true "Model Size Id"
 // @Router /api/wish/cart/{modelSizeId} [delete]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -181,7 +183,8 @@ func (wh *WishHandler) deleteFromCart(ctx *fiber.Ctx) error {
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Increase cart item quantity
@@ -192,7 +195,7 @@ func (wh *WishHandler) deleteFromCart(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param modelSizeId path int true "Model Size Id"
 // @Router /api/wish/cart/increase/{modelSizeId} [patch]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -211,7 +214,8 @@ func (wh *WishHandler) increaseNumber(ctx *fiber.Ctx) error {
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Reduce cart item quantity
@@ -222,7 +226,7 @@ func (wh *WishHandler) increaseNumber(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param modelSizeId path int true "Model Size Id"
 // @Router /api/wish/cart/reduce/{modelSizeId} [patch]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -241,7 +245,8 @@ func (wh *WishHandler) reduceNumber(ctx *fiber.Ctx) error {
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Delete several items from cart
@@ -252,7 +257,7 @@ func (wh *WishHandler) reduceNumber(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param ids path string true "Model Sizes Ids example:([1,2,3])"
 // @Router /api/wish/cart/several/{ids} [delete]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -286,7 +291,8 @@ func (ws *WishHandler) removeSeveralItems(ctx *fiber.Ctx) error {
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Add item to cart
@@ -297,7 +303,7 @@ func (ws *WishHandler) removeSeveralItems(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param dto body model.AddToCartDto true "Add to cart with dto"
 // @Router /api/wish/cart [post]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -335,5 +341,6 @@ func (wh *WishHandler) addToCart(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_CREATED)
+	resp := fall.GetCreated()
+	return ctx.Status(resp.Status()).JSON(resp)
 }

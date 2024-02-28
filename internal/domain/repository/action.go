@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/maximfedotov74/diploma-backend/internal/domain/model"
@@ -21,6 +22,7 @@ func NewActionRepository(db db.PostgresClient) *ActionRepository {
 }
 
 func (r *ActionRepository) Create(ctx context.Context, dto model.CreateActionDto) fall.Error {
+
 	q := "INSERT INTO action (end_date,title,img_path,description) VALUES ($1,$2,$3,$4);"
 
 	_, err := r.db.Exec(ctx, q, dto.EndDate, dto.Title, dto.ImgPath, dto.Description)
@@ -41,8 +43,53 @@ func (r *ActionRepository) AddModel(ctx context.Context, actionId string, modelI
 	return nil
 }
 
+func (r *ActionRepository) GetModels(ctx context.Context, id string) ([]model.ActionModel, fall.Error) {
+	q := `
+	SELECT p.product_id as p_id, p.title as p_title,
+	b.brand_id as b_id, b.title as b_title, b.slug as b_slug, ct.category_id as ct_id, ct.title as ct_title, ct.slug as ct_slug,
+	pm.product_model_id as model_id, pm.slug as m_slug, pm.article as m_article, pm.price as model_price, pm.discount as model_discount,
+	pm.main_image_path as pm_main_img
+	FROM product p INNER JOIN category ct ON p.category_id = ct.category_id 
+	INNER JOIN brand b on p.brand_id = b.brand_id
+	INNER JOIN product_model pm ON pm.product_id = p.product_id
+	inner join action_model as am on am.product_model_id = pm.product_model_id
+	inner join action as a on a.action_id = am.action_id
+	where a.action_id = $1 ORDER BY am.action_model_id;
+	`
+
+	rows, err := r.db.Query(ctx, q, id)
+
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+	defer rows.Close()
+
+	var models []model.ActionModel
+
+	for rows.Next() {
+		m := model.ActionModel{}
+
+		err := rows.Scan(&m.ProductId, &m.Title, &m.Brand.Id, &m.Brand.Title, &m.Brand.Slug,
+			&m.Category.Id, &m.Category.Title, &m.Category.Slug, &m.ModelId, &m.Slug, &m.Article, &m.Price, &m.Discount,
+			&m.MainImagePath,
+		)
+
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+		models = append(models, m)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	return models, nil
+
+}
+
 func (r *ActionRepository) FindById(ctx context.Context, id string) (*model.Action, fall.Error) {
-	q := "SELECT action_id, created_at, updated_at, end_date, title, is_activated, img_path, description FROM action WHERE action_id = $1;"
+	q := `SELECT action_id, created_at, updated_at, end_date, title, is_activated, img_path, description FROM action WHERE action_id = $1;`
 
 	row := r.db.QueryRow(ctx, q, id)
 
@@ -90,4 +137,40 @@ func (r *ActionRepository) GetAll(ctx context.Context) ([]model.Action, fall.Err
 	}
 
 	return actions, nil
+}
+
+func (r *ActionRepository) Update(ctx context.Context, dto model.UpdateActionDto, id string) fall.Error {
+	var queries []string
+
+	if dto.Description != nil {
+		queries = append(queries, fmt.Sprintf("description = '%s'", *dto.Description))
+	}
+
+	if dto.Title != nil {
+		queries = append(queries, fmt.Sprintf("title = '%s'", *dto.Title))
+	}
+
+	if dto.ImgPath != nil {
+		queries = append(queries, fmt.Sprintf("img_path = '%s'", *dto.ImgPath))
+	}
+
+	if dto.EndDate != nil {
+
+		f := dto.EndDate.Format("2006-01-02 15:04:05")
+
+		queries = append(queries, fmt.Sprintf("end_date = '%s'", f))
+	}
+
+	if dto.IsActivated != nil {
+		queries = append(queries, fmt.Sprintf("is_activated = '%t'", *dto.IsActivated))
+	}
+
+	if len(queries) > 0 {
+		q := "UPDATE action SET " + strings.Join(queries, ",") + " WHERE action_id = $1;"
+		_, err := r.db.Exec(ctx, q, id)
+		if err != nil {
+			return fall.ServerError(fmt.Sprintf("%s, details: \n %s", msg.ActionUpdateError, err.Error()))
+		}
+	}
+	return nil
 }

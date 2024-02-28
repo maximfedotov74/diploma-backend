@@ -35,7 +35,7 @@ type CreateSizeDto struct {
 type AddSizeToProductModelDto struct {
 	ProductModelId int    `json:"product_model_id" validate:"required,min=1"`
 	SizeId         int    `json:"size_id" validate:"required,min=1"`
-	InStock        int    `json:"in_stock" validate:"required,min=0"`
+	InStock        int    `json:"in_stock" validate:"min=0"`
 	Literal        string `json:"literal" validate:"required"`
 }
 

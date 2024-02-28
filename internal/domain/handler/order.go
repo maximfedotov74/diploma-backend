@@ -26,6 +26,22 @@ func NewOrderHandler(service orderService, router fiber.Router, authMiddleware m
 func (h *OrderHandler) InitRoutes() {
 	orderRouter := h.router.Group("order")
 	{
-		orderRouter.Post("/", func(c *fiber.Ctx) error { return nil })
+		orderRouter.Post("/", h.create)
 	}
+}
+
+// @Summary Create order
+// @Description Create order
+// @Tags order
+// @Accept json
+// @Produce json
+// @Param dto body model.CreateOrderDto true "Create order with body dto"
+// @Router /api/order/ [post]
+// @Success 201 {object} model.Order
+// @Failure 401 {object} fall.AppErr
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *OrderHandler) create(ctx *fiber.Ctx) error {
+	return nil
 }

@@ -30,6 +30,8 @@ type productService interface {
 	GetModelImages(ctx context.Context, modelId int) ([]model.ProductModelImg, fall.Error)
 	GetModelSizes(ctx context.Context, modelId int) ([]model.ProductModelSize, fall.Error)
 	GetModelOptions(ctx context.Context, modelId int) ([]*model.ProductModelOption, fall.Error)
+	SearchByArticle(ctx context.Context, article string) ([]model.SearchProductModel, fall.Error)
+	FindProductModelBySlug(ctx context.Context, slug string) (*model.ProductModel, fall.Error)
 }
 
 type ProductHandler struct {
@@ -69,7 +71,59 @@ func (h *ProductHandler) InitRoutes() {
 		productRouter.Get("/model/img/:id", h.getProductModelImg)
 		productRouter.Get("/model/sizes/:id", h.getProductModelSizes)
 		productRouter.Get("/model/options/:id", h.getModelOptions)
+		productRouter.Get("/model/search-by-article", h.searchByArticle)
+		productRouter.Get("/model/:slug", h.getModelBySlug)
+		productRouter.Get("/:id", h.getProductById)
 	}
+}
+
+// @Summary Get model by slug
+// @Description Get model by slug
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param slug path string true "Model slug"
+// @Router /api/product/model/{slug} [get]
+// @Success 200 {object} model.ProductModel
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ProductHandler) getModelBySlug(ctx *fiber.Ctx) error {
+	slug := ctx.Params("slug")
+
+	model, ex := h.service.FindProductModelBySlug(ctx.Context(), slug)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(model)
+}
+
+// @Summary Get product by id
+// @Description Get product by id
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param id path int true "Product Id"
+// @Router /api/product/{id} [get]
+// @Success 200 {object} model.Product
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ProductHandler) getProductById(ctx *fiber.Ctx) error {
+	id, err := ctx.ParamsInt("id")
+
+	if err != nil {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	p, ex := h.service.FindProductById(ctx.Context(), id)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(p)
 }
 
 // @Summary Get catalog models
@@ -148,6 +202,35 @@ func (h *ProductHandler) getCatalogModels(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Status(fall.STATUS_OK).JSON(res)
+}
+
+// @Summary Get product models
+// @Security BearerToken
+// @Description Get product models
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param article query string true "model article"
+// @Router /api/product/model/search-by-article [get]
+// @Success 200 {array} model.SearchProductModel
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ProductHandler) searchByArticle(ctx *fiber.Ctx) error {
+
+	article := ctx.Query("article")
+
+	if len(article) == 0 {
+		appErr := fall.NewErr("Пустой артикул!", fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	models, ex := h.service.SearchByArticle(ctx.Context(), article)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(models)
 }
 
 // @Summary Get product models

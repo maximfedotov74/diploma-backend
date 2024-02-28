@@ -44,7 +44,7 @@ type ProductRelation struct {
 	Description  *string              `json:"description" example:"описание товара..."`
 	Category     CategoryModel        `json:"category" validate:"required"`
 	Brand        Brand                `json:"brand" validate:"required"`
-	CurrentModel ProductModelRelation `json:"model"`
+	CurrentModel ProductModelRelation `json:"model" validate:"required"`
 }
 
 type ProductModel struct {
@@ -145,22 +145,48 @@ type AdminProductModelRelation struct {
 	ProductId int    `json:"product_id" validate:"required"`
 }
 
+type CatalogModelBrand struct {
+	Id    int    `json:"id" example:"2" validate:"required"`
+	Title string `json:"title" example:"adidas" validate:"required"`
+	Slug  string `json:"slug" example:"adidas" validate:"required"`
+}
+
+type CatalogModelCategory struct {
+	Id         int    `json:"category_id" db:"category_id" example:"3" validate:"required"`
+	Title      string `json:"title" db:"title" example:"Верхняя одежда" validate:"required"`
+	ShortTitle string `json:"short_title" db:"title" example:"одежда" validate:"required"`
+	Slug       string `json:"slug" db:"slug" example:"verhnia-odezhda" validate:"required"`
+}
+
 type CatalogProductModel struct {
-	ProductId     int                 `json:"product_id" example:"1" validate:"required"`
-	Title         string              `json:"product_title" example:"Ботинки" validate:"required"`
-	Slug          string              `json:"product_slug" example:"botinki" validate:"required"`
-	Article       string              `json:"article" validate:"required,min=1"`
-	ModelId       int                 `json:"model_id" example:"1" validate:"required"`
-	Price         int                 `json:"model_price" example:"10000" validate:"required"`
-	Discount      *byte               `json:"model_discount" example:"15"`
-	MainImagePath string              `json:"model_main_image_path" example:"/static/category/test.webp" validate:"required"`
-	Brand         Brand               `json:"brand" validate:"required"`
-	Category      CategoryModel       `json:"category" validate:"required"`
-	Images        []*ProductModelImg  `json:"images"`
-	Sizes         []*ProductModelSize `json:"sizes"`
+	ProductId     int                  `json:"product_id" example:"1" validate:"required"`
+	Title         string               `json:"product_title" example:"Ботинки" validate:"required"`
+	Slug          string               `json:"product_slug" example:"botinki" validate:"required"`
+	Article       string               `json:"article" validate:"required,min=1"`
+	ModelId       int                  `json:"model_id" example:"1" validate:"required"`
+	Price         int                  `json:"model_price" example:"10000" validate:"required"`
+	Discount      *byte                `json:"model_discount" example:"15"`
+	MainImagePath string               `json:"model_main_image_path" example:"/static/category/test.webp" validate:"required"`
+	Brand         CatalogModelBrand    `json:"brand" validate:"required"`
+	Category      CatalogModelCategory `json:"category" validate:"required"`
+	Images        []*ProductModelImg   `json:"images" validate:"required"`
+	Sizes         []*ProductModelSize  `json:"sizes" validate:"required"`
 }
 
 type CatalogResponse struct {
 	Models     []*CatalogProductModel `json:"models"`
 	TotalCount int                    `json:"total_count" example:"100" validate:"required"`
+}
+
+type SearchProductModel struct {
+	ProductId     int           `json:"product_id" example:"1" validate:"required"`
+	Title         string        `json:"product_title" example:"Ботинки" validate:"required"`
+	Slug          string        `json:"product_slug" example:"botinki" validate:"required"`
+	Article       string        `json:"article" validate:"required,min=1"`
+	ModelId       int           `json:"model_id" example:"1" validate:"required"`
+	Price         int           `json:"model_price" example:"10000" validate:"required"`
+	Discount      *byte         `json:"model_discount" example:"15"`
+	MainImagePath string        `json:"model_main_image_path" example:"/static/category/test.webp" validate:"required"`
+	Brand         Brand         `json:"brand" validate:"required"`
+	Category      CategoryModel `json:"category" validate:"required"`
 }

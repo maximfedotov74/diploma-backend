@@ -17,7 +17,7 @@ type categoryService interface {
 	FindBySlugRelation(ctx context.Context, slug string) (*model.Category, fall.Error)
 	Delete(ctx context.Context, slug string) fall.Error
 	GetAll(ctx context.Context) ([]*model.Category, fall.Error)
-	GetCatalogCategories(ctx context.Context, slug string) (*model.СatalogCategory, fall.Error)
+	GetCatalogCategories(ctx context.Context, slug string) (*model.CatalogCategoryResponse, fall.Error)
 	GetTopLevels(ctx context.Context) ([]model.CategoryModel, fall.Error)
 	GetWithoutChildren(ctx context.Context) ([]model.CategoryModel, fall.Error)
 }
@@ -171,7 +171,7 @@ func (h *CategoryHandler) getAll(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param slug path string true "Category Slug"
 // @Router /api/category/catalog/{slug} [get]
-// @Success 200 {array} model.CatalogCategoryRelation
+// @Success 200 {object} model.CatalogCategoryRelationResponse
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -179,13 +179,13 @@ func (h *CategoryHandler) catalog(ctx *fiber.Ctx) error {
 
 	slug := ctx.Params("slug")
 
-	categories, err := h.service.GetCatalogCategories(ctx.Context(), slug)
+	catalogCategoriesResponse, err := h.service.GetCatalogCategories(ctx.Context(), slug)
 
 	if err != nil {
 		return ctx.Status(err.Status()).JSON(err)
 	}
 
-	return ctx.Status(fall.STATUS_OK).JSON(categories)
+	return ctx.Status(fall.STATUS_OK).JSON(catalogCategoriesResponse)
 }
 
 // @Summary Create category

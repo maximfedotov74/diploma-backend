@@ -46,7 +46,7 @@ func (h *DeliveryHandler) InitRoutes() {
 // @Produce json
 // @Param dto body model.CreateDeliveryPointDto true "Create delivery-point with body dto"
 // @Router /api/delivery/ [post]
-// @Success 201
+// @Success 201 {object} fall.AppErr
 // @Failure 401 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
@@ -79,7 +79,8 @@ func (h *DeliveryHandler) сreate(ctx *fiber.Ctx) error {
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
-	return ctx.SendStatus(fall.STATUS_CREATED)
+	resp := fall.GetCreated()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Update delivery-point
@@ -90,7 +91,7 @@ func (h *DeliveryHandler) сreate(ctx *fiber.Ctx) error {
 // @Param dto body model.UpdateDeliveryPointDto true "Update delivery-point with body dto"
 // @Param id path int true "delivery-point id"
 // @Router /api/delivery/{id} [patch]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -130,7 +131,8 @@ func (h *DeliveryHandler) update(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 
 }
 
@@ -170,7 +172,7 @@ func (h *DeliveryHandler) findById(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param id path int true "delivery-point id"
 // @Router /api/delivery/{id} [delete]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -189,7 +191,8 @@ func (h *DeliveryHandler) delete(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Find delivery-point by id

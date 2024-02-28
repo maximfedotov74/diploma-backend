@@ -37,8 +37,8 @@ type JwtService struct {
 	config JwtConfig
 }
 
-const tokenInvalid = "Ошибка при валидации токена!"
-const parseClaimsError = "Данные записанные в токен не соответствуют требуемым!"
+const tokenInvalid = "ошибка при валидации токена!\n\r"
+const parseClaimsError = "данные записанные в токен не соответствуют требуемым!\n\r"
 
 const (
 	AccessToken TokenType = iota
@@ -55,11 +55,8 @@ func (ts *JwtService) Sign(claims UserClaims) (Tokens, error) {
 
 	var tokens Tokens
 
-	// var accessExpTime time.Time = time.Now().Add(time.Minute * time.Duration(ts.config.AccessTokenExp))
-	// var refreshExpTime time.Time = time.Now().AddDate(0, 0, ts.config.RefreshTokenExp)
-
-	var accessExpTime time.Time = time.Now().Add(time.Minute)
-	var refreshExpTime time.Time = time.Now().Add(time.Minute * 2)
+	var accessExpTime time.Time = time.Now().Add(time.Minute * time.Duration(ts.config.AccessTokenExp))
+	var refreshExpTime time.Time = time.Now().AddDate(0, 0, ts.config.RefreshTokenExp)
 
 	var accessSecret = ts.config.AccessTokenSecret
 	var refreshSecret string = ts.config.RefreshTokenSecret

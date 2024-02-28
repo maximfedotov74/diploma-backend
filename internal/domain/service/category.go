@@ -17,7 +17,7 @@ type categoryRepository interface {
 	GetParentTopLevel(ctx context.Context, id int) (*model.CategoryModel, fall.Error)
 	Update(ctx context.Context, dto model.UpdateCategoryDto, newSlug *string, id int) fall.Error
 	GetAll(ctx context.Context) ([]*model.Category, fall.Error)
-	GetCatalogCategories(ctx context.Context, id int, activeSlug string) (*model.СatalogCategory, fall.Error)
+	GetCatalogCategories(ctx context.Context, id int, activeSlug string) (*model.CatalogCategoryResponse, fall.Error)
 	Delete(ctx context.Context, slug string) fall.Error
 	GetTopLevels(ctx context.Context) ([]model.CategoryModel, fall.Error)
 	GetChildrenCount(ctx context.Context, id int) (*int, fall.Error)
@@ -113,7 +113,7 @@ func (s *CategoryService) GetAll(ctx context.Context) ([]*model.Category, fall.E
 	return s.repo.GetAll(ctx)
 }
 
-func (s *CategoryService) GetCatalogCategories(ctx context.Context, slug string) (*model.СatalogCategory, fall.Error) {
+func (s *CategoryService) GetCatalogCategories(ctx context.Context, slug string) (*model.CatalogCategoryResponse, fall.Error) {
 	current, ex := s.FindBySlug(ctx, slug)
 
 	if ex != nil {

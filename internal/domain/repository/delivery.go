@@ -44,7 +44,7 @@ func (r *DeliveryRepository) SearchPoints(ctx context.Context, text string, with
 	query := fmt.Sprintf(`
 	SELECT delivery_point_id,title,city,address,coords,with_fitting,work_schedule,info
 	FROM delivery_point
-	WHERE CONCAT(city, ' ', address) ILIKE $1 %s; 
+	WHERE CONCAT(city, ' ', address, ' ', title) ILIKE $1 %s ORDER BY city, delivery_point_id; 
 	`, filter)
 	rows, err := r.db.Query(ctx, query, "%"+text+"%")
 	if err != nil {
@@ -118,7 +118,7 @@ func (r *DeliveryRepository) Update(ctx context.Context, dto model.UpdateDeliver
 	}
 
 	if dto.WorkSchedule != nil {
-		queries = append(queries, fmt.Sprintf("work_schedule = %s", *dto.WorkSchedule))
+		queries = append(queries, fmt.Sprintf("work_schedule = '%s'", *dto.WorkSchedule))
 	}
 
 	if len(queries) > 0 {

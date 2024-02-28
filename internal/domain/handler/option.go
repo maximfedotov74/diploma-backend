@@ -11,7 +11,7 @@ import (
 )
 
 type optionService interface {
-	GetCatalogFilters(ctx context.Context, categorySlug *string, brandSlug *string, actionId *string) (*model.CatalogFilters, fall.Error)
+	GetCatalogFilters(ctx context.Context, categorySlug string) (*model.CatalogFilters, fall.Error)
 	GetAll(ctx context.Context) ([]*model.Option, fall.Error)
 	FindOptionById(ctx context.Context, id int) (*model.Option, fall.Error)                       // +
 	CreateOption(ctx context.Context, dto model.CreateOptionDto) fall.Error                       // +
@@ -70,8 +70,8 @@ func (h *OptionHandler) InitRoutes() {
 // @Tags characteristics
 // @Accept json
 // @Produce json
-// @Param slug path string true "Category slug"
-// @Router /api/characteristics/catalog/{slug} [get]
+// @Param categorySlug path string true "Category slug"
+// @Router /api/characteristics/catalog/{categorySlug} [get]
 // @Success 200 {object} model.CatalogFilters
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
@@ -80,7 +80,7 @@ func (h *OptionHandler) getCatalogFilters(ctx *fiber.Ctx) error {
 
 	slug := ctx.Params("slug")
 
-	filters, err := h.service.GetCatalogFilters(ctx.Context(), &slug, nil, nil)
+	filters, err := h.service.GetCatalogFilters(ctx.Context(), slug)
 
 	if err != nil {
 		return ctx.Status(err.Status()).JSON(err)

@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -59,7 +59,6 @@ func (r *ProductRepository) CreateModel(ctx context.Context, dto model.CreatePro
 	_, err := r.db.Exec(ctx, q, dto.Price, dto.Discount, dto.ImagePath, dto.ProductId, slug)
 
 	if err != nil {
-		log.Println(err.Error())
 		return fall.NewErr(msg.ProductCreateModelError, fall.STATUS_INTERNAL_ERROR)
 	}
 
@@ -448,7 +447,6 @@ func (r *ProductRepository) AdminGetProductModels(ctx context.Context, id int) (
 }
 
 func (r *ProductRepository) AdminGetProducts(ctx context.Context, page int, brandId *int, categoryId *int) (*model.AdminProductResponse, fall.Error) {
-	//todo add sort
 	limit := 8
 
 	offset := page*limit - limit
@@ -534,114 +532,6 @@ func (r *ProductRepository) AdminGetProducts(ctx context.Context, page int, bran
 	}
 
 	return &model.AdminProductResponse{Products: products, Total: totalCount}, nil
-}
-
-func (r *ProductRepository) GetCatalogModels(ctx context.Context, categorySlug string, sql generator.GeneratedCatalogQuery) (*model.CatalogResponse, fall.Error) {
-
-	// TODO: сначала получить id подходящих моделей, а потом их получить и вернуть.
-
-	mainJoins := `FROM product p INNER JOIN category_tree ct ON p.category_id = ct.category_id 
-	INNER JOIN brand b on p.brand_id = b.brand_id
-	INNER JOIN product_model pm ON pm.product_id = p.product_id
-	inner join model_sizes ms on ms.product_model_id = pm.product_model_id
-	inner join sizes sz on ms.size_id = sz.size_id
-	inner join product_model_img as pimg on pimg.product_model_id = pm.product_model_id
-	`
-
-	query := fmt.Sprintf(`
-	WITH RECURSIVE category_tree AS (
-		SELECT category_id, title, slug, parent_category_id
-		FROM category
-		WHERE slug = $1
-		UNION ALL
-		SELECT c.category_id, c.title, c.slug, c.parent_category_id
-		FROM category c
-		INNER JOIN category_tree ct ON c.parent_category_id = ct.category_id
-	)
-	SELECT p.product_id as p_id, p.title as p_title,
-	b.brand_id as b_id, b.title as b_title, b.slug as b_slug, ct.category_id as ct_id, ct.title as ct_title, ct.slug as ct_slug,
-	pm.product_model_id as model_id, pm.slug as m_slug, pm_artice as m_artice, pm.price as model_price, pm.discount as model_discount,
-	pm.main_image_path as pm_main_img,
-	pimg.product_img_id as pimg_id, pimg.product_model_id as pimg_model_id, pimg.img_path as pimg_img_path, 
-	sz.size_id as size_id, sz.size_value as size_value, ms.literal_size as literal_size,
-	ms.product_model_id as ms_pm_id, ms.in_stock as ms_in_stock,
-	ms.model_size_id as ms_m_sz_id,
-	(select count(distinct pm.product_model_id)%s %s
-	) as total_count
-	%s %s %s %s;`, mainJoins, sql.MainQuery, mainJoins, sql.MainQuery, sql.SortStatement, sql.Pagination)
-
-	rows, err := r.db.Query(ctx, query, categorySlug)
-
-	if err != nil {
-		return nil, fall.ServerError(err.Error())
-	}
-	defer rows.Close()
-
-	imagesMap := make(map[int]*model.ProductModelImg)
-	sizesMap := make(map[int]*model.ProductModelSize)
-	modelsMap := make(map[int]*model.CatalogProductModel)
-	var total int
-	var modelOrder []int
-	var imgOrder []int
-	var sizeOrder []int
-
-	for rows.Next() {
-		sz := model.ProductModelSize{}
-		img := model.ProductModelImg{}
-		m := model.CatalogProductModel{}
-
-		err := rows.Scan(&m.ProductId, &m.Title, &m.Brand.Id, &m.Brand.Title, &m.Brand.Slug,
-			&m.Category.Id, &m.Category.Title, &m.Category.Slug, &m.ModelId, &m.Slug, &m.Article, &m.Price, &m.Discount,
-			&m.MainImagePath, &img.Id, &img.ProductModelId, &img.ImgPath, &sz.SizeId, &sz.Value, &sz.Literal, &sz.ModelId, &sz.InStock, &sz.SizeModelId, &total,
-		)
-		if err != nil {
-			return nil, fall.ServerError(err.Error())
-		}
-		_, ok := modelsMap[m.ModelId]
-		if !ok {
-			modelsMap[m.ModelId] = &m
-			modelOrder = append(modelOrder, m.ModelId)
-		}
-		_, ok = imagesMap[img.Id]
-		if !ok {
-			imagesMap[img.Id] = &img
-			imgOrder = append(imgOrder, img.Id)
-		}
-		_, ok = sizesMap[sz.SizeModelId]
-		if !ok {
-			sizesMap[sz.SizeModelId] = &sz
-			sizeOrder = append(sizeOrder, sz.SizeModelId)
-		}
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fall.ServerError(err.Error())
-	}
-
-	for _, v := range imgOrder {
-		img := imagesMap[v]
-		m := modelsMap[img.ProductModelId]
-		m.Images = append(m.Images, img)
-	}
-
-	for _, v := range sizeOrder {
-		sz := sizesMap[v]
-		m := modelsMap[sz.ModelId]
-		m.Sizes = append(m.Sizes, sz)
-	}
-
-	var result []*model.CatalogProductModel
-
-	for _, id := range modelOrder {
-		m := modelsMap[id]
-		result = append(result, m)
-	}
-
-	return &model.CatalogResponse{
-		Models:     result,
-		TotalCount: total,
-	}, nil
-
 }
 
 func (r *ProductRepository) FindModelSizeById(ctx context.Context, id int) (*model.OrderProductModelSize, fall.Error) {
@@ -847,7 +737,191 @@ func (r *ProductRepository) GetModelOptions(ctx context.Context, modelId int) ([
 	return options, nil
 }
 
-// TODO: implement
-func (r *ProductRepository) SearchByArticle(ctx context.Context, article string) fall.Error {
-	return nil
+func (r *ProductRepository) SearchByArticle(ctx context.Context, article string) ([]model.SearchProductModel, fall.Error) {
+
+	q := `
+	SELECT p.product_id as p_id, p.title as p_title,
+	b.brand_id as b_id, b.title as b_title, b.slug as b_slug, ct.category_id as ct_id, ct.title as ct_title, ct.slug as ct_slug,
+	pm.product_model_id as m_id, pm.slug as m_slug, pm.article as m_article, pm.price as m_price, pm.discount as m_discount,
+	pm.main_image_path as m_main_img
+	FROM product p INNER JOIN category ct ON p.category_id = ct.category_id 
+	INNER JOIN brand b on p.brand_id = b.brand_id
+	INNER JOIN product_model pm ON pm.product_id = p.product_id
+	WHERE pm.article ILIKE $1;
+	`
+
+	rows, err := r.db.Query(ctx, q, article+"%")
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+	defer rows.Close()
+
+	var models []model.SearchProductModel
+
+	for rows.Next() {
+		m := model.SearchProductModel{}
+		err := rows.Scan(&m.ProductId, &m.Title, &m.Brand.Id, &m.Brand.Title, &m.Brand.Slug, &m.Category.Id,
+			&m.Category.Title, &m.Category.Slug, &m.ModelId, &m.Slug, &m.Article, &m.Price, &m.Discount, &m.MainImagePath)
+
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+		models = append(models, m)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	return models, nil
+}
+
+func (r *ProductRepository) GetCatalogModels(ctx context.Context, categorySlug string, sql generator.GeneratedCatalogQuery) (*model.CatalogResponse, fall.Error) {
+
+	mainJoins := `FROM product p INNER JOIN category_tree ct ON p.category_id = ct.category_id 
+	INNER JOIN brand b on p.brand_id = b.brand_id
+	INNER JOIN product_model pm ON pm.product_id = p.product_id
+	inner join model_sizes ms on ms.product_model_id = pm.product_model_id
+	inner join sizes sz on ms.size_id = sz.size_id
+	inner join product_model_img as pimg on pimg.product_model_id = pm.product_model_id
+	`
+	query := fmt.Sprintf(`
+	WITH RECURSIVE category_tree AS (
+		SELECT category_id, title, short_title, slug, parent_category_id
+		FROM category
+		WHERE slug = $1
+		UNION ALL
+		SELECT c.category_id, c.title, c.short_title, c.slug, c.parent_category_id
+		FROM category c
+		INNER JOIN category_tree ct ON c.parent_category_id = ct.category_id
+	)
+	SELECT distinct pm.product_model_id as model_id,
+	(select count(distinct pm.product_model_id)%s %s
+	) as total_count
+	%s %s %s %s;`, mainJoins, sql.MainQuery, mainJoins, sql.MainQuery, sql.SortStatement, sql.Pagination)
+
+	rows, err := r.db.Query(ctx, query, categorySlug)
+
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+	defer rows.Close()
+
+	var total int
+	var modelOrder []int
+
+	for rows.Next() {
+		var modelId int
+		err := rows.Scan(&modelId, &total)
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+
+		modelOrder = append(modelOrder, modelId)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	query = `
+	SELECT p.product_id as p_id, p.title as p_title,
+	b.brand_id as b_id, b.title as b_title, b.slug as b_slug, ct.category_id as ct_id, ct.title as ct_title,
+	ct.short_title as ct_short_title, ct.slug as ct_slug,
+	pm.product_model_id as model_id, pm.slug as m_slug, pm.article as m_article, pm.price as model_price, pm.discount as model_discount,
+	pm.main_image_path as pm_main_img,
+	pimg.product_img_id as pimg_id, pimg.product_model_id as pimg_model_id, pimg.img_path as pimg_img_path, 
+	sz.size_id as size_id, sz.size_value as size_value, ms.literal_size as literal_size,
+	ms.product_model_id as ms_pm_id, ms.in_stock as ms_in_stock,
+	ms.model_size_id as ms_m_sz_id
+	FROM product p INNER JOIN category ct ON p.category_id = ct.category_id 
+	INNER JOIN brand b on p.brand_id = b.brand_id
+	INNER JOIN product_model pm ON pm.product_id = p.product_id
+	inner join model_sizes ms on ms.product_model_id = pm.product_model_id
+	inner join sizes sz on ms.size_id = sz.size_id
+	inner join product_model_img as pimg on pimg.product_model_id = pm.product_model_id
+	WHERE pm.product_model_id = ANY ($1);
+	`
+
+	rows, err = r.db.Query(ctx, query, modelOrder)
+
+	if err != nil {
+
+		return nil, fall.ServerError(err.Error())
+	}
+	defer rows.Close()
+
+	imagesMap := make(map[int]*model.ProductModelImg)
+	sizesMap := make(map[int]*model.ProductModelSize)
+	modelsMap := make(map[int]*model.CatalogProductModel)
+	var imgOrder []int
+	var sizeOrder []int
+
+	for rows.Next() {
+		sz := model.ProductModelSize{}
+		img := model.ProductModelImg{}
+		m := model.CatalogProductModel{}
+
+		err := rows.Scan(&m.ProductId, &m.Title, &m.Brand.Id, &m.Brand.Title, &m.Brand.Slug,
+			&m.Category.Id, &m.Category.Title, &m.Category.ShortTitle, &m.Category.Slug, &m.ModelId, &m.Slug, &m.Article, &m.Price, &m.Discount,
+			&m.MainImagePath, &img.Id, &img.ProductModelId, &img.ImgPath, &sz.SizeId, &sz.Value, &sz.Literal, &sz.ModelId, &sz.InStock, &sz.SizeModelId,
+		)
+		if err != nil {
+
+			return nil, fall.ServerError(err.Error())
+		}
+		_, ok := modelsMap[m.ModelId]
+		if !ok {
+			modelsMap[m.ModelId] = &m
+		}
+		_, ok = imagesMap[img.Id]
+		if !ok {
+			imagesMap[img.Id] = &img
+			imgOrder = append(imgOrder, img.Id)
+		}
+		_, ok = sizesMap[sz.SizeModelId]
+		if !ok {
+			sizesMap[sz.SizeModelId] = &sz
+			sizeOrder = append(sizeOrder, sz.SizeModelId)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	for _, v := range imgOrder {
+		img := imagesMap[v]
+		m := modelsMap[img.ProductModelId]
+		m.Images = append(m.Images, img)
+	}
+
+	for _, v := range sizeOrder {
+		sz := sizesMap[v]
+		m := modelsMap[sz.ModelId]
+		m.Sizes = append(m.Sizes, sz)
+	}
+
+	var result []*model.CatalogProductModel
+
+	for _, id := range modelOrder {
+		m := modelsMap[id]
+		sort.Slice(m.Sizes, func(i, j int) bool {
+			a := m.Sizes[i].Value
+			b := m.Sizes[j].Value
+			aSize, aErr := strconv.Atoi(a)
+			bSize, bErr := strconv.Atoi(b)
+			if aErr != nil || bErr != nil {
+				return false
+			}
+			return aSize > bSize
+		})
+
+		result = append(result, m)
+	}
+
+	return &model.CatalogResponse{
+		Models:     result,
+		TotalCount: total,
+	}, nil
 }

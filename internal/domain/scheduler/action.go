@@ -25,11 +25,11 @@ func (s *ActionScheduler) Start() {
 }
 
 func (s *ActionScheduler) discountCancellation(ctx context.Context) {
-	s.cron.Every(15).Second().Do(func() {
+	s.cron.Every(5).Minute().Do(func() {
 		q := `
     select a.action_id, am.product_model_id from action as a
     inner join action_model as am on a.action_id = am.action_id
-    where current_date >= end_date and is_activated = true;
+    where current_timestamp >= end_date and is_activated = true;
     `
 
 		rows, err := s.db.Query(ctx, q)

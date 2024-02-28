@@ -14,8 +14,8 @@ type CreateSessionDto struct {
 }
 
 type LocalSession struct {
-	UserId    int
-	UserAgent string
-	Email     string
-	Roles     []UserRole
+	UserId    int        `json:"user_id"`
+	UserAgent string     `json:"user_agent"`
+	Email     string     `json:"email"`
+	Roles     []UserRole `json:"roles"`
 }

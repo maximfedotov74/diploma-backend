@@ -31,6 +31,7 @@ type productRepository interface {
 	GetModelImages(ctx context.Context, modelId int) ([]model.ProductModelImg, fall.Error)
 	GetModelSizes(ctx context.Context, modelId int) ([]model.ProductModelSize, fall.Error)
 	GetModelOptions(ctx context.Context, modelId int) ([]*model.ProductModelOption, fall.Error)
+	SearchByArticle(ctx context.Context, article string) ([]model.SearchProductModel, fall.Error)
 }
 
 type productCategoryService interface {
@@ -55,6 +56,14 @@ func NewProductService(repo productRepository, brandService productBrandService,
 		brandService:    brandService,
 		categoryService: categoryService,
 	}
+}
+
+func (s *ProductService) FindProductModelBySlug(ctx context.Context, slug string) (*model.ProductModel, fall.Error) {
+	return s.repo.FindProductModelBySlug(ctx, slug)
+}
+
+func (s *ProductService) SearchByArticle(ctx context.Context, article string) ([]model.SearchProductModel, fall.Error) {
+	return s.repo.SearchByArticle(ctx, article)
 }
 
 func (s *ProductService) GetModelOptions(ctx context.Context, modelId int) ([]*model.ProductModelOption, fall.Error) {

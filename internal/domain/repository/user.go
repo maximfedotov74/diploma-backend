@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/maximfedotov74/diploma-backend/internal/domain/model"
 	"github.com/maximfedotov74/diploma-backend/internal/domain/msg"
@@ -86,12 +87,48 @@ func (r *UserRepository) Create(ctx context.Context, dto model.CreateUserDto) (*
 
 }
 
+func (r *UserRepository) Update(ctx context.Context, dto model.UpdateUserDto, id int) fall.Error {
+
+	var queries []string
+
+	if dto.AvatarPath != nil {
+		queries = append(queries, fmt.Sprintf("avatar_path = '%s'", *dto.AvatarPath))
+	}
+
+	if dto.Patronymic != nil {
+		queries = append(queries, fmt.Sprintf("patronymic = '%s'", *dto.Patronymic))
+	}
+
+	if dto.LastName != nil {
+		queries = append(queries, fmt.Sprintf("last_name = '%s'", *dto.LastName))
+	}
+
+	if dto.FirstName != nil {
+		queries = append(queries, fmt.Sprintf("first_name = '%s'", *dto.FirstName))
+	}
+
+	if dto.Gender != nil {
+		queries = append(queries, fmt.Sprintf("gender = '%s'", *dto.Gender))
+	}
+
+	if len(queries) > 0 {
+		q := "UPDATE public.user SET " + strings.Join(queries, ",") + " WHERE user_id = $1;"
+		_, err := r.db.Exec(ctx, q, id)
+		if err != nil {
+			return fall.ServerError(fmt.Sprintf("%s, details: \n %s", msg.BrandUpdateError, err.Error()))
+		}
+		return nil
+	}
+
+	return nil
+}
+
 func (ur *UserRepository) findByIdOrEmail(ctx context.Context, field string, value any) (*model.User, fall.Error) {
 
 	query := fmt.Sprintf(`
 	SELECT public.user.user_id, public.user.email, public.user.password_hash,
 	public.user.patronymic, public.user.first_name,	public.user.last_name, 
-	role.title, role.role_id, public.user.is_activated
+	role.title, role.role_id, public.user.is_activated, public.user.gender, public.user.avatar_path
 	FROM public.user
 	LEFT JOIN user_role ON public.user.user_id = user_role.user_id
 	LEFT JOIN public.role ON public.role.role_id = user_role.role_id
@@ -110,7 +147,7 @@ func (ur *UserRepository) findByIdOrEmail(ctx context.Context, field string, val
 	for rows.Next() {
 		role := model.UserRole{}
 		err := rows.Scan(&user.Id, &user.Email, &user.PasswordHash, &user.Patronymic, &user.FirstName, &user.LastName,
-			&role.Title, &role.Id, &user.IsActivated)
+			&role.Title, &role.Id, &user.IsActivated, &user.Gender, &user.AvatarPath)
 		if err != nil {
 			return nil, fall.ServerError(err.Error())
 		}

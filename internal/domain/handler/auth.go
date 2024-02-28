@@ -145,6 +145,7 @@ func (ah *AuthHandler) login(ctx *fiber.Ctx) error {
 // @Failure 500 {object} fall.AppErr
 func (ah *AuthHandler) refreshToken(ctx *fiber.Ctx) error {
 	refreshToken := ctx.Cookies("refresh_token")
+
 	if refreshToken == "" {
 		appErr := fall.NewErr(fall.UNAUTHORIZED, fall.STATUS_UNAUTHORIZED)
 		return ctx.Status(appErr.Status()).JSON(appErr)

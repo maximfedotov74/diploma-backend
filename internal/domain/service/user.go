@@ -11,6 +11,7 @@ type userRepository interface {
 	Create(ctx context.Context, dto model.CreateUserDto) (*model.CreatedUserResponse, fall.Error)
 	FindByEmail(ctx context.Context, email string) (*model.User, fall.Error)
 	FindById(ctx context.Context, id int) (*model.User, fall.Error)
+	Update(ctx context.Context, dto model.UpdateUserDto, id int) fall.Error
 }
 
 type UserService struct {
@@ -31,4 +32,8 @@ func (s *UserService) FindById(ctx context.Context, id int) (*model.User, fall.E
 
 func (s *UserService) FindByEmail(ctx context.Context, email string) (*model.User, fall.Error) {
 	return s.repo.FindByEmail(ctx, email)
+}
+
+func (s *UserService) Update(ctx context.Context, dto model.UpdateUserDto, id int) fall.Error {
+	return s.repo.Update(ctx, dto, id)
 }

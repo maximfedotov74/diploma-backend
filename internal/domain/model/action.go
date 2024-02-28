@@ -24,3 +24,24 @@ type Action struct {
 	ImgPath     *string   `json:"img_path" validate:"omitempty"`
 	Description *string   `json:"description" validate:"omitempty,min=10"`
 }
+
+type ActionModel struct {
+	ProductId     int           `json:"product_id" example:"1" validate:"required"`
+	Title         string        `json:"product_title" example:"Ботинки" validate:"required"`
+	Slug          string        `json:"product_slug" example:"botinki" validate:"required"`
+	Article       string        `json:"article" validate:"required,min=1"`
+	ModelId       int           `json:"model_id" example:"1" validate:"required"`
+	Price         int           `json:"model_price" example:"10000" validate:"required"`
+	Discount      *byte         `json:"model_discount" example:"15"`
+	MainImagePath string        `json:"model_main_image_path" example:"/static/category/test.webp" validate:"required"`
+	Brand         Brand         `json:"brand" validate:"required"`
+	Category      CategoryModel `json:"category" validate:"required"`
+}
+
+type UpdateActionDto struct {
+	EndDate     *time.Time `json:"end_date" validate:"omitempty,gt"`
+	Title       *string    `json:"title" validate:"omitempty,min=5"`
+	ImgPath     *string    `json:"img_path" validate:"omitempty"`
+	Description *string    `json:"description" validate:"omitempty,min=10"`
+	IsActivated *bool      `json:"is_activated" validate:"omitempty"`
+}

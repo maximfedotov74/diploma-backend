@@ -54,6 +54,15 @@ type CatalogChild struct {
 	Subcategories []*CatalogCategoryRelation `json:"subcategories" validate:"required"`
 }
 
+type CatalogCategoryResponse struct {
+	CatalogCategories СatalogCategory `json:"catalog_categories" validate:"required"`
+	Current           CategoryModel   `json:"current" validate:"required"`
+}
+type CatalogCategoryRelationResponse struct {
+	CatalogCategories CatalogCategoryRelation `json:"catalog_categories" validate:"required"`
+	Current           CategoryModel           `json:"current" validate:"required"`
+}
+
 type CatalogCategoryRelation struct {
 	Id            int             `json:"category_id" db:"category_id" example:"3" validate:"required"`
 	Title         string          `json:"title" db:"title" example:"Верхняя одежда" validate:"required"`

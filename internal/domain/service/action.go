@@ -12,6 +12,8 @@ type actionRepository interface {
 	AddModel(ctx context.Context, actionId string, modelId int) fall.Error
 	FindById(ctx context.Context, id string) (*model.Action, fall.Error)
 	GetAll(ctx context.Context) ([]model.Action, fall.Error)
+	Update(ctx context.Context, dto model.UpdateActionDto, id string) fall.Error
+	GetModels(ctx context.Context, id string) ([]model.ActionModel, fall.Error)
 }
 
 type actionProductService interface {
@@ -25,6 +27,10 @@ type ActionService struct {
 
 func NewActionService(repo actionRepository, productService actionProductService) *ActionService {
 	return &ActionService{repo: repo, productService: productService}
+}
+
+func (s *ActionService) GetModels(ctx context.Context, id string) ([]model.ActionModel, fall.Error) {
+	return s.repo.GetModels(ctx, id)
 }
 
 func (s *ActionService) Create(ctx context.Context, dto model.CreateActionDto) fall.Error {
@@ -45,4 +51,14 @@ func (s *ActionService) AddModel(ctx context.Context, dto model.AddModelToAction
 
 func (s *ActionService) GetAll(ctx context.Context) ([]model.Action, fall.Error) {
 	return s.repo.GetAll(ctx)
+}
+
+func (s *ActionService) Update(ctx context.Context, dto model.UpdateActionDto, id string) fall.Error {
+	_, ex := s.repo.FindById(ctx, id)
+	if ex != nil {
+		return ex
+	}
+
+	return s.repo.Update(ctx, dto, id)
+
 }

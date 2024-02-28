@@ -303,27 +303,7 @@ func (r *OptionRepository) CreateSize(ctx context.Context, value string) fall.Er
 	return nil
 }
 
-func (r *OptionRepository) GetCatalogFilters(ctx context.Context, categorySlug *string, brandSlug *string, actionId *string) (*model.CatalogFilters, fall.Error) {
-
-	categoryFilter := ""
-	brandFilter := ""
-	actionFilter := ""
-
-	if categorySlug != nil {
-		categoryFilter = "WHERE slug = " + *categorySlug
-	}
-
-	if brandSlug != nil {
-		brandFilter = "AND b.slug = " + *brandSlug
-	}
-
-	if actionId != nil {
-		actionFilter = "AND act.action_id = " + *actionId
-	}
-
-	log.Println(categoryFilter)
-	log.Println(brandFilter)
-	log.Println(actionFilter)
+func (r *OptionRepository) GetCatalogFilters(ctx context.Context, categorySlug string) (*model.CatalogFilters, fall.Error) {
 
 	mainQuery := `
 	FROM product as p
@@ -360,7 +340,7 @@ func (r *OptionRepository) GetCatalogFilters(ctx context.Context, categorySlug *
 	where op.for_catalog = true ;
 	`, mainQuery)
 
-	rows, err := r.db.Query(ctx, query)
+	rows, err := r.db.Query(ctx, query, categorySlug)
 
 	if err != nil {
 		return nil, fall.ServerError(err.Error())
@@ -445,7 +425,12 @@ func (r *OptionRepository) GetCatalogFilters(ctx context.Context, categorySlug *
 	sort.Slice(sizes, func(i, j int) bool {
 		a := sizes[i].Value
 		b := sizes[j].Value
-		return a < b
+		aSize, aErr := strconv.Atoi(a)
+		bSize, bErr := strconv.Atoi(b)
+		if aErr != nil || bErr != nil {
+			return false
+		}
+		return aSize > bSize
 	})
 
 	return &model.CatalogFilters{

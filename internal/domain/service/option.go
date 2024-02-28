@@ -23,7 +23,7 @@ type optionRepository interface {
 	FindByField(ctx context.Context, field string, value any) (*model.Option, fall.Error)
 	AddOptionToProductModel(ctx context.Context, dto model.AddOptionToProductModelDto) fall.Error
 	AddSizeToProductModel(ctx context.Context, dto model.AddSizeToProductModelDto) fall.Error
-	GetCatalogFilters(ctx context.Context, categorySlug *string, brandSlug *string, actionId *string) (*model.CatalogFilters, fall.Error)
+	GetCatalogFilters(ctx context.Context, categorySlug string) (*model.CatalogFilters, fall.Error)
 	CheckValueInOption(ctx context.Context, valueId int, optionId int) fall.Error
 	GetAllSizes(ctx context.Context) ([]model.Size, fall.Error)
 }
@@ -40,8 +40,8 @@ func (s *OptionService) GetAllSizes(ctx context.Context) ([]model.Size, fall.Err
 	return s.repo.GetAllSizes(ctx)
 }
 
-func (s *OptionService) GetCatalogFilters(ctx context.Context, categorySlug *string, brandSlug *string, actionId *string) (*model.CatalogFilters, fall.Error) {
-	return s.repo.GetCatalogFilters(ctx, categorySlug, brandSlug, actionId)
+func (s *OptionService) GetCatalogFilters(ctx context.Context, categorySlug string) (*model.CatalogFilters, fall.Error) {
+	return s.repo.GetCatalogFilters(ctx, categorySlug)
 }
 
 func (s *OptionService) GetAll(ctx context.Context) ([]*model.Option, fall.Error) {

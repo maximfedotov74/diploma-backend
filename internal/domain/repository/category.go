@@ -446,7 +446,7 @@ func (r *CategoryRepository) Update(ctx context.Context, dto model.UpdateCategor
 	return nil
 }
 
-func (cr *CategoryRepository) GetCatalogCategories(ctx context.Context, id int, activeSlug string) (*model.СatalogCategory, fall.Error) {
+func (cr *CategoryRepository) GetCatalogCategories(ctx context.Context, id int, activeSlug string) (*model.CatalogCategoryResponse, fall.Error) {
 	query := `
 	WITH RECURSIVE category_tree AS (
 		SELECT category_id, title, slug, short_title, img_path, parent_category_id, 1 AS level
@@ -468,6 +468,7 @@ func (cr *CategoryRepository) GetCatalogCategories(ctx context.Context, id int, 
 	defer rows.Close()
 
 	result := model.СatalogCategory{}
+	current := model.CategoryModel{}
 	secondMap := make(map[int]*model.СatalogCategory)
 	var secondOrder []int
 	thirdMap := make(map[int]*model.СatalogCategory)
@@ -492,6 +493,12 @@ func (cr *CategoryRepository) GetCatalogCategories(ctx context.Context, id int, 
 
 		if category.Slug == activeSlug {
 			category.Active = true
+			current.Id = category.Id
+			current.ImgPath = category.ImgPath
+			current.ParentId = category.ParentId
+			current.ShortTitle = category.ShortTitle
+			current.Slug = category.Slug
+			current.Title = category.Title
 		} else {
 			category.Active = false
 		}
@@ -561,7 +568,10 @@ func (cr *CategoryRepository) GetCatalogCategories(ctx context.Context, id int, 
 		result.Subcategories = append(result.Subcategories, p)
 	}
 
-	return &result, nil
+	return &model.CatalogCategoryResponse{
+		CatalogCategories: result,
+		Current:           current,
+	}, nil
 }
 
 func (r *CategoryRepository) Delete(ctx context.Context, slug string) fall.Error {
