@@ -34,7 +34,7 @@ func NewOrderRepository(db db.PostgresClient, wishRepository orderWishRepository
 
 func (r *OrderRepository) Create(ctx context.Context, input model.CreateOrderInput, userId int) fall.Error {
 
-	var ex fall.Error
+	var ex fall.Error = nil
 
 	tx, err := r.db.Begin(ctx)
 

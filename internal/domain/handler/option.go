@@ -211,7 +211,6 @@ func (h *OptionHandler) addSizeToProductModel(ctx *fiber.Ctx) error {
 	err := ctx.BodyParser(&dto)
 
 	if err != nil {
-
 		appErr := fall.NewErr(fall.INVALID_BODY, fall.STATUS_BAD_REQUEST)
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}

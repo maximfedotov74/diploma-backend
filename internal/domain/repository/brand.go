@@ -75,7 +75,7 @@ func (r *BrandRepository) GetAll(ctx context.Context) ([]model.Brand, fall.Error
 		}
 	}
 
-	if rows.Err() != nil {
+	if err := rows.Err(); err != nil {
 		return nil, fall.ServerError(err.Error())
 	}
 

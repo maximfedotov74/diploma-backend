@@ -139,12 +139,10 @@ func (r *RoleRepository) Find(ctx context.Context) ([]model.Role, fall.Error) {
 	}
 
 	for _, key := range usersOrder {
-		if err == nil {
-			user := usersMap[key]
-			role := rolesMap[*user.RoleId]
-			role.Users = append(role.Users, user)
-			rolesMap[role.Id] = role
-		}
+		user := usersMap[key]
+		role := rolesMap[*user.RoleId]
+		role.Users = append(role.Users, user)
+		rolesMap[role.Id] = role
 	}
 
 	for _, key := range rolesOrder {

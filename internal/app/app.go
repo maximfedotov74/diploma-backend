@@ -117,7 +117,7 @@ func initDeps(router fiber.Router, postgresClient db.PostgresClient,
 	actionRepo := repository.NewActionRepository(postgresClient)
 
 	roleService := service.NewRoleService(roleRepo)
-	userService := service.NewUserService(userRepo)
+	userService := service.NewUserService(userRepo, sessionService, mailService)
 	brandService := service.NewBrandService(brandRepo)
 	categoryService := service.NewCategoryService(categoryRepo)
 	optionService := service.NewOptionService(optionRepo)

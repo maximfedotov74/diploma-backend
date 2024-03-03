@@ -14,6 +14,9 @@ type actionRepository interface {
 	GetAll(ctx context.Context) ([]model.Action, fall.Error)
 	Update(ctx context.Context, dto model.UpdateActionDto, id string) fall.Error
 	GetModels(ctx context.Context, id string) ([]model.ActionModel, fall.Error)
+	DeleteActionModel(ctx context.Context, actionModelId int) fall.Error
+	DeleteAction(ctx context.Context, id string) fall.Error
+	GetActionsByGender(ctx context.Context, gender model.ActionGender) ([]model.Action, fall.Error)
 }
 
 type actionProductService interface {
@@ -27,6 +30,19 @@ type ActionService struct {
 
 func NewActionService(repo actionRepository, productService actionProductService) *ActionService {
 	return &ActionService{repo: repo, productService: productService}
+}
+
+func (s *ActionService) GetActionsByGender(ctx context.Context, gender model.ActionGender) ([]model.Action, fall.Error) {
+	return s.repo.GetActionsByGender(ctx, gender)
+}
+
+func (s *ActionService) DeleteAction(ctx context.Context, id string) fall.Error {
+	return s.repo.DeleteAction(ctx, id)
+
+}
+
+func (s *ActionService) DeleteActionModel(ctx context.Context, actionModelId int) fall.Error {
+	return s.repo.DeleteActionModel(ctx, actionModelId)
 }
 
 func (s *ActionService) GetModels(ctx context.Context, id string) ([]model.ActionModel, fall.Error) {

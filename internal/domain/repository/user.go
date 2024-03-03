@@ -176,3 +176,97 @@ func (r *UserRepository) FindById(ctx context.Context, id int) (*model.User, fal
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*model.User, fall.Error) {
 	return r.findByIdOrEmail(ctx, "email", email)
 }
+
+func (r *UserRepository) RemoveChangePasswordCode(ctx context.Context, userId int, tx db.Transaction) error {
+	query := "DELETE FROM change_password_code WHERE user_id = $1"
+
+	if tx != nil {
+		_, err := tx.Exec(ctx, query, userId)
+
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	_, err := r.db.Exec(context.Background(), query, userId)
+
+	if err != nil {
+		return err
+	}
+	return nil
+
+}
+
+func (r *UserRepository) FindChangePasswordCode(ctx context.Context, userId int, code string) (*model.ChangePasswordCode, fall.Error) {
+	query := `SELECT change_password_code_id, code, user_id FROM
+	change_password_code WHERE user_id = $1 AND code = $2 AND end_time > CURRENT_TIMESTAMP;`
+
+	row := r.db.QueryRow(ctx, query, userId, code)
+
+	codeModel := model.ChangePasswordCode{}
+
+	err := row.Scan(&codeModel.ChangePasswordCodeId, &codeModel.Code, &codeModel.UserId)
+
+	if err != nil {
+		return nil, fall.NewErr(msg.ChangePasswordCodeNotFound, fall.STATUS_NOT_FOUND)
+	}
+
+	return &codeModel, nil
+
+}
+
+func (r *UserRepository) CreateChangePasswordCode(ctx context.Context, userId int) (*string, fall.Error) {
+
+	var ex fall.Error = nil
+
+	tx, err := r.db.Begin(ctx)
+
+	if err != nil {
+		ex = fall.ServerError(err.Error())
+		return nil, ex
+	}
+
+	defer func() {
+		if ex != nil {
+			tx.Rollback(ctx)
+		} else {
+			tx.Commit(ctx)
+		}
+	}()
+
+	err = r.RemoveChangePasswordCode(ctx, userId, nil)
+
+	if err != nil {
+		ex = fall.ServerError(err.Error())
+		return nil, ex
+	}
+
+	query := "INSERT INTO change_password_code (user_id) VALUES ($1) RETURNING code;"
+
+	row := tx.QueryRow(ctx, query, userId)
+
+	var code string
+
+	err = row.Scan(&code)
+
+	if err != nil {
+		ex = fall.ServerError(msg.CreateChangeCodeError)
+		return nil, ex
+	}
+
+	return &code, nil
+}
+
+func (r *UserRepository) ChangePassword(ctx context.Context, userId int, newPassword string) fall.Error {
+
+	query := `UPDATE public.user SET password_hash = $1,
+	updated_at = CURRENT_TIMESTAMP WHERE public.user.user_id = $2;`
+
+	_, err := r.db.Exec(ctx, query, newPassword, userId)
+	if err != nil {
+		return fall.NewErr(msg.UpdatePasswordError, fall.STATUS_INTERNAL_ERROR)
+	}
+
+	return nil
+}

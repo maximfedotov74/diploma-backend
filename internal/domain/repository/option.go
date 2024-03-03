@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -285,7 +284,6 @@ func (r *OptionRepository) AddSizeToProductModel(ctx context.Context, dto model.
 
 	_, err := r.db.Exec(ctx, query, dto.ProductModelId, dto.SizeId, dto.Literal, dto.InStock)
 	if err != nil {
-		log.Println(err.Error())
 		return fall.ServerError(msg.AddSizeToProductError)
 	}
 

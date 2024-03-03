@@ -149,6 +149,8 @@ func (h *ProductHandler) getCatalogModels(ctx *fiber.Ctx) error {
 
 	query := ctx.Queries()
 
+	delete(query, "categorySlug")
+
 	sizes, ok := query["size"]
 
 	if ok {

@@ -16,6 +16,9 @@ type actionService interface {
 	GetAll(ctx context.Context) ([]model.Action, fall.Error)
 	Update(ctx context.Context, dto model.UpdateActionDto, id string) fall.Error
 	GetModels(ctx context.Context, id string) ([]model.ActionModel, fall.Error)
+	DeleteActionModel(ctx context.Context, actionModelId int) fall.Error
+	DeleteAction(ctx context.Context, id string) fall.Error
+	GetActionsByGender(ctx context.Context, gender model.ActionGender) ([]model.Action, fall.Error)
 }
 
 type ActionHandler struct {
@@ -34,10 +37,108 @@ func (h *ActionHandler) InitRoutes() {
 		actionRouter.Post("/", h.create)
 		actionRouter.Post("/model", h.addModelToAction)
 		actionRouter.Get("/", h.getAll)
+		actionRouter.Get("/:gender", h.getByGender)
 		actionRouter.Get("/model/:id", h.getActionModels)
 		actionRouter.Patch("/:id", h.update)
-
+		actionRouter.Delete("/model/:actionModelId", h.deleteActionModel)
+		actionRouter.Delete("/:id", h.deleteAction)
 	}
+}
+
+// @Summary Get actions by gender
+// @Description Get actions by gender
+// @Tags action
+// @Accept json
+// @Produce json
+// @Param gender path string true "action gender"
+// @Router /api/action/{gender} [get]
+// @Success 200 {array} model.Action
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ActionHandler) getByGender(ctx *fiber.Ctx) error {
+
+	gender := ctx.Params("gender")
+
+	validate := validator.New()
+
+	validate.RegisterValidation("actionGenderEnumValidation", model.ActionGenderEnumValidation)
+
+	err := validate.Var(gender, "actionGenderEnumValidation")
+
+	if err != nil {
+		ex := fall.NewErr(err.Error(), fall.STATUS_BAD_REQUEST)
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	actions, ex := h.service.GetActionsByGender(ctx.Context(), model.ActionGender(gender))
+
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(actions)
+
+}
+
+// @Summary Delete action
+// @Description Delete action
+// @Tags action
+// @Accept json
+// @Produce json
+// @Param id path string true "Action id"
+// @Router /api/action/{id} [delete]
+// @Success 200 {object} fall.AppErr
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ActionHandler) deleteAction(ctx *fiber.Ctx) error {
+
+	id := ctx.Params("id")
+
+	if id == "" {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	ex := h.service.DeleteAction(ctx.Context(), id)
+
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
+}
+
+// @Summary Delete action model
+// @Description Delete action model
+// @Tags action
+// @Accept json
+// @Produce json
+// @Param actionModelId path int true "Action model  id"
+// @Router /api/action/model/{actionModelId} [delete]
+// @Success 200 {object} fall.AppErr
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ActionHandler) deleteActionModel(ctx *fiber.Ctx) error {
+
+	actionModelId, err := ctx.ParamsInt("actionModelId")
+
+	if err != nil {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	ex := h.service.DeleteActionModel(ctx.Context(), actionModelId)
+
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Update action
@@ -116,6 +217,8 @@ func (h *ActionHandler) create(ctx *fiber.Ctx) error {
 	}
 
 	validate := validator.New()
+
+	validate.RegisterValidation("actionGenderEnumValidation", model.ActionGenderEnumValidation)
 
 	err = validate.Struct(&dto)
 

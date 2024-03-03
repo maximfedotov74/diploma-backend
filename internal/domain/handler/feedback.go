@@ -51,7 +51,7 @@ func (fh *FeedbackHandler) InitRoutes() {
 // @Produce json
 // @Param id path int true "feedback id"
 // @Router /api/feedback/{id} [patch]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -69,7 +69,8 @@ func (fh *FeedbackHandler) toggleHidden(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Get all feedback
@@ -105,7 +106,7 @@ func (fh *FeedbackHandler) getAll(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param id path int true "Feedback Id"
 // @Router /api/feedback/{id} [delete]
-// @Success 200
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -123,7 +124,8 @@ func (fh *FeedbackHandler) deleteFeedback(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Add feedback to model
@@ -134,7 +136,7 @@ func (fh *FeedbackHandler) deleteFeedback(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param dto body model.AddFeedbackDto true "Add feedback with body dto"
 // @Router /api/feedback/ [post]
-// @Success 201
+// @Success 201 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -173,7 +175,8 @@ func (fh *FeedbackHandler) addFeedback(ctx *fiber.Ctx) error {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
 
-	return ctx.SendStatus(fall.STATUS_CREATED)
+	resp := fall.GetCreated()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Get model feedback by modelId

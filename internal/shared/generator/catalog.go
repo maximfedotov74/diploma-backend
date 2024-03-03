@@ -43,33 +43,35 @@ func GenerateCatalogQuery(filters CatalogFilters) GeneratedCatalogQuery {
 		optIdx := 1
 
 		for optionSlug, v := range filters.Options {
-			join := fmt.Sprintf(`
-      inner join product_model_option as pmop%[1]d on pmop%[1]d.product_model_id = pm.product_model_id
-      inner join option as op%[1]d on op%[1]d.option_id = pmop%[1]d.option_id
-      inner join option_value as v%[1]d on v%[1]d.option_value_id = pmop%[1]d.option_value_id`, optIdx)
-			optionsJoins += join
-			filterValues := strings.Split(v, ",")
-			where := fmt.Sprintf("op%d.slug = '%s' and v%d.option_value_id IN ", optIdx, optionSlug, optIdx)
+			if v != "" {
+				join := fmt.Sprintf(`
+				inner join product_model_option as pmop%[1]d on pmop%[1]d.product_model_id = pm.product_model_id
+				inner join option as op%[1]d on op%[1]d.option_id = pmop%[1]d.option_id
+				inner join option_value as v%[1]d on v%[1]d.option_value_id = pmop%[1]d.option_value_id`, optIdx)
+				optionsJoins += join
+				filterValues := strings.Split(v, ",")
+				where := fmt.Sprintf("op%d.slug = '%s' and v%d.option_value_id IN ", optIdx, optionSlug, optIdx)
 
-			if !isWhereStatement {
-				where = " WHERE " + where
-				isWhereStatement = true
-			} else {
-				where = " AND " + where
-			}
-			idsArr := make([]string, 0, len(filterValues))
-			for _, optionValue := range filterValues {
-				valueId, err := strconv.Atoi(optionValue)
-				if err != nil {
-					continue
+				if !isWhereStatement {
+					where = " WHERE " + where
+					isWhereStatement = true
+				} else {
+					where = " AND " + where
 				}
-				idStr := fmt.Sprintf("%d", valueId)
-				idsArr = append(idsArr, idStr)
+				idsArr := make([]string, 0, len(filterValues))
+				for _, optionValue := range filterValues {
+					valueId, err := strconv.Atoi(optionValue)
+					if err != nil {
+						continue
+					}
+					idStr := fmt.Sprintf("%d", valueId)
+					idsArr = append(idsArr, idStr)
+				}
+				inStatement := fmt.Sprintf("(%s)", strings.Join(idsArr, ","))
+				where += inStatement
+				optionsWhereStatement += where + " "
+				optIdx++
 			}
-			inStatement := fmt.Sprintf("(%s)", strings.Join(idsArr, ","))
-			where += inStatement
-			optionsWhereStatement += where + " "
-			optIdx++
 		}
 		optionsWhere = optionsWhereStatement
 	}
@@ -94,12 +96,6 @@ func GenerateCatalogQuery(filters CatalogFilters) GeneratedCatalogQuery {
 	}
 
 	if filters.Brands != "" {
-		brandsIds := strings.Split(filters.Brands, ",")
-		idsArr := make([]string, 0, len(brandsIds))
-		for _, brandId := range brandsIds {
-			idStr := fmt.Sprintf("%s", brandId)
-			idsArr = append(idsArr, idStr)
-		}
 		where := "b.brand_id IN "
 		if !isWhereStatement {
 			where = " WHERE " + where
@@ -107,7 +103,7 @@ func GenerateCatalogQuery(filters CatalogFilters) GeneratedCatalogQuery {
 		} else {
 			where = " AND " + where
 		}
-		inStatement := fmt.Sprintf("(%s)", strings.Join(idsArr, ","))
+		inStatement := fmt.Sprintf("(%s)", filters.Brands)
 		where += inStatement
 		brandsWhere = where
 	}
@@ -129,10 +125,10 @@ func GenerateCatalogQuery(filters CatalogFilters) GeneratedCatalogQuery {
 
 	if filters.OnlyWithDiscount != "" && filters.OnlyWithDiscount == "1" {
 		if !isWhereStatement {
-			onlyWithDiscountWhere = " WHERE pm.discount != NULL"
+			onlyWithDiscountWhere = " WHERE pm.discount IS NOT NULL"
 			isWhereStatement = true
 		} else {
-			onlyWithDiscountWhere = " AND pm.discount != NULL"
+			onlyWithDiscountWhere = " AND pm.discount IS NOT NULL"
 		}
 	}
 
@@ -140,13 +136,10 @@ func GenerateCatalogQuery(filters CatalogFilters) GeneratedCatalogQuery {
 		switch filters.SortBy {
 		case "price_asc":
 			sortStatement = " ORDER BY pm.price ASC"
-			break
 		case "price_desc":
 			sortStatement = " ORDER BY pm.price DESC"
-			break
 		case "discount":
 			sortStatement = " ORDER BY pm.discount DESC"
-			break
 		default:
 			sortStatement = ""
 		}

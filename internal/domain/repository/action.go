@@ -23,9 +23,9 @@ func NewActionRepository(db db.PostgresClient) *ActionRepository {
 
 func (r *ActionRepository) Create(ctx context.Context, dto model.CreateActionDto) fall.Error {
 
-	q := "INSERT INTO action (end_date,title,img_path,description) VALUES ($1,$2,$3,$4);"
+	q := "INSERT INTO action (end_date,title,img_path,description,action_gender) VALUES ($1,$2,$3,$4,$5);"
 
-	_, err := r.db.Exec(ctx, q, dto.EndDate, dto.Title, dto.ImgPath, dto.Description)
+	_, err := r.db.Exec(ctx, q, dto.EndDate, dto.Title, dto.ImgPath, dto.Description, dto.Gender)
 	if err != nil {
 		return fall.ServerError(fmt.Sprintf("Ошибка при создании акции: %s", err.Error()))
 	}
@@ -48,7 +48,7 @@ func (r *ActionRepository) GetModels(ctx context.Context, id string) ([]model.Ac
 	SELECT p.product_id as p_id, p.title as p_title,
 	b.brand_id as b_id, b.title as b_title, b.slug as b_slug, ct.category_id as ct_id, ct.title as ct_title, ct.slug as ct_slug,
 	pm.product_model_id as model_id, pm.slug as m_slug, pm.article as m_article, pm.price as model_price, pm.discount as model_discount,
-	pm.main_image_path as pm_main_img
+	pm.main_image_path as pm_main_img, am.action_model_id as am_id
 	FROM product p INNER JOIN category ct ON p.category_id = ct.category_id 
 	INNER JOIN brand b on p.brand_id = b.brand_id
 	INNER JOIN product_model pm ON pm.product_id = p.product_id
@@ -71,7 +71,7 @@ func (r *ActionRepository) GetModels(ctx context.Context, id string) ([]model.Ac
 
 		err := rows.Scan(&m.ProductId, &m.Title, &m.Brand.Id, &m.Brand.Title, &m.Brand.Slug,
 			&m.Category.Id, &m.Category.Title, &m.Category.Slug, &m.ModelId, &m.Slug, &m.Article, &m.Price, &m.Discount,
-			&m.MainImagePath,
+			&m.MainImagePath, &m.ActionModelId,
 		)
 
 		if err != nil {
@@ -109,7 +109,8 @@ func (r *ActionRepository) FindById(ctx context.Context, id string) (*model.Acti
 }
 
 func (r *ActionRepository) GetAll(ctx context.Context) ([]model.Action, fall.Error) {
-	q := "SELECT action_id, created_at, updated_at, end_date, title, is_activated, img_path, description FROM action ORDER BY created_at;"
+	q := `SELECT action_id, created_at, updated_at, end_date, title, is_activated, img_path, description, action_gender
+	FROM action ORDER BY created_at;`
 
 	rows, err := r.db.Query(ctx, q)
 
@@ -124,7 +125,7 @@ func (r *ActionRepository) GetAll(ctx context.Context) ([]model.Action, fall.Err
 		action := model.Action{}
 
 		err := rows.Scan(&action.Id, &action.CreatedAt, &action.UpdatedAt, &action.EndDate, &action.Title, &action.IsActivated,
-			&action.ImgPath, &action.Description)
+			&action.ImgPath, &action.Description, &action.Gender)
 
 		if err != nil {
 			return nil, fall.ServerError(err.Error())
@@ -173,4 +174,63 @@ func (r *ActionRepository) Update(ctx context.Context, dto model.UpdateActionDto
 		}
 	}
 	return nil
+}
+
+func (r *ActionRepository) DeleteActionModel(ctx context.Context, actionModelId int) fall.Error {
+
+	q := "DELETE FROM action_model WHERE action_model_id = $1;"
+
+	_, err := r.db.Exec(ctx, q, actionModelId)
+
+	if err != nil {
+		return fall.ServerError(err.Error())
+	}
+
+	return nil
+
+}
+
+func (r *ActionRepository) DeleteAction(ctx context.Context, id string) fall.Error {
+	q := "DELETE FROM action WHERE action_id = $1;"
+
+	_, err := r.db.Exec(ctx, q, id)
+
+	if err != nil {
+		return fall.ServerError(err.Error())
+	}
+
+	return nil
+}
+
+func (r *ActionRepository) GetActionsByGender(ctx context.Context, gender model.ActionGender) ([]model.Action, fall.Error) {
+
+	q := `SELECT action_id, created_at, updated_at, end_date, title, is_activated, img_path, description, action_gender
+	FROM action WHERE action_gender = $1 OR action_gender = 'everyone' ORDER BY created_at;`
+
+	rows, err := r.db.Query(ctx, q, gender)
+
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+	defer rows.Close()
+
+	var actions []model.Action
+
+	for rows.Next() {
+		action := model.Action{}
+
+		err := rows.Scan(&action.Id, &action.CreatedAt, &action.UpdatedAt, &action.EndDate, &action.Title, &action.IsActivated,
+			&action.ImgPath, &action.Description, &action.Gender)
+
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+		actions = append(actions, action)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	return actions, nil
 }
