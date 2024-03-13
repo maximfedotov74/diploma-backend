@@ -18,6 +18,11 @@ type userMailService interface {
 type userSessionServie interface {
 	Create(ctx context.Context, dto model.CreateSessionDto) fall.Error
 	Sign(claims jwt.UserClaims) (*jwt.Tokens, fall.Error)
+	GetUserSessions(ctx context.Context, userId int, token string) (*model.UserSessionsResponse, fall.Error)
+
+	RemoveSession(ctx context.Context, userId int, sessionId int) fall.Error
+	RemoveExceptCurrentSession(ctx context.Context, userId int, sessionId int) fall.Error
+	RemoveAllSessions(ctx context.Context, userId int) fall.Error
 }
 
 type userRepository interface {
@@ -40,6 +45,17 @@ type UserService struct {
 func NewUserService(repo userRepository, sessionService userSessionServie,
 	mailService userMailService) *UserService {
 	return &UserService{repo: repo, sessionService: sessionService, mailService: mailService}
+}
+
+func (s *UserService) RemoveAllSessions(ctx context.Context, userId int) fall.Error {
+	return s.sessionService.RemoveAllSessions(ctx, userId)
+}
+func (s *UserService) RemoveSession(ctx context.Context, userId int, sessionId int) fall.Error {
+	return s.sessionService.RemoveSession(ctx, userId, sessionId)
+}
+
+func (s *UserService) RemoveExceptCurrentSession(ctx context.Context, userId int, sessionId int) fall.Error {
+	return s.sessionService.RemoveExceptCurrentSession(ctx, userId, sessionId)
 }
 
 func (s *UserService) Create(ctx context.Context, dto model.CreateUserDto) (*model.CreatedUserResponse, fall.Error) {
@@ -140,4 +156,8 @@ func (us *UserService) ChangePassword(ctx context.Context, dto model.ChangePassw
 	}
 
 	return tokens, nil
+}
+
+func (s *UserService) GetUserSessions(ctx context.Context, userId int, token string) (*model.UserSessionsResponse, fall.Error) {
+	return s.sessionService.GetUserSessions(ctx, userId, token)
 }

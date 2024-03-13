@@ -35,6 +35,7 @@ func GenerateCatalogQuery(filters CatalogFilters) GeneratedCatalogQuery {
 	brandsWhere := ""
 	priceWhere := ""
 	onlyWithDiscountWhere := ""
+	orderJoin := ""
 
 	if len(filters.Options) > 0 {
 
@@ -156,7 +157,7 @@ func GenerateCatalogQuery(filters CatalogFilters) GeneratedCatalogQuery {
 
 	return GeneratedCatalogQuery{
 		SortStatement: sortStatement,
-		MainQuery:     optionsJoins + optionsWhere + sizeWhere + brandsWhere + priceWhere + onlyWithDiscountWhere,
+		MainQuery:     optionsJoins + orderJoin + optionsWhere + sizeWhere + brandsWhere + priceWhere + onlyWithDiscountWhere,
 		Pagination:    pagination,
 	}
 }

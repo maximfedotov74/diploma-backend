@@ -9,6 +9,7 @@ import (
 	"github.com/maximfedotov74/diploma-backend/internal/domain/model"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/fall"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/generator"
+	"github.com/maximfedotov74/diploma-backend/internal/shared/utils"
 )
 
 type productService interface {
@@ -32,6 +33,12 @@ type productService interface {
 	GetModelOptions(ctx context.Context, modelId int) ([]*model.ProductModelOption, fall.Error)
 	SearchByArticle(ctx context.Context, article string) ([]model.SearchProductModel, fall.Error)
 	FindProductModelBySlug(ctx context.Context, slug string) (*model.ProductModel, fall.Error)
+	GetSimilarProducts(ctx context.Context, categoryId int, brandId int, modelId int) ([]*model.CatalogProductModel, fall.Error)
+	GetModelViews(ctx context.Context, modelId int) *int
+	UpdateViews(ctx context.Context, ip string, modelId int)
+	GetViewHistory(ctx context.Context, userId int, modelId int) ([]*model.CatalogProductModel, fall.Error)
+	AddToViewHistory(ctx context.Context, userId int, modelId int) fall.Error
+	GetPopularProducts(ctx context.Context, slug string) ([]*model.CatalogProductModel, fall.Error)
 }
 
 type ProductHandler struct {
@@ -54,6 +61,8 @@ func (h *ProductHandler) InitRoutes() {
 		productRouter.Post("/", h.createProduct)
 		productRouter.Post("/model", h.createProductModel)
 		productRouter.Post("/model/img", h.addPhoto)
+		productRouter.Post("/model/views/:id", h.addViewToModel)
+		productRouter.Post("/model/views-history/:id", h.authMiddleware, h.addModelToHistory)
 
 		productRouter.Delete("/model/img/:imgId", h.removePhoto)
 		productRouter.Delete("/model/:modelId", h.deleteModel)
@@ -70,11 +79,199 @@ func (h *ProductHandler) InitRoutes() {
 		productRouter.Get("/model/page/:slug", h.getProductPage)
 		productRouter.Get("/model/img/:id", h.getProductModelImg)
 		productRouter.Get("/model/sizes/:id", h.getProductModelSizes)
+		productRouter.Get("/model/views/:id", h.getModelViews)
+		productRouter.Get("/model/views-history/:id", h.authMiddleware, h.getViewHistory)
 		productRouter.Get("/model/options/:id", h.getModelOptions)
+		productRouter.Get("/model/similar-models/:id", h.getSimilarModels)
 		productRouter.Get("/model/search-by-article", h.searchByArticle)
+		productRouter.Get("/model/popular/:categorySlug", h.getPopular)
 		productRouter.Get("/model/:slug", h.getModelBySlug)
 		productRouter.Get("/:id", h.getProductById)
 	}
+}
+
+// @Summary Get popular models
+// @Description Get popular models
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param categorySlug path string true "Category slug"
+// @Router /api/product/model/popular/{categorySlug} [get]
+// @Success 200 {array} model.CatalogProductModel
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ProductHandler) getPopular(ctx *fiber.Ctx) error {
+
+	slug := ctx.Params("categorySlug")
+
+	models, ex := h.service.GetPopularProducts(ctx.Context(), slug)
+
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(models)
+}
+
+// @Summary Add model to history
+// @Description Add model to history
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param id path int true "Model id"
+// @Router /api/product/model/views-history/{id} [post]
+// @Success 200 {object} fall.AppErr
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ProductHandler) addModelToHistory(ctx *fiber.Ctx) error {
+
+	user, ex := utils.GetLocalSession(ctx)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	id, err := ctx.ParamsInt("id")
+	if err != nil {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	ex = h.service.AddToViewHistory(ctx.Context(), user.UserId, id)
+
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	ok := fall.GetOk()
+
+	return ctx.Status(ok.Status()).JSON(ok)
+}
+
+// @Summary Add view to model
+// @Description Add view to model
+// @Security BearerToken
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param id path int true "Model id"
+// @Router /api/product/model/views/{id} [post]
+// @Success 200 {object} fall.AppErr
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ProductHandler) addViewToModel(ctx *fiber.Ctx) error {
+	id, err := ctx.ParamsInt("id")
+	if err != nil {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	ip := ctx.IP()
+
+	h.service.UpdateViews(ctx.Context(), ip, id)
+
+	ok := fall.GetOk()
+
+	return ctx.Status(ok.Status()).JSON(ok)
+}
+
+// @Summary Get model views
+// @Description Get model views
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param id path int true "Model id"
+// @Router /api/product/model/views/{id} [get]
+// @Success 200 {object} model.Views
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ProductHandler) getModelViews(ctx *fiber.Ctx) error {
+
+	id, err := ctx.ParamsInt("id")
+	if err != nil {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	count := h.service.GetModelViews(ctx.Context(), id)
+
+	v := model.Views{Count: count}
+
+	return ctx.Status(fall.STATUS_OK).JSON(v)
+}
+
+// @Summary Get view history models
+// @Description Get view history models
+// @Security BearerToken
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param id path int true "Model id"
+// @Router /api/product/model/views-history/{id} [get]
+// @Success 200 {array} model.CatalogProductModel
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ProductHandler) getViewHistory(ctx *fiber.Ctx) error {
+
+	user, ex := utils.GetLocalSession(ctx)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	id, err := ctx.ParamsInt("id")
+	if err != nil {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	history, ex := h.service.GetViewHistory(ctx.Context(), user.UserId, id)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+	return ctx.Status(fall.STATUS_OK).JSON(history)
+}
+
+// @Summary Get similar models
+// @Description Get similar models
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param id path int true "Model id"
+// @Param brandId query int true "Brand id"
+// @Param categoryId query int true "Category Id"
+// @Router /api/product/model/similar-models/{id} [get]
+// @Success 200 {array} model.CatalogProductModel
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ProductHandler) getSimilarModels(ctx *fiber.Ctx) error {
+
+	id, err := ctx.ParamsInt("id")
+	if err != nil {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	brandId := ctx.QueryInt("brandId")
+	if brandId == 0 {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+	categoryId := ctx.QueryInt("categoryId")
+	if categoryId == 0 {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	similar, ex := h.service.GetSimilarProducts(ctx.Context(), categoryId, brandId, id)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+	return ctx.Status(fall.STATUS_OK).JSON(similar)
 }
 
 // @Summary Get model by slug

@@ -7,9 +7,13 @@ import (
 )
 
 type CreateOrderResponse struct {
-	Link  string `json:"link" validate:"required"`
-	Id    string `json:"id" validate:"required"`
-	Total int    `json:"total" validate:"required"`
+	Link  string  `json:"link" validate:"required"`
+	Id    string  `json:"id" validate:"required"`
+	Total float64 `json:"total" validate:"required"`
+}
+
+type OrderConfirmation struct {
+	PaymentUrl *string `json:"payment_url"`
 }
 
 type OrderStatusEnum string
@@ -56,9 +60,9 @@ type Order struct {
 	Status        OrderStatusEnum   `json:"status" validate:"required"`
 	PaymentMethod PaymentMethodEnum `json:"payment_method" validate:"required"`
 	Conditions    OrderConditions   `json:"conditions" validate:"required"`
-	ProductsPrice int               `json:"products_price" validate:"required"`
-	TotalPrice    int               `json:"total_price" validate:"required"`
-	TotalDiscount *int              `json:"total_discount"`
+	ProductsPrice float64           `json:"products_price" validate:"required"`
+	TotalPrice    float64           `json:"total_price" validate:"required"`
+	TotalDiscount *float64          `json:"total_discount"`
 	PromoDiscount *int              `json:"promo_discount"`
 	DeliveryPrice int               `json:"delivery_price" validate:"required"`
 	DeliveryPoint DeliveryPoint     `json:"delivery_point" validate:"required"`
@@ -82,16 +86,6 @@ type OrderModel struct {
 	Size          ProductModelSize  `json:"size" validate:"required"`
 	MainImagePath string            `json:"main_image_path" validate:"required"`
 	Product       OrderModelProduct `json:"product" validate:"required"`
-	Color         OrderModelOption  `json:"option" validate:"required"`
-}
-
-type OrderModelOption struct {
-	ProductModelOptionId int    `json:"product_model_option_id" validate:"required"`
-	OptionId             int    `json:"option_id" validate:"required"`
-	ValueId              int    `json:"value_id" validate:"required"`
-	Title                string `json:"title" validate:"required"`
-	Slug                 string `json:"slug" validate:"required"`
-	Value                string `json:"value" validate:"required"`
 }
 
 func OrderStatusEnumValidation(fl validator.FieldLevel) bool {
@@ -136,10 +130,10 @@ type CreateOrderDto struct {
 }
 
 type CreateOrderInput struct {
-	DeliveryPrice      int `json:"delivery_price" validate:"required,min=0"`
-	TotalPrice         int
-	ProductsPrice      int
-	TotalDiscount      int
+	DeliveryPrice      float64 `json:"delivery_price" validate:"required,min=0"`
+	TotalPrice         float64
+	ProductsPrice      float64
+	TotalDiscount      float64
 	RecipientFirstname string
 	RecipientLastname  string
 	Conditions         OrderConditions `json:"order_conditions" validate:"required,orderConditionsEnumValidation"`

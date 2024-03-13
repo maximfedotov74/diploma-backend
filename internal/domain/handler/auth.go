@@ -14,7 +14,8 @@ import (
 type authService interface {
 	Login(ctx context.Context, dto model.LoginDto, userAgent string) (*model.LoginResponse, fall.Error)
 	Registration(ctx context.Context, dto model.CreateUserDto) (*int, fall.Error)
-	Refresh(ctx context.Context, refreshToken string, userAgent string) (*model.LoginResponse, fall.Error)
+	Refresh(ctx context.Context, refreshToken string) (*model.LoginResponse, fall.Error)
+	Logout(ctx context.Context, token string) fall.Error
 }
 
 type AuthHandler struct {
@@ -36,6 +37,7 @@ func (ah *AuthHandler) InitRoutes() {
 	{
 		authRouter.Post("/registration", ah.registration)
 		authRouter.Post("/login", ah.login)
+		authRouter.Post("/logout", ah.logout)
 		authRouter.Get("/refresh-token", ah.refreshToken)
 	}
 }
@@ -133,6 +135,53 @@ func (ah *AuthHandler) login(ctx *fiber.Ctx) error {
 
 }
 
+// @Summary Logout
+// @Description Logout
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param dto body model.LogoutDto true "logout"
+// @Router /api/auth/logout [post]
+// @Success 200 {object} fall.AppErr
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (ah *AuthHandler) logout(ctx *fiber.Ctx) error {
+	var dto model.LogoutDto
+
+	err := ctx.BodyParser(&dto)
+	if err != nil {
+		ex := fall.NewErr(fall.INVALID_BODY, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	validate := validator.New()
+
+	err = validate.Struct(&dto)
+
+	if err != nil {
+		error_messages := err.(validator.ValidationErrors)
+		items := fall.ValidationMessages(error_messages)
+		validError := fall.NewValidErr(items)
+
+		return ctx.Status(validError.Status).JSON(validError)
+	}
+
+	ex := ah.service.Logout(ctx.Context(), dto.Token)
+
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	access, refresh := utils.RemoveCookies()
+	ctx.Cookie(access)
+	ctx.Cookie(refresh)
+
+	ok := fall.GetOk()
+	return ctx.Status(ok.Status()).JSON(ok)
+
+}
+
 // @Summary Refresh tokens
 // @Description Refresh tokens by cookies refresh_token
 // @Tags auth
@@ -151,9 +200,7 @@ func (ah *AuthHandler) refreshToken(ctx *fiber.Ctx) error {
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
-	userAgent := ctx.Get("User-Agent")
-
-	response, err := ah.service.Refresh(ctx.Context(), refreshToken, userAgent)
+	response, err := ah.service.Refresh(ctx.Context(), refreshToken)
 
 	if err != nil {
 		return ctx.Status(err.Status()).JSON(err)

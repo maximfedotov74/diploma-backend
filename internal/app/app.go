@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -40,15 +39,8 @@ func Start() {
 	})))
 
 	fiberApp.Use(cors.New(cors.Config{
-		AllowOrigins: configuration.ClientUrl,
-		AllowMethods: strings.Join([]string{
-			fiber.MethodGet,
-			fiber.MethodPost,
-			fiber.MethodHead,
-			fiber.MethodPut,
-			fiber.MethodDelete,
-			fiber.MethodPatch,
-		}, ","),
+		AllowOrigins:     configuration.ClientUrl,
+		AllowMethods:     "*",
 		AllowCredentials: true,
 	}))
 
@@ -132,7 +124,7 @@ func initDeps(router fiber.Router, postgresClient db.PostgresClient,
 
 	authService := service.NewAuthService(userService, sessionService, mailService)
 	roleHandler := handler.NewRoleHandler(roleService, router, authMiddleware, roleMiddleware)
-	userHandler := handler.NewUserHandler(userService, router, authMiddleware)
+	userHandler := handler.NewUserHandler(userService, router, authMiddleware, fmt.Sprintf("%s/auth", config.ClientUrl))
 	authHandler := handler.NewAuthHandler(authService, router, authMiddleware)
 	brandHandler := handler.NewBrandHandler(brandService, router, authMiddleware)
 	categoryHandler := handler.NewCategoryHandler(categoryService, router, authMiddleware)
@@ -141,7 +133,7 @@ func initDeps(router fiber.Router, postgresClient db.PostgresClient,
 	productHandler := handler.NewProductHandler(productService, router, authMiddleware)
 	feedbackHandler := handler.NewFeedbackHandler(feedbackService, router, authMiddleware)
 	wishHandler := handler.NewWishHandler(wishService, router, authMiddleware)
-	orderHandler := handler.NewOrderHandler(orderService, router, authMiddleware)
+	orderHandler := handler.NewOrderHandler(orderService, router, authMiddleware, config.ClientUrl)
 	fileHandler := handler.NewFileHandler(fileClient, router, authMiddleware)
 	actionHandler := handler.NewActionHandler(actionService, router, authMiddleware)
 

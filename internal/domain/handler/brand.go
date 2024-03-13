@@ -16,6 +16,7 @@ type brandService interface {
 	Update(ctx context.Context, dto model.UpdateBrandDto, id int) fall.Error
 	Create(ctx context.Context, dto model.CreateBrandDto) fall.Error
 	Delete(ctx context.Context, slug string) fall.Error
+	GetBrandsByGender(ctx context.Context, slug string) ([]model.Brand, fall.Error)
 }
 
 type BrandHandler struct {
@@ -39,8 +40,34 @@ func (h *BrandHandler) InitRoutes() {
 		brandRouter.Patch("/:id", h.update)
 		brandRouter.Delete("/:slug", h.delete)
 		brandRouter.Get("/", h.getAll)
+		brandRouter.Get("/by-gender/:categorySlug", h.getByGender)
 		brandRouter.Get("/:slug", h.findBySlug)
 	}
+}
+
+// @Summary Get brands by gender
+// @Description Get brands by gender
+// @Tags brand
+// @Accept json
+// @Produce json
+// @Param categorySlug path string true "Category slug"
+// @Router /api/brand/by-gender/{categorySlug} [get]
+// @Success 200 {array} model.Brand
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *BrandHandler) getByGender(ctx *fiber.Ctx) error {
+
+	categorySlug := ctx.Params("categorySlug")
+
+	brands, err := h.service.GetBrandsByGender(ctx.Context(), categorySlug)
+
+	if err != nil {
+		return ctx.Status(err.Status()).JSON(err)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(brands)
+
 }
 
 // @Summary Delete brand by slug

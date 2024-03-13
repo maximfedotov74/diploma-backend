@@ -19,3 +19,17 @@ func SetCookies(tokens jwt.Tokens) (*fiber.Cookie, *fiber.Cookie) {
 
 	return access_cookie, refresh_cookie
 }
+
+func RemoveCookies() (*fiber.Cookie, *fiber.Cookie) {
+	access_cookie := new(fiber.Cookie)
+	access_cookie.Name = "access_token"
+	access_cookie.Value = ""
+	access_cookie.MaxAge = -1
+	refresh_cookie := new(fiber.Cookie)
+	refresh_cookie.Name = "refresh_token"
+	refresh_cookie.Value = ""
+	refresh_cookie.MaxAge = -1
+	refresh_cookie.HTTPOnly = true
+	return access_cookie, refresh_cookie
+
+}

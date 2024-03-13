@@ -22,6 +22,7 @@ type categoryRepository interface {
 	GetTopLevels(ctx context.Context) ([]model.CategoryModel, fall.Error)
 	GetChildrenCount(ctx context.Context, id int) (*int, fall.Error)
 	GetWithoutChildren(ctx context.Context) ([]model.CategoryModel, fall.Error)
+	GetLastLevels(ctx context.Context, slug string) ([]model.CategoryModel, fall.Error)
 }
 
 type CategoryService struct {
@@ -30,6 +31,10 @@ type CategoryService struct {
 
 func NewCategoryService(repo categoryRepository) *CategoryService {
 	return &CategoryService{repo: repo}
+}
+
+func (s *CategoryService) GetLastLevels(ctx context.Context, slug string) ([]model.CategoryModel, fall.Error) {
+	return s.repo.GetLastLevels(ctx, slug)
 }
 
 func (s *CategoryService) GetWithoutChildren(ctx context.Context) ([]model.CategoryModel, fall.Error) {

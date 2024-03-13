@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"errors"
-	"log"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/maximfedotov74/diploma-backend/internal/domain/model"
@@ -32,7 +31,7 @@ func NewOrderRepository(db db.PostgresClient, wishRepository orderWishRepository
 	return &OrderRepository{db: db, wishRepository: wishRepository, productRepository: productRepository}
 }
 
-func (r *OrderRepository) Create(ctx context.Context, input model.CreateOrderInput, userId int) fall.Error {
+func (r *OrderRepository) Create(ctx context.Context, input model.CreateOrderInput, userId int) (*model.CreateOrderResponse, fall.Error) {
 
 	var ex fall.Error = nil
 
@@ -40,7 +39,7 @@ func (r *OrderRepository) Create(ctx context.Context, input model.CreateOrderInp
 
 	if err != nil {
 		ex = fall.ServerError(err.Error())
-		return ex
+		return nil, ex
 	}
 
 	defer func() {
@@ -67,24 +66,24 @@ func (r *OrderRepository) Create(ctx context.Context, input model.CreateOrderInp
 	err = row.Scan(&orderId)
 	if err != nil {
 		ex = fall.ServerError(err.Error())
-		return ex
+		return nil, ex
 	}
 
 	for _, item := range input.CartItems {
 		ex = r.createOrderModel(ctx, tx, orderId, item)
 		if ex != nil {
-			return ex
+			return nil, ex
 		}
 	}
 
 	ex = r.AddDeliveryPoint(ctx, tx, orderId, input.DeliveryPointId)
 	if ex != nil {
-		return ex
+		return nil, ex
 	}
 
 	link, ex := r.AddActivationLink(ctx, tx, orderId)
 	if ex != nil {
-		return ex
+		return nil, ex
 	}
 
 	if len(input.CartItems) > 0 {
@@ -94,13 +93,11 @@ func (r *OrderRepository) Create(ctx context.Context, input model.CreateOrderInp
 		}
 		ex = r.wishRepository.RemoveSeveralItems(ctx, tx, cartIds)
 		if ex != nil {
-			return ex
+			return nil, ex
 		}
 	}
 
-	log.Println(orderId, link, input.TotalPrice)
-
-	return nil
+	return &model.CreateOrderResponse{Link: *link, Id: orderId, Total: input.TotalPrice}, nil
 }
 
 func (r *OrderRepository) createOrderModel(
@@ -190,4 +187,335 @@ func (or *OrderRepository) AddActivationLink(ctx context.Context, tx db.Transact
 		return nil, err
 	}
 	return link, nil
+}
+
+func (or *OrderRepository) ActivateOrder(link string) fall.Error {
+	ctx := context.Background()
+	query := `SELECT order_id FROM order_activation WHERE link = $1 AND end_time > CURRENT_TIMESTAMP;`
+
+	row := or.db.QueryRow(ctx, query, link)
+
+	var orderId string
+
+	err := row.Scan(&orderId)
+
+	if err != nil {
+		return fall.ServerError(msg.OrderErrorWhenActivate)
+	}
+
+	query = "UPDATE public.order SET is_activated = TRUE WHERE order_id = $1;"
+
+	_, err = or.db.Exec(ctx, query, orderId)
+	if err != nil {
+		return fall.ServerError(msg.OrderErrorWhenActivate)
+	}
+
+	return nil
+
+}
+
+func (or *OrderRepository) GetUserOrders(ctx context.Context, userId int) ([]*model.Order, fall.Error) {
+
+	query := `
+	SELECT o.order_id as o_id, o.created_at as o_created_at, o.updated_at as o_updated_at,
+	o.delivery_date as o_delivery_date, o.is_activated as o_is_activated,
+	o.order_status as o_order_status, o.order_payment_method as o_payment_method,
+	o.conditions as o_conditions, o.products_price as o_products_price,
+	o.total_price as o_total_price, o.total_discount as o_total_discount,o.promo_discount as o_promo_discount,
+	o.delivery_price as o_delivery_price,o.recipient_firstname as o_recipient_firstname, 
+	o.recipient_lastname as o_recipient_lastname,o.recipient_phone as o_recipient_phone, u.user_id as u_id, u.email as u_email,
+	om.order_model_id as om_id, om.quantity as om_quantity,
+	om.price as om_price, om.discount as om_discount,
+	ms.model_size_id as ms_id, ms.product_model_id as ms_product_model_id, ms.size_id as ms_size_id, ms.literal_size as ms_literal_size,
+	sz.size_value as ms_size_value,  ms.in_stock as ms_in_stock,
+	pm.main_image_path as pm_main_image_path,
+	p.product_id as p_id, p.title as p_title, pm.slug as pm_slug, pm.article as pm_article,
+	c.category_id as c_id, c.title as c_title, c.slug as c_slug,
+	b.brand_id as b_id, b.title as b_title, b.slug as b_slug,
+	dp.delivery_point_id as dp_id, dp.title as dp_title, dp.city as dp_city,
+	dp.address as dp_address, dp.coords as db_coords, dp.with_fitting as dp_with_fitting,
+	dp.work_schedule as dp_work_schedule, dp.info as dp_info
+	FROM public.order as o
+	INNER JOIN public.user as u ON o.user_id = u.user_id
+	INNER JOIN order_model as om ON o.order_id = om.order_id
+	INNER JOIN model_sizes as ms ON om.model_size_id = ms.model_size_id
+	INNER JOIN product_model as pm ON ms.product_model_id = pm.product_model_id
+	INNER JOIN sizes as sz ON ms.size_id = sz.size_id
+	INNER JOIN product as p ON p.product_id = pm.product_id
+	INNER JOIN category as c on p.category_id = c.category_id
+	INNER JOIN brand as b on p.brand_id = b.brand_id
+	INNER JOIN order_delivery_point as odp ON o.order_id = odp.order_id
+	INNER JOIN delivery_point as dp ON odp.delivery_point_id = dp.delivery_point_id
+	WHERE u.user_id = $1
+	ORDER BY o.created_at DESC;
+	`
+
+	rows, err := or.db.Query(ctx, query, userId)
+
+	if err != nil {
+
+		return nil, fall.ServerError(err.Error())
+	}
+	defer rows.Close()
+
+	ordersMap := make(map[string]*model.Order)
+	var ordersOrder []string
+	for rows.Next() {
+		o := model.Order{}
+		m := model.OrderModel{}
+
+		err := rows.Scan(&o.Id, &o.CreatedAt, &o.UpdatedAt, &o.DeliveryDate, &o.IsActivated, &o.Status, &o.PaymentMethod, &o.Conditions,
+			&o.ProductsPrice, &o.TotalPrice, &o.TotalDiscount, &o.PromoDiscount, &o.DeliveryPrice, &o.User.FirstName, &o.User.LastName,
+			&o.User.Phone, &o.User.Id, &o.User.Email, &m.OrderModelId, &m.Quantity, &m.Price, &m.Discount, &m.Size.ModelId, &m.Size.ModelId, &m.Size.SizeId, &m.Size.Literal, &m.Size.Value, &m.Size.InStock, &m.MainImagePath, &m.Product.ProductId, &m.Product.Title, &m.Slug, &m.Article,
+			&m.Product.Category.Id, &m.Product.Category.Title, &m.Product.Category.Slug,
+			&m.Product.Brand.Id, &m.Product.Brand.Title, &m.Product.Brand.Slug, &o.DeliveryPoint.Id, &o.DeliveryPoint.Title,
+			&o.DeliveryPoint.City, &o.DeliveryPoint.Address, &o.DeliveryPoint.Coords, &o.DeliveryPoint.WithFitting, &o.DeliveryPoint.WorkSchedule,
+			&o.DeliveryPoint.Info,
+		)
+		if err != nil {
+
+			return nil, fall.ServerError(err.Error())
+		}
+
+		current, ok := ordersMap[o.Id]
+		if !ok {
+			o.Models = append(o.Models, m)
+			ordersMap[o.Id] = &o
+			ordersOrder = append(ordersOrder, o.Id)
+		} else {
+			current.Models = append(current.Models, m)
+			ordersMap[current.Id] = current
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	orders := make([]*model.Order, 0, len(ordersMap))
+
+	for _, id := range ordersOrder {
+		o := ordersMap[id]
+		orders = append(orders, o)
+	}
+
+	return orders, nil
+}
+
+func (or *OrderRepository) GetOrder(ctx context.Context, id string) (*model.Order, fall.Error) {
+
+	query := `
+	SELECT o.order_id as o_id, o.created_at as o_created_at, o.updated_at as o_updated_at,
+	o.delivery_date as o_delivery_date, o.is_activated as o_is_activated,
+	o.order_status as o_order_status, o.order_payment_method as o_payment_method,
+	o.conditions as o_conditions, o.products_price as o_products_price,
+	o.total_price as o_total_price, o.total_discount as o_total_discount,o.promo_discount as o_promo_discount,
+	o.delivery_price as o_delivery_price,o.recipient_firstname as o_recipient_firstname, 
+	o.recipient_lastname as o_recipient_lastname,o.recipient_phone as o_recipient_phone, u.user_id as u_id, u.email as u_email,
+	om.order_model_id as om_id, om.quantity as om_quantity,
+	om.price as om_price, om.discount as om_discount,
+	ms.model_size_id as ms_id, ms.product_model_id as ms_product_model_id, ms.size_id as ms_size_id, ms.literal_size as ms_literal_size,
+	sz.size_value as ms_size_value, ms.in_stock as ms_in_stock,
+	pm.main_image_path as pm_main_image_path,
+	p.product_id as p_id, p.title as p_title, pm.slug as pm_slug, pm.article as pm_article,
+	c.category_id as c_id, c.title as c_title, c.slug as c_slug,
+	b.brand_id as b_id, b.title as b_title, b.slug as b_slug,
+	dp.delivery_point_id as dp_id, dp.title as dp_title, dp.city as dp_city,
+	dp.address as dp_address, dp.coords as db_coords, dp.with_fitting as dp_with_fitting,
+	dp.work_schedule as dp_work_schedule, dp.info as dp_info
+	FROM public.order as o
+	INNER JOIN public.user as u ON o.user_id = u.user_id
+	INNER JOIN order_model as om ON o.order_id = om.order_id
+	INNER JOIN model_sizes as ms ON om.model_size_id = ms.model_size_id
+	INNER JOIN product_model as pm ON ms.product_model_id = pm.product_model_id
+	INNER JOIN sizes as sz ON ms.size_id = sz.size_id
+	INNER JOIN product as p ON p.product_id = pm.product_id
+	INNER JOIN category as c on p.category_id = c.category_id
+	INNER JOIN brand as b on p.brand_id = b.brand_id
+	INNER JOIN order_delivery_point as odp ON o.order_id = odp.order_id
+	INNER JOIN delivery_point as dp ON odp.delivery_point_id = dp.delivery_point_id
+	WHERE o.order_id = $1;
+	`
+
+	rows, err := or.db.Query(ctx, query, id)
+
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+	defer rows.Close()
+
+	o := model.Order{}
+
+	founded := false
+
+	for rows.Next() {
+		m := model.OrderModel{}
+		err := rows.Scan(&o.Id, &o.CreatedAt, &o.UpdatedAt, &o.DeliveryDate, &o.IsActivated, &o.Status, &o.PaymentMethod, &o.Conditions,
+			&o.ProductsPrice, &o.TotalPrice, &o.TotalDiscount, &o.PromoDiscount, &o.DeliveryPrice, &o.User.FirstName, &o.User.LastName,
+			&o.User.Phone, &o.User.Id, &o.User.Email, &m.OrderModelId, &m.Quantity, &m.Price, &m.Discount, &m.Size.SizeModelId, &m.Size.ModelId, &m.Size.SizeId, &m.Size.Literal, &m.Size.Value, &m.Size.InStock, &m.MainImagePath, &m.Product.ProductId, &m.Product.Title, &m.Slug, &m.Article,
+			&m.Product.Category.Id, &m.Product.Category.Title, &m.Product.Category.Slug,
+			&m.Product.Brand.Id, &m.Product.Brand.Title, &m.Product.Brand.Slug, &o.DeliveryPoint.Id, &o.DeliveryPoint.Title,
+			&o.DeliveryPoint.City, &o.DeliveryPoint.Address, &o.DeliveryPoint.Coords, &o.DeliveryPoint.WithFitting, &o.DeliveryPoint.WorkSchedule,
+			&o.DeliveryPoint.Info,
+		)
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+
+		o.Models = append(o.Models, m)
+
+		if !founded {
+			founded = true
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	if !founded {
+		return nil, fall.NewErr(msg.OrderNotFound, fall.STATUS_NOT_FOUND)
+	}
+
+	return &o, nil
+}
+
+func (or *OrderRepository) GetAdminOrders(ctx context.Context) ([]*model.Order, fall.Error) {
+
+	query := `
+	SELECT o.order_id as o_id, o.created_at as o_created_at, o.updated_at as o_updated_at,
+	o.delivery_date as o_delivery_date, o.is_activated as o_is_activated,
+	o.order_status as o_order_status, o.order_payment_method as o_payment_method,
+	o.conditions as o_conditions, o.products_price as o_products_price,
+	o.total_price as o_total_price, o.total_discount as o_total_discount,o.promo_discount as o_promo_discount,
+	o.delivery_price as o_delivery_price,o.recipient_firstname as o_recipient_firstname, 
+	o.recipient_lastname as o_recipient_lastname,o.recipient_phone as o_recipient_phone, u.user_id as u_id, u.email as u_email,
+	om.order_model_id as om_id, om.quantity as om_quantity,
+	om.price as om_price, om.discount as om_discount,
+	ms.model_size_id as ms_id, ms.product_model_id as ms_product_model_id, ms.size_id as ms_size_id, ms.literal_size as ms_literal_size,
+	sz.size_value as ms_size_value, ms.in_stock as ms_in_stock,
+	pm.main_image_path as pm_main_image_path,
+	p.product_id as p_id, p.title as p_title, pm.slug as pm_slug, pm.article as pm_article,
+	c.category_id as c_id, c.title as c_title, c.slug as c_slug,
+	b.brand_id as b_id, b.title as b_title, b.slug as b_slug,
+	dp.delivery_point_id as dp_id, dp.title as dp_title, dp.city as dp_city,
+	dp.address as dp_address, dp.coords as db_coords, dp.with_fitting as dp_with_fitting,
+	dp.work_schedule as dp_work_schedule, dp.info as dp_info
+	FROM public.order as o
+	INNER JOIN public.user as u ON o.user_id = u.user_id
+	INNER JOIN order_model as om ON o.order_id = om.order_id
+	INNER JOIN model_sizes as ms ON om.model_size_id = ms.model_size_id
+	INNER JOIN product_model as pm ON ms.product_model_id = pm.product_model_id
+	INNER JOIN sizes as sz ON ms.size_id = sz.size_id
+	INNER JOIN product as p ON p.product_id = pm.product_id
+	INNER JOIN category as c on p.category_id = c.category_id
+	INNER JOIN brand as b on p.brand_id = b.brand_id
+	INNER JOIN order_delivery_point as odp ON o.order_id = odp.order_id
+	INNER JOIN delivery_point as dp ON odp.delivery_point_id = dp.delivery_point_id
+	ORDER BY o.created_at DESC;
+	`
+
+	rows, err := or.db.Query(ctx, query)
+
+	if err != nil {
+
+		return nil, fall.ServerError(err.Error())
+	}
+	defer rows.Close()
+
+	ordersMap := make(map[string]*model.Order)
+	var ordersOrder []string
+	for rows.Next() {
+		o := model.Order{}
+		m := model.OrderModel{}
+
+		err := rows.Scan(&o.Id, &o.CreatedAt, &o.UpdatedAt, &o.DeliveryDate, &o.IsActivated, &o.Status, &o.PaymentMethod, &o.Conditions,
+			&o.ProductsPrice, &o.TotalPrice, &o.TotalDiscount, &o.PromoDiscount, &o.DeliveryPrice, &o.User.FirstName, &o.User.LastName,
+			&o.User.Phone, &o.User.Id, &o.User.Email, &m.OrderModelId, &m.Quantity, &m.Price, &m.Discount, &m.Size.SizeModelId, &m.Size.ModelId, &m.Size.SizeId, &m.Size.Literal, &m.Size.Value, &m.Size.InStock, &m.MainImagePath, &m.Product.ProductId, &m.Product.Title, &m.Slug, &m.Article,
+			&m.Product.Category.Id, &m.Product.Category.Title, &m.Product.Category.Slug,
+			&m.Product.Brand.Id, &m.Product.Brand.Title, &m.Product.Brand.Slug, &o.DeliveryPoint.Id, &o.DeliveryPoint.Title,
+			&o.DeliveryPoint.City, &o.DeliveryPoint.Address, &o.DeliveryPoint.Coords, &o.DeliveryPoint.WithFitting, &o.DeliveryPoint.WorkSchedule,
+			&o.DeliveryPoint.Info,
+		)
+		if err != nil {
+
+			return nil, fall.ServerError(err.Error())
+		}
+
+		current, ok := ordersMap[o.Id]
+		if !ok {
+			o.Models = append(o.Models, m)
+			ordersMap[o.Id] = &o
+			ordersOrder = append(ordersOrder, o.Id)
+		} else {
+			current.Models = append(current.Models, m)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	orders := make([]*model.Order, 0, len(ordersMap))
+
+	for _, id := range ordersOrder {
+		o := ordersMap[id]
+		orders = append(orders, o)
+	}
+
+	return orders, nil
+}
+
+func (or *OrderRepository) SendNewActivationLink(ctx context.Context, orderId string) (*string, fall.Error) {
+
+	var ex fall.Error = nil
+
+	tx, err := or.db.Begin(ctx)
+
+	if err != nil {
+		ex = fall.ServerError(err.Error())
+		return nil, ex
+	}
+	defer func() {
+		if ex != nil {
+			tx.Rollback(ctx)
+		} else {
+			tx.Commit(ctx)
+		}
+	}()
+
+	query := "SELECT is_activated FROM public.order WHERE order_id = $1;"
+
+	row := tx.QueryRow(ctx, query, orderId)
+
+	var isActivated bool
+
+	err = row.Scan(&isActivated)
+
+	if err != nil {
+		ex = fall.ServerError(err.Error())
+		return nil, ex
+	}
+
+	if isActivated {
+		ex = fall.NewErr(msg.OrderAlreadyActivated, fall.STATUS_BAD_REQUEST)
+		return nil, ex
+	}
+	link, ex := or.AddActivationLink(ctx, tx, orderId)
+	if ex != nil {
+		return nil, ex
+	}
+	return link, nil
+}
+
+func (r *OrderRepository) CancelOrder(ctx context.Context, orderId string, userId int) fall.Error {
+	q := "UPDATE public.order SET order_status = 'canceled' WHERE order_id = $1 AND user_id = $2;"
+
+	_, err := r.db.Exec(ctx, q, orderId, userId)
+
+	if err != nil {
+		return fall.ServerError(msg.OrderErrorWhenCancel)
+	}
+
+	return nil
 }

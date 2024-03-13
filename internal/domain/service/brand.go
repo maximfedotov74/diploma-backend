@@ -15,6 +15,7 @@ type brandRepository interface {
 	GetAll(ctx context.Context) ([]model.Brand, fall.Error)
 	UpdateBrand(ctx context.Context, dto model.UpdateBrandDto, newSlug *string, id int) fall.Error
 	Delete(ctx context.Context, slug string) fall.Error
+	GetBrandsByGender(ctx context.Context, slug string) ([]model.Brand, fall.Error)
 }
 
 type BrandService struct {
@@ -23,6 +24,10 @@ type BrandService struct {
 
 func NewBrandService(repo brandRepository) *BrandService {
 	return &BrandService{repo: repo}
+}
+
+func (s *BrandService) GetBrandsByGender(ctx context.Context, slug string) ([]model.Brand, fall.Error) {
+	return s.repo.GetBrandsByGender(ctx, slug)
 }
 
 func (s *BrandService) Create(ctx context.Context, dto model.CreateBrandDto) fall.Error {

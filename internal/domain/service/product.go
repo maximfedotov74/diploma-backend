@@ -32,6 +32,13 @@ type productRepository interface {
 	GetModelSizes(ctx context.Context, modelId int) ([]model.ProductModelSize, fall.Error)
 	GetModelOptions(ctx context.Context, modelId int) ([]*model.ProductModelOption, fall.Error)
 	SearchByArticle(ctx context.Context, article string) ([]model.SearchProductModel, fall.Error)
+	GetSimilarProducts(ctx context.Context, filter model.SimilarProductsFilter, mainFilterId int,
+		secondaryFilterId int, modelId int) ([]*model.CatalogProductModel, fall.Error)
+	GetModelViews(ctx context.Context, modelId int) *int
+	UpdateViews(ctx context.Context, ip string, modelId int)
+	GetViewHistory(ctx context.Context, userId int, modelId int) ([]*model.CatalogProductModel, fall.Error)
+	AddToViewHistory(ctx context.Context, userId int, modelId int) fall.Error
+	GetPopularProducts(ctx context.Context, slug string) ([]*model.CatalogProductModel, fall.Error)
 }
 
 type productCategoryService interface {
@@ -56,6 +63,33 @@ func NewProductService(repo productRepository, brandService productBrandService,
 		brandService:    brandService,
 		categoryService: categoryService,
 	}
+}
+
+func (s *ProductService) GetPopularProducts(ctx context.Context, slug string) ([]*model.CatalogProductModel, fall.Error) {
+	return s.repo.GetPopularProducts(ctx, slug)
+}
+
+func (s *ProductService) AddToViewHistory(ctx context.Context, userId int, modelId int) fall.Error {
+	return s.repo.AddToViewHistory(ctx, userId, modelId)
+}
+
+func (s *ProductService) GetViewHistory(ctx context.Context, userId int, modelId int) ([]*model.CatalogProductModel, fall.Error) {
+	return s.repo.GetViewHistory(ctx, userId, modelId)
+}
+
+func (s *ProductService) GetSimilarProducts(ctx context.Context, categoryId int, brandId int, modelId int) ([]*model.CatalogProductModel, fall.Error) {
+	bs, ex := s.repo.GetSimilarProducts(ctx, model.SimilarByBrand, brandId, categoryId, modelId)
+	if ex != nil {
+		return nil, ex
+	}
+	cs, ex := s.repo.GetSimilarProducts(ctx, model.SimilarByCategory, categoryId, brandId, modelId)
+	if ex != nil {
+		return nil, ex
+	}
+
+	res := append(bs, cs...)
+
+	return res, nil
 }
 
 func (s *ProductService) FindProductModelBySlug(ctx context.Context, slug string) (*model.ProductModel, fall.Error) {
@@ -192,4 +226,12 @@ func (ps *ProductService) GetCatalogModels(ctx context.Context, query generator.
 	sql := generator.GenerateCatalogQuery(query)
 
 	return ps.repo.GetCatalogModels(ctx, query.Slug, sql)
+}
+
+func (s *ProductService) UpdateViews(ctx context.Context, ip string, modelId int) {
+	s.repo.UpdateViews(ctx, ip, modelId)
+}
+
+func (s *ProductService) GetModelViews(ctx context.Context, modelId int) *int {
+	return s.repo.GetModelViews(ctx, modelId)
 }

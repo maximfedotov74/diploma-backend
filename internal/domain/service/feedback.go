@@ -11,7 +11,7 @@ import (
 type feedbackRepository interface {
 	AddFeedback(ctx context.Context, userId int, dto model.AddFeedbackDto) fall.Error
 	GetModelFeedback(ctx context.Context, modelId int, order string) (*model.ModelFeedbackResponse, fall.Error)
-	GetAll(ctx context.Context, order string) ([]model.Feedback, fall.Error)
+	GetAll(ctx context.Context, order string, page int, filter string) (*model.AdminAllFeedbackResponse, fall.Error)
 	DeleteFeedback(ctx context.Context, feedbackId int) fall.Error
 	ToggleHidden(ctx context.Context, feedbackId int) fall.Error
 	FindFeedback(ctx context.Context, userId int, modelId int) (*model.Feedback, fall.Error)
@@ -47,8 +47,8 @@ func (s *FeedbackService) GetModelFeedback(ctx context.Context, modelId int, ord
 	return s.repo.GetModelFeedback(ctx, modelId, order)
 }
 
-func (s *FeedbackService) GetAll(ctx context.Context, order string) ([]model.Feedback, fall.Error) {
-	return s.repo.GetAll(ctx, order)
+func (s *FeedbackService) GetAll(ctx context.Context, order string, page int, filter string) (*model.AdminAllFeedbackResponse, fall.Error) {
+	return s.repo.GetAll(ctx, order, page, filter)
 }
 
 func (s *FeedbackService) DeleteFeedback(ctx context.Context, feedbackId int) fall.Error {

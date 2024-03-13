@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -15,7 +16,7 @@ type feedbackService interface {
 	AddFeedback(ctx context.Context, dto model.AddFeedbackDto, userId int) fall.Error
 	ToggleHidden(ctx context.Context, feedbackId int) fall.Error
 	GetModelFeedback(ctx context.Context, modelId int, order string) (*model.ModelFeedbackResponse, fall.Error)
-	GetAll(ctx context.Context, order string) ([]model.Feedback, fall.Error)
+	GetAll(ctx context.Context, order string, page int, filter string) (*model.AdminAllFeedbackResponse, fall.Error)
 	DeleteFeedback(ctx context.Context, feedbackId int) fall.Error
 }
 
@@ -78,20 +79,37 @@ func (fh *FeedbackHandler) toggleHidden(ctx *fiber.Ctx) error {
 // @Tags feedback
 // @Accept json
 // @Produce json
-// @Router /api/feedback/ [get]
+// @Router /api/feedback [get]
 // @Param order query string false "Order [ASC | DESC]"
-// @Success 200 {array} model.Feedback
+// @Param page query int false "Page"
+// @Param filter query string false "Filter"
+// @Success 200 {object} model.AdminAllFeedbackResponse
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
 func (fh *FeedbackHandler) getAll(ctx *fiber.Ctx) error {
-	order := ctx.Query("order", "ASC")
+	order := strings.ToUpper(ctx.Query("order", "ASC"))
 
 	if order != "ASC" && order != "DESC" {
 		order = "ASC"
 	}
 
-	feedback, ex := fh.service.GetAll(ctx.Context(), order)
+	page := ctx.QueryInt("page", 1)
+
+	filter := ctx.Query("filter")
+
+	validate := validator.New()
+
+	validate.RegisterValidation("feedbakAdminFilterEnumValidation", model.FeedbakAdminFilterEnumValidation)
+
+	err := validate.Var(filter, "feedbakAdminFilterEnumValidation")
+
+	if err != nil {
+		ex := fall.NewErr(err.Error(), fall.STATUS_BAD_REQUEST)
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	feedback, ex := fh.service.GetAll(ctx.Context(), order, page, filter)
 	if ex != nil {
 		return ctx.Status(ex.Status()).JSON(ex)
 	}

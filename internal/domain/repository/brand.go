@@ -21,6 +21,48 @@ func NewBrandRepository(db db.PostgresClient) *BrandRepository {
 	return &BrandRepository{db: db}
 }
 
+func (r *BrandRepository) GetBrandsByGender(ctx context.Context, slug string) ([]model.Brand, fall.Error) {
+	q := `
+	WITH RECURSIVE category_tree AS (
+		SELECT category_id, slug, parent_category_id
+		FROM category
+		WHERE slug = $1
+		UNION ALL
+		SELECT c.category_id, c.slug, c.parent_category_id
+		FROM category c
+		INNER JOIN category_tree ct ON c.parent_category_id = ct.category_id
+	)
+	SELECT DISTINCT b.brand_id, b.title, b.slug, b.description, b.img_path
+	FROM product p
+	INNER JOIN category_tree ct ON p.category_id = ct.category_id 
+	INNER JOIN brand b on p.brand_id = b.brand_id;
+	`
+
+	rows, err := r.db.Query(ctx, q, slug)
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	defer rows.Close()
+
+	var result []model.Brand
+	for rows.Next() {
+		brand := model.Brand{}
+		err := rows.Scan(&brand.Id, &brand.Title, &brand.Slug, &brand.Description, &brand.ImgPath)
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+
+		result = append(result, brand)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	return result, nil
+}
+
 func (r *BrandRepository) CreateBrand(ctx context.Context, dto model.CreateBrandDto, slug string) fall.Error {
 	query := "INSERT INTO brand (title, slug, description, img_path) VALUES ($1, $2, $3, $4);"
 

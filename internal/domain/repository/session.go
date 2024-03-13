@@ -51,15 +51,17 @@ func (r *SessionRepository) Create(ctx context.Context, dto model.CreateSessionD
 	return nil
 }
 
-func (sr *SessionRepository) FindByAgentAndToken(ctx context.Context, agent string, token string) (*model.Session, fall.Error) {
+func (r *SessionRepository) FindByAgentAndToken(ctx context.Context, agent string, token string) (*model.Session, fall.Error) {
 
-	query := "SELECT session_id, user_id, user_agent, token FROM public.session WHERE user_agent = $1 AND token = $2;"
+	query := "SELECT session_id, user_id, user_agent, token, created_at, updated_at FROM public.session WHERE user_agent = $1 AND token = $2;"
 
 	sessionModel := model.Session{}
 
-	row := sr.db.QueryRow(ctx, query, agent, token)
+	row := r.db.QueryRow(ctx, query, agent, token)
 
-	err := row.Scan(&sessionModel.SessionId, &sessionModel.UserId, &sessionModel.UserAgent, &sessionModel.Token)
+	err := row.Scan(&sessionModel.SessionId, &sessionModel.UserId, &sessionModel.UserAgent,
+		&sessionModel.Token, &sessionModel.CreatedAt, &sessionModel.UpdatedAt,
+	)
 
 	if err != nil {
 		return nil, fall.NewErr(msg.SessionNotFound, fall.STATUS_NOT_FOUND)
@@ -69,20 +71,100 @@ func (sr *SessionRepository) FindByAgentAndToken(ctx context.Context, agent stri
 
 }
 
-func (tr *SessionRepository) RemoveSession(ctx context.Context, userId int, agent string) fall.Error {
-	query := "DELETE FROM session WHERE user_id = $1 AND user_agent = $2;"
-	_, err := tr.db.Exec(ctx, query, userId, agent)
+func (r *SessionRepository) FindByAgentAndUserId(ctx context.Context, agent string, userId int) (*model.Session, fall.Error) {
+
+	query := "SELECT session_id, user_id, user_agent, token, created_at, updated_at FROM public.session WHERE user_agent = $1 AND user_id = $2;"
+
+	sessionModel := model.Session{}
+
+	row := r.db.QueryRow(ctx, query, agent, userId)
+
+	err := row.Scan(&sessionModel.SessionId, &sessionModel.UserId, &sessionModel.UserAgent,
+		&sessionModel.Token, &sessionModel.CreatedAt, &sessionModel.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, fall.NewErr(msg.SessionNotFound, fall.STATUS_NOT_FOUND)
+	}
+
+	return &sessionModel, nil
+
+}
+
+func (r *SessionRepository) RemoveSession(ctx context.Context, userId int, sessionId int) fall.Error {
+	query := "DELETE FROM session WHERE user_id = $1 AND session_id = $2;"
+	_, err := r.db.Exec(ctx, query, userId, sessionId)
 	if err != nil {
 		return fall.ServerError(err.Error())
 	}
 	return nil
 }
 
-func (tr *SessionRepository) RemoveExceptCurrentSession(ctx context.Context, userId int, agent string) fall.Error {
-	query := "DELETE FROM session WHERE user_id = $1 AND user_agent != $2;"
-	_, err := tr.db.Exec(ctx, query, userId, agent)
+func (r *SessionRepository) RemoveExceptCurrentSession(ctx context.Context, userId int, sessionId int) fall.Error {
+	query := "DELETE FROM session WHERE user_id = $1 AND session_id != $2;"
+	_, err := r.db.Exec(ctx, query, userId, sessionId)
 	if err != nil {
 		return fall.ServerError(err.Error())
 	}
 	return nil
+}
+
+func (r *SessionRepository) RemoveSessionByToken(ctx context.Context, token string) fall.Error {
+	query := "DELETE FROM session WHERE token = $1;"
+	_, err := r.db.Exec(ctx, query, token)
+	if err != nil {
+		return fall.ServerError(err.Error())
+	}
+	return nil
+}
+
+func (r *SessionRepository) RemoveAllSessions(ctx context.Context, userId int) fall.Error {
+	query := "DELETE FROM session WHERE user_id = $1;"
+
+	_, err := r.db.Exec(ctx, query, userId)
+	if err != nil {
+		return fall.ServerError(err.Error())
+	}
+	return nil
+}
+
+func (r *SessionRepository) GetUserSessions(ctx context.Context, userId int, token string) (*model.UserSessionsResponse, fall.Error) {
+	q := `SELECT session_id, user_id, user_agent, token, created_at, updated_at
+	FROM public.session WHERE user_id = $1 ORDER BY updated_at DESC;`
+
+	var sessions []model.Session
+
+	rows, err := r.db.Query(ctx, q, userId)
+
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	response := model.UserSessionsResponse{}
+
+	for rows.Next() {
+		s := model.Session{}
+
+		err := rows.Scan(&s.SessionId, &s.UserId, &s.UserAgent,
+			&s.Token, &s.CreatedAt, &s.UpdatedAt,
+		)
+
+		if err != nil {
+			return nil, fall.NewErr(msg.SessionNotFound, fall.STATUS_NOT_FOUND)
+		}
+
+		if s.Token == token {
+			response.Current = &s
+		}
+
+		sessions = append(sessions, s)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	response.All = sessions
+
+	return &response, nil
 }

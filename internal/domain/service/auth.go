@@ -21,6 +21,7 @@ type authSessionService interface {
 	Sign(claims jwt.UserClaims) (*jwt.Tokens, fall.Error)
 	Create(ctx context.Context, dto model.CreateSessionDto) fall.Error
 	FindByAgentAndToken(ctx context.Context, agent string, token string) (*model.Session, fall.Error)
+	RemoveSessionByToken(ctx context.Context, token string) fall.Error
 }
 
 type authMailService interface {
@@ -98,15 +99,15 @@ func (as *AuthService) Registration(ctx context.Context, dto model.CreateUserDto
 
 }
 
-func (as *AuthService) Refresh(ctx context.Context, refreshToken string, userAgent string) (*model.LoginResponse, fall.Error) {
+func (as *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.LoginResponse, fall.Error) {
 
-	_, ex := as.sessionService.Parse(refreshToken, jwt.RefreshToken)
+	parsed, ex := as.sessionService.Parse(refreshToken, jwt.RefreshToken)
 
 	if ex != nil {
 		return nil, ex
 	}
 
-	dbToken, appErr := as.sessionService.FindByAgentAndToken(ctx, userAgent, refreshToken)
+	dbToken, appErr := as.sessionService.FindByAgentAndToken(ctx, parsed.UserAgent, refreshToken)
 
 	if appErr != nil {
 		return nil, appErr
@@ -135,4 +136,8 @@ func (as *AuthService) Refresh(ctx context.Context, refreshToken string, userAge
 	response := model.LoginResponse{Id: user.Id, Tokens: *tokens}
 
 	return &response, nil
+}
+
+func (s *AuthService) Logout(ctx context.Context, token string) fall.Error {
+	return s.sessionService.RemoveSessionByToken(ctx, token)
 }

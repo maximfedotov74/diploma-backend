@@ -14,6 +14,7 @@ import (
 
 type sessionService interface {
 	Parse(token string, tokenType jwt.TokenType) (*jwt.UserClaims, fall.Error)
+	FindByAgentAndUserId(ctx context.Context, agent string, userId int) (*model.Session, fall.Error)
 }
 
 type userService interface {
@@ -23,7 +24,6 @@ type userService interface {
 func CreateAuthMiddleware(session sessionService, user userService) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		ctx.Locals(utils.LocalSessionKey, nil)
-		userAgent := ctx.Get(keys.UserAgentHeader)
 
 		authHeader := ctx.Get(keys.AuthorizationHeader)
 
@@ -42,16 +42,22 @@ func CreateAuthMiddleware(session sessionService, user userService) fiber.Handle
 			return ctx.Status(authError.Status()).JSON(authError)
 		}
 
-		if userAgent != claims.UserAgent {
-			return ctx.Status(authError.Status()).JSON(authError)
-		}
-
 		currentUser, _ := user.FindById(ctx.Context(), claims.UserId)
 		if currentUser == nil {
 			return ctx.Status(authError.Status()).JSON(authError)
 		}
 
-		contextData := model.LocalSession{UserId: currentUser.Id, UserAgent: claims.UserAgent,
+		session, ex := session.FindByAgentAndUserId(ctx.Context(), claims.UserAgent, claims.UserId)
+
+		if ex != nil {
+			access, refresh := utils.RemoveCookies()
+			ctx.Cookie(access)
+			ctx.Cookie(refresh)
+			forbidded := fall.NewErr(fall.FORBIDDEN, fall.STATUS_FORBIDDEN)
+			return ctx.Status(forbidded.Status()).JSON(forbidded)
+		}
+
+		contextData := model.LocalSession{UserId: session.UserId, UserAgent: session.UserAgent,
 			Roles: currentUser.Roles, Email: currentUser.Email}
 
 		ctx.Locals(utils.LocalSessionKey, contextData)

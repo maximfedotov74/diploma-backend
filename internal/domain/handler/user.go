@@ -19,29 +19,145 @@ type userService interface {
 	CreateChangePasswordCode(ctx context.Context, userId int) fall.Error
 	ConfirmChangePassword(ctx context.Context, code string, userId int) fall.Error
 	ChangePassword(ctx context.Context, dto model.ChangePasswordDto, localSession model.LocalSession) (*jwt.Tokens, fall.Error)
+	GetUserSessions(ctx context.Context, userId int, agent string) (*model.UserSessionsResponse, fall.Error)
+
+	RemoveAllSessions(ctx context.Context, userId int) fall.Error
+	RemoveSession(ctx context.Context, userId int, sessionId int) fall.Error
+	RemoveExceptCurrentSession(ctx context.Context, userId int, sessionId int) fall.Error
 }
 
 type UserHandler struct {
 	service        userService
 	router         fiber.Router
 	authMiddleware middleware.AuthMiddleware
+	clientAuthUrl  string
 }
 
-func NewUserHandler(service userService, router fiber.Router, authMiddleware middleware.AuthMiddleware,
+func NewUserHandler(service userService, router fiber.Router, authMiddleware middleware.AuthMiddleware, clientAuthUrl string,
+
 ) *UserHandler {
-	return &UserHandler{service: service, router: router, authMiddleware: authMiddleware}
+	return &UserHandler{service: service, router: router, authMiddleware: authMiddleware, clientAuthUrl: clientAuthUrl}
 }
 
 func (h *UserHandler) InitRoutes() {
 	userRouter := h.router.Group("/user")
 	{
 		userRouter.Get("/session", h.authMiddleware, h.getSession)
+		userRouter.Get("/session/all", h.authMiddleware, h.getSessions)
 		userRouter.Get("/profile", h.authMiddleware, h.getProfile)
 		userRouter.Patch("/profile", h.authMiddleware, h.updateProfile)
 		userRouter.Patch("/password-code/change", h.authMiddleware, h.changePassword)
 		userRouter.Post("/password-code/confirm", h.authMiddleware, h.confirmChangePasswordCode)
 		userRouter.Post("/password-code", h.authMiddleware, h.createChangePasswordCode)
+
+		userRouter.Delete("/session/all", h.authMiddleware, h.removeAllSessions)
+		userRouter.Delete("/session/except-current/:sessionId", h.authMiddleware, h.removeExceptCurrentSession)
+		userRouter.Delete("/session/:sessionId", h.authMiddleware, h.removeSession)
 	}
+}
+
+// @Summary Remove all user sessions
+// @Security BearerToken
+// @Description Remove all user sessions
+// @Tags user
+// @Accept json
+// @Produce json
+// @Router /api/user/session/all [delete]
+// @Success 200 {object} fall.AppErr
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *UserHandler) removeAllSessions(ctx *fiber.Ctx) error {
+
+	session, ex := utils.GetLocalSession(ctx)
+
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	ex = h.service.RemoveAllSessions(ctx.Context(), session.UserId)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	access_cookie, refresh_cookie := utils.RemoveCookies()
+
+	ctx.Cookie(access_cookie)
+	ctx.Cookie(refresh_cookie)
+
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
+}
+
+// @Summary Remove user sessions except current
+// @Security BearerToken
+// @Description Remove user sessions except current
+// @Tags user
+// @Accept json
+// @Produce json
+// @Param sessionId path int true "User session id"
+// @Router /api/user/session/except-current/{sessionId} [delete]
+// @Success 200 {object} fall.AppErr
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *UserHandler) removeExceptCurrentSession(ctx *fiber.Ctx) error {
+
+	session, ex := utils.GetLocalSession(ctx)
+
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	sessionId, err := ctx.ParamsInt("sessionId")
+
+	if err != nil {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	ex = h.service.RemoveExceptCurrentSession(ctx.Context(), session.UserId, sessionId)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
+}
+
+// @Summary Remove user session by session id
+// @Security BearerToken
+// @Description Remove user session by session id
+// @Tags user
+// @Accept json
+// @Produce json
+// @Param sessionId path int true "User session id"
+// @Router /api/user/session/{sessionId} [delete]
+// @Success 200 {object} fall.AppErr
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *UserHandler) removeSession(ctx *fiber.Ctx) error {
+	session, ex := utils.GetLocalSession(ctx)
+
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	sessionId, err := ctx.ParamsInt("sessionId")
+
+	if err != nil {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	ex = h.service.RemoveSession(ctx.Context(), session.UserId, sessionId)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	resp := fall.GetOk()
+	return ctx.Status(resp.Status()).JSON(resp)
 }
 
 // @Summary Get base profile info
@@ -69,6 +185,41 @@ func (h *UserHandler) getProfile(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Status(fall.STATUS_OK).JSON(user)
+}
+
+// @Summary Get user sessions
+// @Security BearerToken
+// @Description Get user sessions
+// @Tags user
+// @Accept json
+// @Produce json
+// @Router /api/user/session/all [get]
+// @Success 200 {object} model.UserSessionsResponse
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *UserHandler) getSessions(ctx *fiber.Ctx) error {
+
+	session, ex := utils.GetLocalSession(ctx)
+
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	refreshToken := ctx.Cookies("refresh_token")
+
+	if refreshToken == "" {
+		appErr := fall.NewErr(fall.UNAUTHORIZED, fall.STATUS_UNAUTHORIZED)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	sessions, ex := h.service.GetUserSessions(ctx.Context(), session.UserId, refreshToken)
+
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(sessions)
 }
 
 // @Summary Get local session

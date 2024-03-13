@@ -21,6 +21,60 @@ func NewCategoryRepository(db db.PostgresClient) *CategoryRepository {
 	return &CategoryRepository{db: db}
 }
 
+func (r *CategoryRepository) GetLastLevels(ctx context.Context, slug string) ([]model.CategoryModel, fall.Error) {
+	q := `
+	WITH RECURSIVE category_tree AS (
+		SELECT category_id, parent_category_id, slug, title, short_title, img_path, 1 AS level
+		FROM category
+		WHERE slug = $1
+		UNION ALL
+		SELECT c.category_id, c.parent_category_id, c.slug, c.title, c.short_title, c.img_path, ct.level + 1
+		FROM category AS c
+		INNER JOIN category_tree AS ct ON c.parent_category_id = ct.category_id
+	)
+	SELECT *
+	FROM category_tree
+	WHERE level IN (
+		SELECT MAX(level) - 1
+		FROM category_tree
+		UNION
+		SELECT MAX(level)
+		FROM category_tree
+	) ORDER BY level DESC;
+	`
+
+	rows, err := r.db.Query(ctx, q, slug)
+
+	if err != nil {
+
+		return nil, fall.ServerError(err.Error())
+	}
+
+	defer rows.Close()
+
+	var cats []model.CategoryModel
+
+	for rows.Next() {
+		c := model.CategoryModel{}
+		err := rows.Scan(&c.Id, &c.ParentId, &c.Slug, &c.Title, &c.ShortTitle, &c.ImgPath, nil)
+
+		if err != nil {
+
+			return nil, fall.ServerError(err.Error())
+		}
+
+		cats = append(cats, c)
+	}
+
+	if err := rows.Err(); err != nil {
+
+		return nil, fall.ServerError(err.Error())
+	}
+
+	return cats, nil
+
+}
+
 func (r *CategoryRepository) GetChildrenCount(ctx context.Context, id int) (*int, fall.Error) {
 	q := "select count(*) from category where parent_category_id = $1;"
 

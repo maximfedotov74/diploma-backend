@@ -55,6 +55,9 @@ func (ts *JwtService) Sign(claims UserClaims) (Tokens, error) {
 
 	var tokens Tokens
 
+	// var accessExpTime time.Time = time.Now().Add(time.Minute)
+	// var refreshExpTime time.Time = time.Now().Add(time.Minute * 2)
+
 	var accessExpTime time.Time = time.Now().Add(time.Minute * time.Duration(ts.config.AccessTokenExp))
 	var refreshExpTime time.Time = time.Now().AddDate(0, 0, ts.config.RefreshTokenExp)
 

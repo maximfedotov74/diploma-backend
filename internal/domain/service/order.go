@@ -11,7 +11,11 @@ import (
 )
 
 type orderRepository interface {
-	Create(ctx context.Context, input model.CreateOrderInput, userId int) fall.Error
+	Create(ctx context.Context, input model.CreateOrderInput, userId int) (*model.CreateOrderResponse, fall.Error)
+	GetAdminOrders(ctx context.Context) ([]*model.Order, fall.Error)
+	GetOrder(ctx context.Context, id string) (*model.Order, fall.Error)
+	GetUserOrders(ctx context.Context, userId int) ([]*model.Order, fall.Error)
+	CancelOrder(ctx context.Context, orderId string, userId int) fall.Error
 }
 
 type orderUserService interface {
@@ -27,7 +31,7 @@ type orderDeliveryRepository interface {
 }
 
 type orderPaymentService interface {
-	CreatePayment(orderId string, totalPrice int) (*payment.Payment, error)
+	CreatePayment(orderId string, totalPrice float64) (*payment.Payment, error)
 }
 
 type orderWishService interface {
@@ -55,7 +59,23 @@ func NewOrderService(repo orderRepository, wishService orderWishService, userSer
 	}
 }
 
-func (s *OrderService) Create(ctx context.Context, dto model.CreateOrderDto, user model.LocalSession) fall.Error {
+func (s *OrderService) CancelOrder(ctx context.Context, orderId string, userId int) fall.Error {
+	return s.repo.CancelOrder(ctx, orderId, userId)
+}
+
+func (s *OrderService) GetAdminOrders(ctx context.Context) ([]*model.Order, fall.Error) {
+	return s.repo.GetAdminOrders(ctx)
+}
+
+func (s *OrderService) GetUserOrders(ctx context.Context, userId int) ([]*model.Order, fall.Error) {
+	return s.repo.GetUserOrders(ctx, userId)
+}
+
+func (s *OrderService) GetOrder(ctx context.Context, id string) (*model.Order, fall.Error) {
+	return s.repo.GetOrder(ctx, id)
+}
+
+func (s *OrderService) Create(ctx context.Context, dto model.CreateOrderDto, user *model.LocalSession) (*string, fall.Error) {
 
 	var cartItems []*model.CartItemModel
 
@@ -69,29 +89,31 @@ func (s *OrderService) Create(ctx context.Context, dto model.CreateOrderDto, use
 
 	deliveryPoint, ex := s.deliveryRepo.FindById(ctx, dto.DeliveryPointId)
 	if ex != nil {
-		return ex
+		return nil, ex
 	}
 
-	productsPrice := 0
-	totalDiscount := 0
+	var productsPrice float64 = 0
+	var totalDiscount float64 = 0
 
 	for _, item := range cartItems {
-		productsPrice += (item.Price * item.Quantity)
+		productsPrice += (float64(item.Price) * (float64(item.Quantity)))
 		if item.Discount != nil {
-			discountPrice := math.Round(float64(item.Price / 100 * int(*item.Discount)))
-			totalDiscount += int(discountPrice) * item.Quantity
+			totalDiscount += (float64(item.Price) / 100) * float64(*item.Discount) * float64(item.Quantity)
 		}
 	}
 
 	flag := deliveryPoint.WithFitting == model.ConvertFittingToBool(dto.Conditions)
 	if !flag {
-		return fall.NewErr(msg.OrderDeliveryPointConditionConflict, fall.STATUS_BAD_REQUEST)
+		return nil, fall.NewErr(msg.OrderDeliveryPointConditionConflict, fall.STATUS_BAD_REQUEST)
 	}
 
-	deliveryPrice := 0
+	var deliveryPrice float64 = 0
 	if model.ConvertFittingToBool(dto.Conditions) {
 		deliveryPrice = 199
 	}
+
+	totalDiscount = math.Ceil(totalDiscount)
+	productsPrice = math.Ceil(productsPrice)
 
 	totalPrice := productsPrice - totalDiscount + deliveryPrice
 
@@ -109,6 +131,20 @@ func (s *OrderService) Create(ctx context.Context, dto model.CreateOrderDto, use
 		Conditions:         dto.Conditions,
 	}
 
-	return s.repo.Create(ctx, input, user.UserId)
+	resp, ex := s.repo.Create(ctx, input, user.UserId)
+	if ex != nil {
+		return nil, ex
+	}
+
+	if dto.PaymentMethod == model.Online {
+		p, err := s.paymentService.CreatePayment(resp.Id, resp.Total)
+		if err != nil {
+			return nil, fall.ServerError("Ошибка при обработки платежа №" + resp.Id)
+		}
+		return &p.Confirmation.ConfirmationURL, nil
+	}
+
+	go s.mailService.SendOrderActivationEmail(user.Email, "Подтверждение оформления заказа!", resp.Link)
+	return nil, nil
 
 }

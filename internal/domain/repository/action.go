@@ -205,7 +205,9 @@ func (r *ActionRepository) DeleteAction(ctx context.Context, id string) fall.Err
 func (r *ActionRepository) GetActionsByGender(ctx context.Context, gender model.ActionGender) ([]model.Action, fall.Error) {
 
 	q := `SELECT action_id, created_at, updated_at, end_date, title, is_activated, img_path, description, action_gender
-	FROM action WHERE action_gender = $1 OR action_gender = 'everyone' ORDER BY created_at;`
+	FROM action WHERE action_gender IN ($1, 'everyone')
+	AND is_activated = TRUE AND current_timestamp < end_date
+	ORDER BY action_gender;`
 
 	rows, err := r.db.Query(ctx, q, gender)
 

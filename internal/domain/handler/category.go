@@ -20,6 +20,7 @@ type categoryService interface {
 	GetCatalogCategories(ctx context.Context, slug string) (*model.CatalogCategoryResponse, fall.Error)
 	GetTopLevels(ctx context.Context) ([]model.CategoryModel, fall.Error)
 	GetWithoutChildren(ctx context.Context) ([]model.CategoryModel, fall.Error)
+	GetLastLevels(ctx context.Context, slug string) ([]model.CategoryModel, fall.Error)
 }
 
 type CategoryHandler struct {
@@ -43,6 +44,7 @@ func (h *CategoryHandler) InitRoutes() {
 			categoryRouter.Get("/", h.getAll)
 			categoryRouter.Get("/top", h.getTopLevels)
 			categoryRouter.Get("/without-children", h.getWithoutChildren)
+			categoryRouter.Get("/last-levels/:slug", h.getLastLevels)
 			categoryRouter.Get("/catalog/:slug", h.catalog)
 			categoryRouter.Get("/relation/:slug", h.findBySlugRelation)
 			categoryRouter.Post("/", h.create)
@@ -51,6 +53,30 @@ func (h *CategoryHandler) InitRoutes() {
 			categoryRouter.Get("/:slug", h.findBySlug)
 		}
 	}
+}
+
+// @Summary Get last levels categories
+// @Description Get last levels categories
+// @Tags category
+// @Accept json
+// @Produce json
+// @Param slug path string true "Category Slug"
+// @Router /api/category/last-levels/{slug} [get]
+// @Success 200 {array} model.CategoryModel
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *CategoryHandler) getLastLevels(ctx *fiber.Ctx) error {
+
+	slug := ctx.Params("slug")
+
+	categories, err := h.service.GetLastLevels(ctx.Context(), slug)
+
+	if err != nil {
+		return ctx.Status(err.Status()).JSON(err)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(categories)
 }
 
 // @Summary Get category by slug with subcategories

@@ -1,5 +1,16 @@
 package model
 
+type SimilarProductsFilter string
+
+const (
+	SimilarByCategory SimilarProductsFilter = "WHERE ct.category_id = $1 AND b.brand_id != $2"
+	SimilarByBrand    SimilarProductsFilter = "WHERE b.brand_id = $1 AND ct.category_id = $2"
+)
+
+type Views struct {
+	Count *int `json:"count"`
+}
+
 type CreateProducModelImg struct {
 	ImgPath        string `json:"img_path" validate:"required"`
 	ProductModelId int    `json:"product_model_id" validate:"required,min=1"`

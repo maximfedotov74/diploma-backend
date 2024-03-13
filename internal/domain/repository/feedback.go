@@ -120,29 +120,57 @@ func (r *FeedbackRepository) GetModelFeedback(ctx context.Context, modelId int, 
 	return &feedbackResponse, nil
 }
 
-func (r *FeedbackRepository) GetAll(ctx context.Context, order string) ([]model.Feedback, fall.Error) {
+func (r *FeedbackRepository) GetAll(ctx context.Context, order string, page int, filter string) (*model.AdminAllFeedbackResponse, fall.Error) {
+
+	limit := 16
+
+	offset := page*limit - limit
+	pagination := fmt.Sprintf("LIMIT %d OFFSET %d", limit, offset)
+
+	where := ""
+
+	switch filter {
+	case string(model.All):
+		where = ""
+	case string(model.OnlyActive):
+		where = "WHERE f.is_hidden = FALSE"
+	case string(model.OnlyHidden):
+		where = "WHERE f.is_hidden = TRUE"
+	default:
+		where = ""
+	}
+
 	query := fmt.Sprintf(`
 	SELECT f.feedback_id as f_id, f.created_at as created_at, f.updated_at as updated_at, f.feedback_text as f_text, f.rate as f_rate,
 	f.product_model_id as f_model_id, f.is_hidden as f_hidden,
 	u.user_id as u_id, u.email as u_email,
-	u.avatar_path as u_avatar_path, u.first_name as u_first_name, u.last_name as u_last_name
+	u.avatar_path as u_avatar_path, u.first_name as u_first_name, u.last_name as u_last_name,
+	(select count(distinct f.feedback_id) 
 	FROM feedback as f
 	INNER JOIN public.user as u ON f.user_id = u.user_id
 	INNER JOIN product_model as pm ON pm.product_model_id = f.product_model_id
-	ORDER BY f.updated_at %s;
-	`, order)
+	%s
+	) as total_count
+	FROM feedback as f
+	INNER JOIN public.user as u ON f.user_id = u.user_id
+	INNER JOIN product_model as pm ON pm.product_model_id = f.product_model_id
+	%s
+	ORDER BY f.updated_at %s %s;
+	`, where, where, order, pagination)
+
 	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		return nil, fall.ServerError(err.Error())
 	}
 	defer rows.Close()
 	var result []model.Feedback
+	var total int
 	for rows.Next() {
 
 		f := model.Feedback{}
 
 		err := rows.Scan(&f.Id, &f.CreatedAt, &f.UpdatedAt, &f.Text, &f.Rate, &f.ModelId, &f.Hidden,
-			&f.User.Id, &f.User.Email, &f.User.Avatar, &f.User.FirstName, &f.User.LastName,
+			&f.User.Id, &f.User.Email, &f.User.Avatar, &f.User.FirstName, &f.User.LastName, &total,
 		)
 		if err != nil {
 			return nil, fall.ServerError(err.Error())
@@ -154,7 +182,10 @@ func (r *FeedbackRepository) GetAll(ctx context.Context, order string) ([]model.
 		return nil, fall.ServerError(rows.Err().Error())
 	}
 
-	return result, nil
+	return &model.AdminAllFeedbackResponse{
+		Feedback: result,
+		Total:    total,
+	}, nil
 }
 
 func (r *FeedbackRepository) DeleteFeedback(ctx context.Context, feedbackId int) fall.Error {

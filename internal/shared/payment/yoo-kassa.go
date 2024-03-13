@@ -25,15 +25,15 @@ func NewPaymentService(shopId string, secretKey string, appLink string) *Payment
 	return &PaymentService{shopId: shopId, secretKey: secretKey, appLink: appLink}
 }
 
-func (ps *PaymentService) CreatePayment(orderId string, totalPrice int) (*Payment, error) {
+func (ps *PaymentService) CreatePayment(orderId string, totalPrice float64) (*Payment, error) {
 
 	dto := PaymentDto{
-		Amount:      Amount{Value: fmt.Sprintf("%.2f", float64(totalPrice)), Currency: "RUB"},
+		Amount:      Amount{Value: fmt.Sprintf("%.2f", totalPrice), Currency: "RUB"},
 		Capture:     true,
 		Description: fmt.Sprintf("Оплата заказа №%s в магазине FamilyModa", orderId),
 		Confirmation: Confirmation{
 			Type:      "redirect",
-			ReturnURL: ps.appLink + "/api/order/confirm-payment/" + orderId,
+			ReturnURL: ps.appLink + "/api/order/confirm-online-payment/" + orderId,
 		},
 	}
 
