@@ -62,16 +62,16 @@ func New(minioUrl string, user string, password string, bucket string, ctx conte
 
 func (c *FileClient) Upload(ctx context.Context, h *multipart.FileHeader) (*model.UploadResponse, error) {
 	file, err := h.Open()
-	defer file.Close()
 	if err != nil {
-		return nil, fmt.Errorf("Error when open file, cause: %s", err.Error())
+		return nil, fmt.Errorf("error when open file, cause: %s", err.Error())
 	}
+	defer file.Close()
 
 	contentType := h.Header.Get("Content-type")
 	fileBytes, err := io.ReadAll(file)
 
 	if err != nil {
-		return nil, fmt.Errorf("Error when get file bytes with io: %s", err.Error())
+		return nil, fmt.Errorf("error when get file bytes with io: %s", err.Error())
 	}
 
 	splittedContentType := strings.Split(contentType, "/")
@@ -85,7 +85,7 @@ func (c *FileClient) Upload(ctx context.Context, h *multipart.FileHeader) (*mode
 		compressOptions := bimg.Options{Quality: 50, Type: bimg.WEBP}
 		webpBytes, err := bimg.Resize(fileBytes, compressOptions)
 		if err != nil {
-			return nil, fmt.Errorf("Error when compressing image, cause: %s", err.Error())
+			return nil, fmt.Errorf("error when compressing image, cause: %s", err.Error())
 		}
 
 		newType := http.DetectContentType(webpBytes)
@@ -96,7 +96,7 @@ func (c *FileClient) Upload(ctx context.Context, h *multipart.FileHeader) (*mode
 			UserMetadata: map[string]string{"x-amz-acl": "public-read"},
 		})
 		if err != nil {
-			return nil, fmt.Errorf("Error when uploading file, cause: %s", err.Error())
+			return nil, fmt.Errorf("error when uploading file, cause: %s", err.Error())
 		}
 
 		return &model.UploadResponse{Path: path.Join("/", "storage", c.mainBucket, newName)}, nil
@@ -109,7 +109,7 @@ func (c *FileClient) Upload(ctx context.Context, h *multipart.FileHeader) (*mode
 		UserMetadata: map[string]string{"x-amz-acl": "public-read"},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Error when uploading file, cause: %s", err.Error())
+		return nil, fmt.Errorf("error when uploading file, cause: %s", err.Error())
 	}
 
 	return &model.UploadResponse{Path: path.Join("/", "storage", c.mainBucket, newName)}, nil

@@ -10,4 +10,5 @@ const (
 	OrderNotFound                       = "Заказ не найден!"
 	OrderActivationLinkNotFound         = "Ссылка активации заказа не найдена!"
 	OrderErrorWhenCancel                = "Ошибка при отмене заказа!"
+	OrderErrorWhenChangeStatus          = "Ошибка при смене статуса!"
 )

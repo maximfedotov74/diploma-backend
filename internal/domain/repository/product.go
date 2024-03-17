@@ -418,7 +418,7 @@ func (pr *ProductRepository) FindModelsColored(ctx context.Context, id int) ([]m
 
 }
 
-func (r *ProductRepository) AdminGetProductModels(ctx context.Context, id int) ([]model.AdminProductModelRelation, fall.Error) {
+func (r *ProductRepository) AdminGetProductModels(ctx context.Context, id int) ([]model.ProductModel, fall.Error) {
 
 	q := `SELECT product_model_id,price,slug,article,discount,main_image_path,product_id FROM product_model
 	WHERE product_id = $1 ORDER BY product_model_id;`
@@ -430,10 +430,10 @@ func (r *ProductRepository) AdminGetProductModels(ctx context.Context, id int) (
 	}
 	defer rows.Close()
 
-	var models = []model.AdminProductModelRelation{}
+	var models = []model.ProductModel{}
 
 	for rows.Next() {
-		m := model.AdminProductModelRelation{}
+		m := model.ProductModel{}
 
 		err := rows.Scan(&m.Id, &m.Price, &m.Slug, &m.Article, &m.Discount, &m.ImagePath, &m.ProductId)
 		if err != nil {
@@ -781,13 +781,6 @@ func (r *ProductRepository) SearchByArticle(ctx context.Context, article string)
 
 func (r *ProductRepository) GetCatalogModels(ctx context.Context, categorySlug string, sql generator.GeneratedCatalogQuery) (*model.CatalogResponse, fall.Error) {
 
-	mainJoins := `FROM product p INNER JOIN category_tree ct ON p.category_id = ct.category_id 
-	INNER JOIN brand b on p.brand_id = b.brand_id
-	INNER JOIN product_model pm ON pm.product_id = p.product_id
-	inner join model_sizes ms on ms.product_model_id = pm.product_model_id
-	inner join sizes sz on ms.size_id = sz.size_id
-	inner join product_model_img as pimg on pimg.product_model_id = pm.product_model_id
-	`
 	query := fmt.Sprintf(`
 	WITH RECURSIVE category_tree AS (
 		SELECT category_id, title, short_title, slug, parent_category_id
@@ -801,7 +794,7 @@ func (r *ProductRepository) GetCatalogModels(ctx context.Context, categorySlug s
 	SELECT distinct pm.product_model_id as model_id,
 	(select count(distinct pm.product_model_id)%s %s
 	) as total_count
-	%s %s %s %s;`, mainJoins, sql.MainQuery, mainJoins, sql.MainQuery, sql.SortStatement, sql.Pagination)
+	%s %s  %s;`, sql.MainJoins, sql.MainQuery, sql.MainJoins, sql.MainQuery, sql.Pagination)
 
 	rows, err := r.db.Query(ctx, query, categorySlug)
 
@@ -811,7 +804,7 @@ func (r *ProductRepository) GetCatalogModels(ctx context.Context, categorySlug s
 	defer rows.Close()
 
 	var total int
-	var modelOrder []int
+	var modelIds []int
 
 	for rows.Next() {
 		var modelId int
@@ -820,14 +813,14 @@ func (r *ProductRepository) GetCatalogModels(ctx context.Context, categorySlug s
 			return nil, fall.ServerError(err.Error())
 		}
 
-		modelOrder = append(modelOrder, modelId)
+		modelIds = append(modelIds, modelId)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, fall.ServerError(err.Error())
 	}
 
-	query = `
+	query = fmt.Sprintf(`
 	SELECT p.product_id as p_id, p.title as p_title,
 	b.brand_id as b_id, b.title as b_title, b.slug as b_slug, ct.category_id as ct_id, ct.title as ct_title,
 	ct.short_title as ct_short_title, ct.slug as ct_slug,
@@ -836,17 +829,24 @@ func (r *ProductRepository) GetCatalogModels(ctx context.Context, categorySlug s
 	pimg.product_img_id as pimg_id, pimg.product_model_id as pimg_model_id, pimg.img_path as pimg_img_path, 
 	sz.size_id as size_id, sz.size_value as size_value, ms.literal_size as literal_size,
 	ms.product_model_id as ms_pm_id, ms.in_stock as ms_in_stock,
-	ms.model_size_id as ms_m_sz_id
+	ms.model_size_id as ms_m_sz_id,
+	(
+		SELECT COUNT(om.order_model_id) 
+		FROM order_model as om
+		LEFT JOIN model_sizes as ms ON om.model_size_id = ms.model_size_id
+		LEFT JOIN product_model as pm1 ON ms.product_model_id = pm1.product_model_id
+		WHERE pm1.product_model_id = pm.product_model_id) AS order_count
 	FROM product p INNER JOIN category ct ON p.category_id = ct.category_id 
 	INNER JOIN brand b on p.brand_id = b.brand_id
 	INNER JOIN product_model pm ON pm.product_id = p.product_id
 	inner join model_sizes ms on ms.product_model_id = pm.product_model_id
 	inner join sizes sz on ms.size_id = sz.size_id
 	inner join product_model_img as pimg on pimg.product_model_id = pm.product_model_id
-	WHERE pm.product_model_id = ANY ($1);
-	`
+	WHERE pm.product_model_id = ANY ($1)
+	%s;
+	`, sql.SortStatement)
 
-	rows, err = r.db.Query(ctx, query, modelOrder)
+	rows, err = r.db.Query(ctx, query, modelIds)
 
 	if err != nil {
 
@@ -857,6 +857,8 @@ func (r *ProductRepository) GetCatalogModels(ctx context.Context, categorySlug s
 	imagesMap := make(map[int]*model.ProductModelImg)
 	sizesMap := make(map[int]*model.ProductModelSize)
 	modelsMap := make(map[int]*model.CatalogProductModel)
+	var modelOrder []int
+
 	var imgOrder []int
 	var sizeOrder []int
 
@@ -867,7 +869,7 @@ func (r *ProductRepository) GetCatalogModels(ctx context.Context, categorySlug s
 
 		err := rows.Scan(&m.ProductId, &m.Title, &m.Brand.Id, &m.Brand.Title, &m.Brand.Slug,
 			&m.Category.Id, &m.Category.Title, &m.Category.ShortTitle, &m.Category.Slug, &m.ModelId, &m.Slug, &m.Article, &m.Price, &m.Discount,
-			&m.MainImagePath, &img.Id, &img.ProductModelId, &img.ImgPath, &sz.SizeId, &sz.Value, &sz.Literal, &sz.ModelId, &sz.InStock, &sz.SizeModelId,
+			&m.MainImagePath, &img.Id, &img.ProductModelId, &img.ImgPath, &sz.SizeId, &sz.Value, &sz.Literal, &sz.ModelId, &sz.InStock, &sz.SizeModelId, nil,
 		)
 		if err != nil {
 
@@ -876,6 +878,7 @@ func (r *ProductRepository) GetCatalogModels(ctx context.Context, categorySlug s
 		_, ok := modelsMap[m.ModelId]
 		if !ok {
 			modelsMap[m.ModelId] = &m
+			modelOrder = append(modelOrder, m.ModelId)
 		}
 		_, ok = imagesMap[img.Id]
 		if !ok {

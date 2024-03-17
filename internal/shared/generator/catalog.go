@@ -21,12 +21,20 @@ type GeneratedCatalogQuery struct {
 	SortStatement string
 	Pagination    string
 	MainQuery     string
+	MainJoins     string
 }
 
 func GenerateCatalogQuery(filters CatalogFilters) GeneratedCatalogQuery {
 
-	var isWhereStatement bool = false
+	mainJoins := `FROM product p INNER JOIN category_tree ct ON p.category_id = ct.category_id 
+	INNER JOIN brand b on p.brand_id = b.brand_id
+	INNER JOIN product_model pm ON pm.product_id = p.product_id
+	inner join model_sizes ms on ms.product_model_id = pm.product_model_id
+	inner join sizes sz on ms.size_id = sz.size_id
+	inner join product_model_img as pimg on pimg.product_model_id = pm.product_model_id
+	`
 
+	var isWhereStatement bool = false
 	optionsJoins := ""
 	optionsWhere := ""
 	sizeWhere := ""
@@ -35,7 +43,6 @@ func GenerateCatalogQuery(filters CatalogFilters) GeneratedCatalogQuery {
 	brandsWhere := ""
 	priceWhere := ""
 	onlyWithDiscountWhere := ""
-	orderJoin := ""
 
 	if len(filters.Options) > 0 {
 
@@ -133,17 +140,19 @@ func GenerateCatalogQuery(filters CatalogFilters) GeneratedCatalogQuery {
 		}
 	}
 
-	if filters.SortBy != "" {
-		switch filters.SortBy {
-		case "price_asc":
-			sortStatement = " ORDER BY pm.price ASC"
-		case "price_desc":
-			sortStatement = " ORDER BY pm.price DESC"
-		case "discount":
-			sortStatement = " ORDER BY pm.discount DESC"
-		default:
-			sortStatement = ""
-		}
+	switch filters.SortBy {
+	case "price_asc":
+		sortStatement = " ORDER BY pm.price ASC"
+	case "price_desc":
+		sortStatement = " ORDER BY pm.price DESC"
+	case "discount":
+		sortStatement = " ORDER BY pm.discount IS NULL, pm.discount DESC"
+	case "popular":
+		sortStatement = " ORDER BY order_count DESC"
+	case "new":
+		sortStatement = " ORDER BY pm.created_at DESC"
+	default:
+		sortStatement = " ORDER BY order_count DESC"
 	}
 
 	limit := 16
@@ -157,7 +166,8 @@ func GenerateCatalogQuery(filters CatalogFilters) GeneratedCatalogQuery {
 
 	return GeneratedCatalogQuery{
 		SortStatement: sortStatement,
-		MainQuery:     optionsJoins + orderJoin + optionsWhere + sizeWhere + brandsWhere + priceWhere + onlyWithDiscountWhere,
+		MainQuery:     optionsJoins + optionsWhere + sizeWhere + brandsWhere + priceWhere + onlyWithDiscountWhere,
 		Pagination:    pagination,
+		MainJoins:     mainJoins,
 	}
 }

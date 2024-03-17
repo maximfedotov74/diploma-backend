@@ -155,7 +155,7 @@ func (r *FeedbackRepository) GetAll(ctx context.Context, order string, page int,
 	INNER JOIN public.user as u ON f.user_id = u.user_id
 	INNER JOIN product_model as pm ON pm.product_model_id = f.product_model_id
 	%s
-	ORDER BY f.updated_at %s %s;
+	ORDER BY f.created_at %s %s;
 	`, where, where, order, pagination)
 
 	rows, err := r.db.Query(ctx, query)
@@ -186,6 +186,59 @@ func (r *FeedbackRepository) GetAll(ctx context.Context, order string, page int,
 		Feedback: result,
 		Total:    total,
 	}, nil
+}
+
+func (r *FeedbackRepository) GetMyFeedback(ctx context.Context, userId int) ([]model.UserFeedback, fall.Error) {
+	q := `
+ 	SELECT f.feedback_id as f_id, f.created_at as created_at, f.updated_at as updated_at, f.feedback_text as f_text, f.rate as f_rate,
+	f.is_hidden as f_hidden, p.product_id as p_id, p.title as p_title, p.description as p_descr,
+	b.brand_id as b_id, b.title as b_title, b.slug as b_slug, b.img_path as b_img_path, b.description as d_description,
+	ct.category_id as ct_id, ct.title as ct_title,
+	ct.short_title as ct_short_title, ct.slug as ct_slug,
+	ct.img_path as c_img_path, ct.parent_category_id as c_parent_id,
+	pm.product_model_id as model_id, pm.product_id as m_product_id, pm.slug as m_slug, pm.article as m_article, pm.price as model_price, pm.discount as model_discount,
+	pm.main_image_path as pm_main_img
+	FROM feedback as f
+	INNER JOIN public.user as u ON f.user_id = u.user_id
+	INNER JOIN product_model as pm ON pm.product_model_id = f.product_model_id
+	INNER JOIN product as p ON pm.product_id = p.product_id
+	INNER JOIN category ct ON p.category_id = ct.category_id 
+	INNER JOIN brand b on p.brand_id = b.brand_id
+	WHERE u.user_id = $1
+	ORDER BY f.created_at DESC;
+ `
+	rows, err := r.db.Query(ctx, q, userId)
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+	defer rows.Close()
+	var result []model.UserFeedback
+	for rows.Next() {
+
+		f := model.UserFeedback{}
+		p := model.Product{}
+		m := model.ProductModel{}
+
+		err := rows.Scan(&f.Id, &f.CreatedAt, &f.UpdatedAt, &f.Text, &f.Rate, &f.Hidden, &p.Id, &p.Title, &p.Description,
+			&p.Brand.Id, &p.Brand.Title, &p.Brand.Slug, &p.Brand.ImgPath, &p.Brand.Description,
+			&p.Category.Id, &p.Category.Title, &p.Category.ShortTitle, &p.Category.Slug, &p.Category.ImgPath, &p.Category.ParentId,
+			&m.Id, &m.ProductId, &m.Slug, &m.Article, &m.Price, &m.Discount,
+			&m.ImagePath)
+
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+
+		f.Product = p
+		f.Model = m
+		result = append(result, f)
+	}
+
+	if rows.Err() != nil {
+		return nil, fall.ServerError(rows.Err().Error())
+	}
+
+	return result, nil
 }
 
 func (r *FeedbackRepository) DeleteFeedback(ctx context.Context, feedbackId int) fall.Error {

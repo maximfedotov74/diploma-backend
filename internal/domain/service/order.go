@@ -2,20 +2,21 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"math"
 
 	"github.com/maximfedotov74/diploma-backend/internal/domain/model"
-	"github.com/maximfedotov74/diploma-backend/internal/domain/msg"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/fall"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/payment"
 )
 
 type orderRepository interface {
 	Create(ctx context.Context, input model.CreateOrderInput, userId int) (*model.CreateOrderResponse, fall.Error)
-	GetAdminOrders(ctx context.Context) ([]*model.Order, fall.Error)
+	GetAdminOrders(ctx context.Context, page int, fromDate *string, toDate *string) (*model.AllOrdersResponse, fall.Error)
 	GetOrder(ctx context.Context, id string) (*model.Order, fall.Error)
 	GetUserOrders(ctx context.Context, userId int) ([]*model.Order, fall.Error)
 	CancelOrder(ctx context.Context, orderId string, userId int) fall.Error
+	ChangeStatus(ctx context.Context, orderId string, status model.OrderStatusEnum) fall.Error
 }
 
 type orderUserService interface {
@@ -59,12 +60,16 @@ func NewOrderService(repo orderRepository, wishService orderWishService, userSer
 	}
 }
 
+func (s *OrderService) ChangeStatus(ctx context.Context, orderId string, status model.OrderStatusEnum) fall.Error {
+	return s.repo.ChangeStatus(ctx, orderId, status)
+}
+
 func (s *OrderService) CancelOrder(ctx context.Context, orderId string, userId int) fall.Error {
 	return s.repo.CancelOrder(ctx, orderId, userId)
 }
 
-func (s *OrderService) GetAdminOrders(ctx context.Context) ([]*model.Order, fall.Error) {
-	return s.repo.GetAdminOrders(ctx)
+func (s *OrderService) GetAdminOrders(ctx context.Context, page int, fromDate *string, toDate *string) (*model.AllOrdersResponse, fall.Error) {
+	return s.repo.GetAdminOrders(ctx, page, fromDate, toDate)
 }
 
 func (s *OrderService) GetUserOrders(ctx context.Context, userId int) ([]*model.Order, fall.Error) {
@@ -100,11 +105,6 @@ func (s *OrderService) Create(ctx context.Context, dto model.CreateOrderDto, use
 		if item.Discount != nil {
 			totalDiscount += (float64(item.Price) / 100) * float64(*item.Discount) * float64(item.Quantity)
 		}
-	}
-
-	flag := deliveryPoint.WithFitting == model.ConvertFittingToBool(dto.Conditions)
-	if !flag {
-		return nil, fall.NewErr(msg.OrderDeliveryPointConditionConflict, fall.STATUS_BAD_REQUEST)
 	}
 
 	var deliveryPrice float64 = 0
@@ -144,7 +144,9 @@ func (s *OrderService) Create(ctx context.Context, dto model.CreateOrderDto, use
 		return &p.Confirmation.ConfirmationURL, nil
 	}
 
-	go s.mailService.SendOrderActivationEmail(user.Email, "Подтверждение оформления заказа!", resp.Link)
+	go s.mailService.SendOrderActivationEmail(user.Email, fmt.Sprintf("Подтверждение оформления заказа №: %s!", resp.Id),
+		fmt.Sprintf("/api/order/confirm/%s", resp.Id))
+
 	return nil, nil
 
 }

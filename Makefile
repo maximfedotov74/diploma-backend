@@ -9,11 +9,11 @@ SEQ =
 dev:
 	go run cmd/main.go
 prod:
-	./bin/macos-amd64
+	./bin/app
 build:
-	GOOS=darwin GOARCH=amd64 cd cmd && go build -o ../bin/macos-amd64
+	GOOS=darwin GOARCH=amd64 cd cmd && go build -o ../bin/app
 build-win:
-	GOOS=windows GOARCH=amd64 cd cmd && go build -o ../bin/windows-amd64.exe
+	GOOS=windows GOARCH=amd64 cd cmd && go build -o ../bin/app.exe
 swag:
 	swag init -g cmd/main.go 
 migrate-up:

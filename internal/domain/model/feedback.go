@@ -36,8 +36,20 @@ type Feedback struct {
 	Text      string       `json:"text" validate:"required,min=3" example:"Хороший товар"`
 	Rate      int8         `json:"rate" validate:"required,min=1,max=5" example:"3"`
 	ModelId   int          `json:"model_id" validate:"required,min=1" example:"4"`
+	ModelSlug string       `json:"model_slug" validate:"required"`
 	Hidden    bool         `json:"is_hidden" validate:"required"`
 	User      FeedbackUser `json:"user" validate:"required"`
+}
+
+type UserFeedback struct {
+	Id        int          `json:"id" example:"2" validate:"required"`
+	CreatedAt time.Time    `json:"created_at" validate:"required"`
+	UpdatedAt time.Time    `json:"updated_at" validate:"required"`
+	Text      string       `json:"text" validate:"required,min=3" example:"Хороший товар"`
+	Rate      int8         `json:"rate" validate:"required,min=1,max=5" example:"3"`
+	Hidden    bool         `json:"is_hidden" validate:"required"`
+	Model     ProductModel `json:"model" validate:"required"`
+	Product   Product      `json:"product" validate:"required"`
 }
 
 type FeedbackUser struct {

@@ -26,7 +26,7 @@ type productService interface {
 	UpdateProductModel(ctx context.Context, dto model.UpdateProductModelDto, id int) fall.Error // +
 	FindModelsColored(ctx context.Context, id int) ([]model.ProductModelColors, fall.Error)     // +
 	AdminGetProducts(ctx context.Context, page int, brandId *int, categoryId *int) (*model.AdminProductResponse, fall.Error)
-	AdminGetProductModels(ctx context.Context, id int) ([]model.AdminProductModelRelation, fall.Error)
+	AdminGetProductModels(ctx context.Context, id int) ([]model.ProductModel, fall.Error)
 	GetCatalogModels(ctx context.Context, query generator.CatalogFilters) (*model.CatalogResponse, fall.Error)
 	GetModelImages(ctx context.Context, modelId int) ([]model.ProductModelImg, fall.Error)
 	GetModelSizes(ctx context.Context, modelId int) ([]model.ProductModelSize, fall.Error)
@@ -85,9 +85,41 @@ func (h *ProductHandler) InitRoutes() {
 		productRouter.Get("/model/similar-models/:id", h.getSimilarModels)
 		productRouter.Get("/model/search-by-article", h.searchByArticle)
 		productRouter.Get("/model/popular/:categorySlug", h.getPopular)
-		productRouter.Get("/model/:slug", h.getModelBySlug)
+		productRouter.Get("/model/by-id/:id", h.getModelById)
+		productRouter.Get("/model/by-slug/:slug", h.getModelBySlug)
 		productRouter.Get("/:id", h.getProductById)
 	}
+}
+
+// @Summary Get model by id
+// @Description Get model by id
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param id path int true "Model id"
+// @Router /api/product/model/by-id/{id} [get]
+// @Success 200 {object} model.ProductModel
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ProductHandler) getModelById(ctx *fiber.Ctx) error {
+	id, err := ctx.ParamsInt("id")
+	if err != nil {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	if id <= 0 {
+		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	model, ex := h.service.FindProductModelById(ctx.Context(), id)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(model)
 }
 
 // @Summary Get popular models
@@ -258,11 +290,14 @@ func (h *ProductHandler) getSimilarModels(ctx *fiber.Ctx) error {
 
 	brandId := ctx.QueryInt("brandId")
 	if brandId == 0 {
+
 		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 	categoryId := ctx.QueryInt("categoryId")
 	if categoryId == 0 {
+
 		appErr := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
@@ -280,7 +315,7 @@ func (h *ProductHandler) getSimilarModels(ctx *fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Param slug path string true "Model slug"
-// @Router /api/product/model/{slug} [get]
+// @Router /api/product/model/by-slug/{slug} [get]
 // @Success 200 {object} model.ProductModel
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
@@ -440,7 +475,7 @@ func (h *ProductHandler) searchByArticle(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param productId path int true "product id"
 // @Router /api/product/admin/models/{productId} [get]
-// @Success 200 {array} model.AdminProductModelRelation
+// @Success 200 {array} model.ProductModel
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr

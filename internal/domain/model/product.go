@@ -146,16 +146,6 @@ type AdminProduct struct {
 	Brand       Brand         `json:"brand" validate:"required"`
 }
 
-type AdminProductModelRelation struct {
-	Id        int    `json:"id" example:"1" validate:"required"`
-	Price     int32  `json:"price" example:"15000" validate:"required"`
-	Discount  *byte  `json:"discount"`
-	Slug      string `json:"slug" validate:"required"`
-	Article   string `json:"article" validate:"required,min=1"`
-	ImagePath string `json:"image_path" validate:"required"`
-	ProductId int    `json:"product_id" validate:"required"`
-}
-
 type CatalogModelBrand struct {
 	Id    int    `json:"id" example:"2" validate:"required"`
 	Title string `json:"title" example:"adidas" validate:"required"`

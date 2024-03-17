@@ -18,6 +18,7 @@ type feedbackService interface {
 	GetModelFeedback(ctx context.Context, modelId int, order string) (*model.ModelFeedbackResponse, fall.Error)
 	GetAll(ctx context.Context, order string, page int, filter string) (*model.AdminAllFeedbackResponse, fall.Error)
 	DeleteFeedback(ctx context.Context, feedbackId int) fall.Error
+	GetMyFeedback(ctx context.Context, userId int) ([]model.UserFeedback, fall.Error)
 }
 
 type FeedbackHandler struct {
@@ -41,8 +42,35 @@ func (fh *FeedbackHandler) InitRoutes() {
 		feedbackRouter.Delete("/:id", fh.deleteFeedback)
 		feedbackRouter.Patch("/:id", fh.toggleHidden)
 		feedbackRouter.Get("/model/:modelId", fh.getModelFeedback)
+		feedbackRouter.Get("/my", fh.authMiddleware, fh.getMyFeedback)
 		feedbackRouter.Get("/", fh.getAll)
 	}
+}
+
+// @Summary Get my feedback
+// @Description Get my feedback
+// @Tags feedback
+// @Accept json
+// @Produce json
+// @Router /api/feedback/my [get]
+// @Success 200 {array} model.UserFeedback
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (fh *FeedbackHandler) getMyFeedback(ctx *fiber.Ctx) error {
+
+	user, ex := utils.GetLocalSession(ctx)
+
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	feedback, ex := fh.service.GetMyFeedback(ctx.Context(), user.UserId)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(feedback)
 }
 
 // @Summary Toggle hidden feedback

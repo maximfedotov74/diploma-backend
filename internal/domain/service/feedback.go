@@ -15,6 +15,7 @@ type feedbackRepository interface {
 	DeleteFeedback(ctx context.Context, feedbackId int) fall.Error
 	ToggleHidden(ctx context.Context, feedbackId int) fall.Error
 	FindFeedback(ctx context.Context, userId int, modelId int) (*model.Feedback, fall.Error)
+	GetMyFeedback(ctx context.Context, userId int) ([]model.UserFeedback, fall.Error)
 }
 
 type FeedbackService struct {
@@ -25,6 +26,9 @@ func NewFeedbackService(repo feedbackRepository) *FeedbackService {
 	return &FeedbackService{
 		repo: repo,
 	}
+}
+func (s *FeedbackService) GetMyFeedback(ctx context.Context, userId int) ([]model.UserFeedback, fall.Error) {
+	return s.repo.GetMyFeedback(ctx, userId)
 }
 
 func (s *FeedbackService) AddFeedback(ctx context.Context, dto model.AddFeedbackDto, userId int) fall.Error {

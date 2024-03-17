@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/maximfedotov74/diploma-backend/internal/domain/model"
@@ -229,7 +230,7 @@ func (or *OrderRepository) GetUserOrders(ctx context.Context, userId int) ([]*mo
 	ms.model_size_id as ms_id, ms.product_model_id as ms_product_model_id, ms.size_id as ms_size_id, ms.literal_size as ms_literal_size,
 	sz.size_value as ms_size_value,  ms.in_stock as ms_in_stock,
 	pm.main_image_path as pm_main_image_path,
-	p.product_id as p_id, p.title as p_title, pm.slug as pm_slug, pm.article as pm_article,
+	p.product_id as p_id, p.title as p_title, pm.product_model_id as model_id, pm.slug as pm_slug, pm.article as pm_article,
 	c.category_id as c_id, c.title as c_title, c.slug as c_slug,
 	b.brand_id as b_id, b.title as b_title, b.slug as b_slug,
 	dp.delivery_point_id as dp_id, dp.title as dp_title, dp.city as dp_city,
@@ -266,7 +267,7 @@ func (or *OrderRepository) GetUserOrders(ctx context.Context, userId int) ([]*mo
 
 		err := rows.Scan(&o.Id, &o.CreatedAt, &o.UpdatedAt, &o.DeliveryDate, &o.IsActivated, &o.Status, &o.PaymentMethod, &o.Conditions,
 			&o.ProductsPrice, &o.TotalPrice, &o.TotalDiscount, &o.PromoDiscount, &o.DeliveryPrice, &o.User.FirstName, &o.User.LastName,
-			&o.User.Phone, &o.User.Id, &o.User.Email, &m.OrderModelId, &m.Quantity, &m.Price, &m.Discount, &m.Size.ModelId, &m.Size.ModelId, &m.Size.SizeId, &m.Size.Literal, &m.Size.Value, &m.Size.InStock, &m.MainImagePath, &m.Product.ProductId, &m.Product.Title, &m.Slug, &m.Article,
+			&o.User.Phone, &o.User.Id, &o.User.Email, &m.OrderModelId, &m.Quantity, &m.Price, &m.Discount, &m.Size.ModelId, &m.Size.ModelId, &m.Size.SizeId, &m.Size.Literal, &m.Size.Value, &m.Size.InStock, &m.MainImagePath, &m.Product.ProductId, &m.Product.Title, &m.ModelId, &m.Slug, &m.Article,
 			&m.Product.Category.Id, &m.Product.Category.Title, &m.Product.Category.Slug,
 			&m.Product.Brand.Id, &m.Product.Brand.Title, &m.Product.Brand.Slug, &o.DeliveryPoint.Id, &o.DeliveryPoint.Title,
 			&o.DeliveryPoint.City, &o.DeliveryPoint.Address, &o.DeliveryPoint.Coords, &o.DeliveryPoint.WithFitting, &o.DeliveryPoint.WorkSchedule,
@@ -380,9 +381,84 @@ func (or *OrderRepository) GetOrder(ctx context.Context, id string) (*model.Orde
 	return &o, nil
 }
 
-func (or *OrderRepository) GetAdminOrders(ctx context.Context) ([]*model.Order, fall.Error) {
+func (or *OrderRepository) GetAdminOrders(ctx context.Context, page int, fromDate *string, toDate *string) (*model.AllOrdersResponse, fall.Error) {
 
-	query := `
+	limit := 24
+
+	offset := page*limit - limit
+
+	whereFilter := ""
+
+	if fromDate != nil && toDate == nil {
+		whereFilter = fmt.Sprintf("WHERE o.created_at >= '%s'", *fromDate)
+	}
+
+	if fromDate == nil && toDate != nil {
+		whereFilter = fmt.Sprintf("WHERE o.created_at <= '%s'", *toDate)
+	}
+
+	if fromDate != nil && toDate != nil {
+		whereFilter = fmt.Sprintf("WHERE o.created_at >= '%s' AND o.created_at <= '%s'", *fromDate, *toDate)
+
+	}
+
+	query := fmt.Sprintf(`
+	SELECT DISTINCT o.order_id as o_id, o.created_at,
+	(SELECT count(distinct o.order_id)
+	FROM public.order as o
+	INNER JOIN public.user as u ON o.user_id = u.user_id
+	INNER JOIN order_model as om ON o.order_id = om.order_id
+	INNER JOIN model_sizes as ms ON om.model_size_id = ms.model_size_id
+	INNER JOIN product_model as pm ON ms.product_model_id = pm.product_model_id
+	INNER JOIN sizes as sz ON ms.size_id = sz.size_id
+	INNER JOIN product as p ON p.product_id = pm.product_id
+	INNER JOIN category as c on p.category_id = c.category_id
+	INNER JOIN brand as b on p.brand_id = b.brand_id
+	INNER JOIN order_delivery_point as odp ON o.order_id = odp.order_id
+	INNER JOIN delivery_point as dp ON odp.delivery_point_id = dp.delivery_point_id
+	) as total
+	FROM public.order as o
+	INNER JOIN public.user as u ON o.user_id = u.user_id
+	INNER JOIN order_model as om ON o.order_id = om.order_id
+	INNER JOIN model_sizes as ms ON om.model_size_id = ms.model_size_id
+	INNER JOIN product_model as pm ON ms.product_model_id = pm.product_model_id
+	INNER JOIN sizes as sz ON ms.size_id = sz.size_id
+	INNER JOIN product as p ON p.product_id = pm.product_id
+	INNER JOIN category as c on p.category_id = c.category_id
+	INNER JOIN brand as b on p.brand_id = b.brand_id
+	INNER JOIN order_delivery_point as odp ON o.order_id = odp.order_id
+	INNER JOIN delivery_point as dp ON odp.delivery_point_id = dp.delivery_point_id
+	%s
+	ORDER BY o.created_at DESC
+	LIMIT $1 OFFSET $2
+	;`, whereFilter)
+
+	rows, err := or.db.Query(ctx, query, limit, offset)
+
+	if err != nil {
+
+		return nil, fall.ServerError(err.Error())
+	}
+	defer rows.Close()
+
+	var total int
+	var ordersOrder []string
+
+	for rows.Next() {
+		var orderId string
+		err := rows.Scan(&orderId, nil, &total)
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+
+		ordersOrder = append(ordersOrder, orderId)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	query = `
 	SELECT o.order_id as o_id, o.created_at as o_created_at, o.updated_at as o_updated_at,
 	o.delivery_date as o_delivery_date, o.is_activated as o_is_activated,
 	o.order_status as o_order_status, o.order_payment_method as o_payment_method,
@@ -395,7 +471,7 @@ func (or *OrderRepository) GetAdminOrders(ctx context.Context) ([]*model.Order, 
 	ms.model_size_id as ms_id, ms.product_model_id as ms_product_model_id, ms.size_id as ms_size_id, ms.literal_size as ms_literal_size,
 	sz.size_value as ms_size_value, ms.in_stock as ms_in_stock,
 	pm.main_image_path as pm_main_image_path,
-	p.product_id as p_id, p.title as p_title, pm.slug as pm_slug, pm.article as pm_article,
+	p.product_id as p_id, p.title as p_title, pm.product_model_id as model_id, pm.slug as pm_slug, pm.article as pm_article,
 	c.category_id as c_id, c.title as c_title, c.slug as c_slug,
 	b.brand_id as b_id, b.title as b_title, b.slug as b_slug,
 	dp.delivery_point_id as dp_id, dp.title as dp_title, dp.city as dp_city,
@@ -412,33 +488,29 @@ func (or *OrderRepository) GetAdminOrders(ctx context.Context) ([]*model.Order, 
 	INNER JOIN brand as b on p.brand_id = b.brand_id
 	INNER JOIN order_delivery_point as odp ON o.order_id = odp.order_id
 	INNER JOIN delivery_point as dp ON odp.delivery_point_id = dp.delivery_point_id
-	ORDER BY o.created_at DESC;
+	WHERE o.order_id = ANY ($1);
 	`
 
-	rows, err := or.db.Query(ctx, query)
-
+	rows, err = or.db.Query(ctx, query, ordersOrder)
 	if err != nil {
-
 		return nil, fall.ServerError(err.Error())
 	}
 	defer rows.Close()
 
 	ordersMap := make(map[string]*model.Order)
-	var ordersOrder []string
 	for rows.Next() {
 		o := model.Order{}
 		m := model.OrderModel{}
 
 		err := rows.Scan(&o.Id, &o.CreatedAt, &o.UpdatedAt, &o.DeliveryDate, &o.IsActivated, &o.Status, &o.PaymentMethod, &o.Conditions,
 			&o.ProductsPrice, &o.TotalPrice, &o.TotalDiscount, &o.PromoDiscount, &o.DeliveryPrice, &o.User.FirstName, &o.User.LastName,
-			&o.User.Phone, &o.User.Id, &o.User.Email, &m.OrderModelId, &m.Quantity, &m.Price, &m.Discount, &m.Size.SizeModelId, &m.Size.ModelId, &m.Size.SizeId, &m.Size.Literal, &m.Size.Value, &m.Size.InStock, &m.MainImagePath, &m.Product.ProductId, &m.Product.Title, &m.Slug, &m.Article,
+			&o.User.Phone, &o.User.Id, &o.User.Email, &m.OrderModelId, &m.Quantity, &m.Price, &m.Discount, &m.Size.SizeModelId, &m.Size.ModelId, &m.Size.SizeId, &m.Size.Literal, &m.Size.Value, &m.Size.InStock, &m.MainImagePath, &m.Product.ProductId, &m.Product.Title, &m.ModelId, &m.Slug, &m.Article,
 			&m.Product.Category.Id, &m.Product.Category.Title, &m.Product.Category.Slug,
 			&m.Product.Brand.Id, &m.Product.Brand.Title, &m.Product.Brand.Slug, &o.DeliveryPoint.Id, &o.DeliveryPoint.Title,
 			&o.DeliveryPoint.City, &o.DeliveryPoint.Address, &o.DeliveryPoint.Coords, &o.DeliveryPoint.WithFitting, &o.DeliveryPoint.WorkSchedule,
 			&o.DeliveryPoint.Info,
 		)
 		if err != nil {
-
 			return nil, fall.ServerError(err.Error())
 		}
 
@@ -446,7 +518,6 @@ func (or *OrderRepository) GetAdminOrders(ctx context.Context) ([]*model.Order, 
 		if !ok {
 			o.Models = append(o.Models, m)
 			ordersMap[o.Id] = &o
-			ordersOrder = append(ordersOrder, o.Id)
 		} else {
 			current.Models = append(current.Models, m)
 		}
@@ -463,7 +534,9 @@ func (or *OrderRepository) GetAdminOrders(ctx context.Context) ([]*model.Order, 
 		orders = append(orders, o)
 	}
 
-	return orders, nil
+	return &model.AllOrdersResponse{
+		Orders: orders, Total: total,
+	}, nil
 }
 
 func (or *OrderRepository) SendNewActivationLink(ctx context.Context, orderId string) (*string, fall.Error) {
@@ -515,6 +588,18 @@ func (r *OrderRepository) CancelOrder(ctx context.Context, orderId string, userI
 
 	if err != nil {
 		return fall.ServerError(msg.OrderErrorWhenCancel)
+	}
+
+	return nil
+}
+
+func (r *OrderRepository) ChangeStatus(ctx context.Context, orderId string, status model.OrderStatusEnum) fall.Error {
+	q := "UPDATE public.order SET order_status = $1 WHERE order_id = $2;"
+
+	_, err := r.db.Exec(ctx, q, status, orderId)
+
+	if err != nil {
+		return fall.ServerError(msg.OrderErrorWhenChangeStatus)
 	}
 
 	return nil

@@ -137,7 +137,7 @@ func (wh *WishHandler) getUserCart(ctx *fiber.Ctx) error {
 // @Tags wish
 // @Accept json
 // @Produce json
-// @Router /api/wish/ [get]
+// @Router /api/wish [get]
 // @Success 200 {array} model.CatalogProductModel
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr

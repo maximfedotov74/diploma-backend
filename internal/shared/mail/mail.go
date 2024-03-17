@@ -46,8 +46,8 @@ func (ms *MailService) SendChangePasswordEmail(to string, subject string, code s
 	return ms.sendEmail(to, subject, t)
 }
 
-func (ms *MailService) SendOrderActivationEmail(to string, subject string, code string) error {
-	t := ms.createOrderActivationTemplate(code, to)
+func (ms *MailService) SendOrderActivationEmail(to string, subject string, link string) error {
+	t := ms.createOrderActivationTemplate(link, to)
 
 	return ms.sendEmail(to, subject, t)
 }

@@ -6,10 +6,19 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+type AllOrdersResponse struct {
+	Orders []*Order `json:"orders"`
+	Total  int      `json:"total"`
+}
+
 type CreateOrderResponse struct {
 	Link  string  `json:"link" validate:"required"`
 	Id    string  `json:"id" validate:"required"`
 	Total float64 `json:"total" validate:"required"`
+}
+
+type ChangeOrderStatusDto struct {
+	Status OrderStatusEnum `json:"status" validate:"required"`
 }
 
 type OrderConfirmation struct {
@@ -78,6 +87,7 @@ type OrderModelProduct struct {
 
 type OrderModel struct {
 	OrderModelId  int               `json:"order_model_id" validate:"required"`
+	ModelId       int               `json:"model_id" validate:"required"`
 	Slug          string            `json:"slug" validate:"required"`
 	Article       string            `json:"article" validate:"required"`
 	Quantity      int               `json:"quantity" validate:"required"`

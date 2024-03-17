@@ -26,7 +26,7 @@ type productRepository interface {
 	CreateModel(ctx context.Context, dto model.CreateProductModelDto, slug string) fall.Error
 	CreateProduct(ctx context.Context, dto model.CreateProductDto) fall.Error
 	AdminGetProducts(ctx context.Context, page int, brandId *int, categoryId *int) (*model.AdminProductResponse, fall.Error)
-	AdminGetProductModels(ctx context.Context, id int) ([]model.AdminProductModelRelation, fall.Error)
+	AdminGetProductModels(ctx context.Context, id int) ([]model.ProductModel, fall.Error)
 	GetCatalogModels(ctx context.Context, categorySlug string, sql generator.GeneratedCatalogQuery) (*model.CatalogResponse, fall.Error)
 	GetModelImages(ctx context.Context, modelId int) ([]model.ProductModelImg, fall.Error)
 	GetModelSizes(ctx context.Context, modelId int) ([]model.ProductModelSize, fall.Error)
@@ -112,7 +112,7 @@ func (s *ProductService) GetModelImages(ctx context.Context, modelId int) ([]mod
 	return s.repo.GetModelImages(ctx, modelId)
 }
 
-func (s *ProductService) AdminGetProductModels(ctx context.Context, id int) ([]model.AdminProductModelRelation, fall.Error) {
+func (s *ProductService) AdminGetProductModels(ctx context.Context, id int) ([]model.ProductModel, fall.Error) {
 	return s.repo.AdminGetProductModels(ctx, id)
 }
 

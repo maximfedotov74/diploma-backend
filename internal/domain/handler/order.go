@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -13,10 +14,11 @@ import (
 
 type orderService interface {
 	Create(ctx context.Context, dto model.CreateOrderDto, user *model.LocalSession) (*string, fall.Error)
-	GetAdminOrders(ctx context.Context) ([]*model.Order, fall.Error)
+	GetAdminOrders(ctx context.Context, page int, fromDate *string, toDate *string) (*model.AllOrdersResponse, fall.Error)
 	GetUserOrders(ctx context.Context, userId int) ([]*model.Order, fall.Error)
 	GetOrder(ctx context.Context, id string) (*model.Order, fall.Error)
 	CancelOrder(ctx context.Context, orderId string, userId int) fall.Error
+	ChangeStatus(ctx context.Context, orderId string, status model.OrderStatusEnum) fall.Error
 }
 
 type OrderHandler struct {
@@ -36,10 +38,109 @@ func (h *OrderHandler) InitRoutes() {
 	{
 		orderRouter.Post("/", h.authMiddleware, h.create)
 		orderRouter.Get("/confirm-online-payment/:orderId", h.confirm)
+		orderRouter.Get("/all", h.getAllOrders)
 		orderRouter.Patch("/cancel/:orderId", h.authMiddleware, h.cancel)
 		orderRouter.Get("/my", h.authMiddleware, h.getUserOrders)
 		orderRouter.Get("/:orderId", h.getOrder)
+		orderRouter.Patch("/change-status/:orderId", h.changeStatus)
 	}
+}
+
+// @Summary Change order status
+// @Description Change order status
+// @Tags order
+// @Accept json
+// @Produce json
+// @Param orderId path string true "Order id"
+// @Param dto body model.ChangeOrderStatusDto true "Change order status with body dto"
+// @Router /api/order/change-status/{orderId} [patch]
+// @Success 200 {object} fall.AppErr
+// @Failure 401 {object} fall.AppErr
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *OrderHandler) changeStatus(ctx *fiber.Ctx) error {
+	orderId := ctx.Params("orderId")
+
+	dto := model.ChangeOrderStatusDto{}
+
+	err := ctx.BodyParser(&dto)
+
+	if err != nil {
+
+		appErr := fall.NewErr(fall.INVALID_BODY, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	validate := validator.New()
+
+	err = validate.Struct(&dto)
+
+	if err != nil {
+		error_messages := err.(validator.ValidationErrors)
+		items := fall.ValidationMessages(error_messages)
+		validError := fall.NewValidErr(items)
+
+		return ctx.Status(fall.STATUS_BAD_REQUEST).JSON(validError)
+	}
+
+	ex := h.service.ChangeStatus(ctx.Context(), orderId, dto.Status)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+	ok := fall.GetOk()
+	return ctx.Status(ok.Status()).JSON(ok)
+}
+
+// @Summary Get all orders
+// @Security BearerToken
+// @Description Get all orders
+// @Tags order
+// @Accept json
+// @Produce json
+// @Router /api/order/all [get]
+// @Param fromDate query string false "from date"
+// @Param toDate query string false "to date"
+// @Param page query int false "pagination page"
+// @Success 200 {object} model.AllOrdersResponse
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *OrderHandler) getAllOrders(ctx *fiber.Ctx) error {
+
+	page := ctx.QueryInt("page", 1)
+
+	var fromDate *string
+	var toDate *string
+
+	ISOlayout := "2006-01-02T15:04:05Z07:00"
+	layout := "2006-01-02 15:04:05"
+
+	fromQ := ctx.Query("fromDate")
+	toQ := ctx.Query("toDate")
+
+	if fromQ != "" {
+		parsed, err := time.Parse(ISOlayout, fromQ)
+		if err == nil {
+			formatted := parsed.Format(layout)
+			fromDate = &formatted
+		}
+
+	}
+	if toQ != "" {
+		parsed, err := time.Parse(ISOlayout, toQ)
+		if err == nil {
+			formatted := parsed.Format(layout)
+
+			toDate = &formatted
+		}
+	}
+
+	orders, ex := h.service.GetAdminOrders(ctx.Context(), page, fromDate, toDate)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+	return ctx.Status(fall.STATUS_OK).JSON(orders)
 }
 
 // @Summary Cancel order
