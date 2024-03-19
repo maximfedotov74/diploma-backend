@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/maximfedotov74/diploma-backend/internal/domain/model"
@@ -603,4 +604,20 @@ func (r *OrderRepository) ChangeStatus(ctx context.Context, orderId string, stat
 	}
 
 	return nil
+}
+
+func (r *OrderRepository) ChangeDeliveryDate(ctx context.Context, orderId string, date time.Time) fall.Error {
+
+	q := "UPDATE public.order SET delivery_date = $1 WHERE order_id = $2;"
+
+	f := date.Format("2006-01-02 15:04:05")
+
+	_, err := r.db.Exec(ctx, q, f, orderId)
+
+	if err != nil {
+		return fall.ServerError(msg.OrderErrorWhenChangeDeliveryDate)
+	}
+
+	return nil
+
 }

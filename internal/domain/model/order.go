@@ -21,6 +21,10 @@ type ChangeOrderStatusDto struct {
 	Status OrderStatusEnum `json:"status" validate:"required"`
 }
 
+type ChangeOrderDeliveryDate struct {
+	Date time.Time `json:"date" validate:"required"`
+}
+
 type OrderConfirmation struct {
 	PaymentUrl *string `json:"payment_url"`
 }

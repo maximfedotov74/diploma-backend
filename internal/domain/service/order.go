@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/maximfedotov74/diploma-backend/internal/domain/model"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/fall"
@@ -17,6 +18,7 @@ type orderRepository interface {
 	GetUserOrders(ctx context.Context, userId int) ([]*model.Order, fall.Error)
 	CancelOrder(ctx context.Context, orderId string, userId int) fall.Error
 	ChangeStatus(ctx context.Context, orderId string, status model.OrderStatusEnum) fall.Error
+	ChangeDeliveryDate(ctx context.Context, orderId string, date time.Time) fall.Error
 }
 
 type orderUserService interface {
@@ -58,6 +60,10 @@ func NewOrderService(repo orderRepository, wishService orderWishService, userSer
 		mailService:    mailService,
 		paymentService: paymentService,
 	}
+}
+
+func (s *OrderService) ChangeDeliveryDate(ctx context.Context, orderId string, date time.Time) fall.Error {
+	return s.repo.ChangeDeliveryDate(ctx, orderId, date)
 }
 
 func (s *OrderService) ChangeStatus(ctx context.Context, orderId string, status model.OrderStatusEnum) fall.Error {

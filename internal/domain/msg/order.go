@@ -11,4 +11,5 @@ const (
 	OrderActivationLinkNotFound         = "Ссылка активации заказа не найдена!"
 	OrderErrorWhenCancel                = "Ошибка при отмене заказа!"
 	OrderErrorWhenChangeStatus          = "Ошибка при смене статуса!"
+	OrderErrorWhenChangeDeliveryDate    = "Ошибка при смене даты доставки!"
 )

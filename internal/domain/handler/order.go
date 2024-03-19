@@ -19,6 +19,7 @@ type orderService interface {
 	GetOrder(ctx context.Context, id string) (*model.Order, fall.Error)
 	CancelOrder(ctx context.Context, orderId string, userId int) fall.Error
 	ChangeStatus(ctx context.Context, orderId string, status model.OrderStatusEnum) fall.Error
+	ChangeDeliveryDate(ctx context.Context, orderId string, date time.Time) fall.Error
 }
 
 type OrderHandler struct {
@@ -43,7 +44,54 @@ func (h *OrderHandler) InitRoutes() {
 		orderRouter.Get("/my", h.authMiddleware, h.getUserOrders)
 		orderRouter.Get("/:orderId", h.getOrder)
 		orderRouter.Patch("/change-status/:orderId", h.changeStatus)
+		orderRouter.Patch("/change-delivery-date/:orderId", h.changeDeliveryDate)
 	}
+}
+
+// @Summary Change order delivery date
+// @Description Change order delivery date
+// @Tags order
+// @Accept json
+// @Produce json
+// @Param orderId path string true "Order id"
+// @Param dto body model.ChangeOrderDeliveryDate true "Change delivery date with body dto"
+// @Router /api/order/change-delivery-date/{orderId} [patch]
+// @Success 200 {object} fall.AppErr
+// @Failure 401 {object} fall.AppErr
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *OrderHandler) changeDeliveryDate(ctx *fiber.Ctx) error {
+	orderId := ctx.Params("orderId")
+
+	dto := model.ChangeOrderDeliveryDate{}
+
+	err := ctx.BodyParser(&dto)
+
+	if err != nil {
+
+		appErr := fall.NewErr(fall.INVALID_BODY, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	validate := validator.New()
+
+	err = validate.Struct(&dto)
+
+	if err != nil {
+		error_messages := err.(validator.ValidationErrors)
+		items := fall.ValidationMessages(error_messages)
+		validError := fall.NewValidErr(items)
+
+		return ctx.Status(fall.STATUS_BAD_REQUEST).JSON(validError)
+	}
+
+	ex := h.service.ChangeDeliveryDate(ctx.Context(), orderId, dto.Date)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+	ok := fall.GetOk()
+	return ctx.Status(ok.Status()).JSON(ok)
 }
 
 // @Summary Change order status
