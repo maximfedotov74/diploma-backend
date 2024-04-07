@@ -12,4 +12,6 @@ const (
 	OrderErrorWhenCancel                = "Ошибка при отмене заказа!"
 	OrderErrorWhenChangeStatus          = "Ошибка при смене статуса!"
 	OrderErrorWhenChangeDeliveryDate    = "Ошибка при смене даты доставки!"
+	OrderErrorWhenSetPaymentID          = "Ошибка при обновлении ID платежа"
+	OrderAlreadyPaid                    = "Заказ уже оплачен!"
 )

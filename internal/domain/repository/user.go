@@ -151,7 +151,10 @@ func (ur *UserRepository) findByIdOrEmail(ctx context.Context, field string, val
 		if err != nil {
 			return nil, fall.ServerError(err.Error())
 		}
-		user.Roles = append(user.Roles, role)
+
+		if role.Id != nil {
+			user.Roles = append(user.Roles, role)
+		}
 		if !founded {
 			founded = true
 		}
@@ -269,4 +272,101 @@ func (r *UserRepository) ChangePassword(ctx context.Context, userId int, newPass
 	}
 
 	return nil
+}
+
+func (r *UserRepository) GetAll(ctx context.Context, page int) (*model.GetAllUsersResponse, fall.Error) {
+	limit := 16
+
+	offset := page*limit - limit
+
+	q := "SELECT user_id, (select COUNT(*) from public.user) as total FROM public.user ORDER BY public.user.created_at LIMIT $1 OFFSET $2;"
+
+	rows, err := r.db.Query(ctx, q, limit, offset)
+
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+	defer rows.Close()
+
+	var userIds []int
+	var total int
+
+	for rows.Next() {
+		var id int
+		err := rows.Scan(&id, &total)
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+		userIds = append(userIds, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	q = `SELECT public.user.user_id, public.user.email, public.user.password_hash,
+	public.user.patronymic, public.user.first_name,	public.user.last_name, 
+	role.title, role.role_id, public.user.is_activated, public.user.gender, public.user.avatar_path, user_role.user_id as role_user_id,
+	user_role.user_role_id as user_role_id
+	FROM public.user
+	LEFT JOIN user_role ON public.user.user_id = user_role.user_id
+	LEFT JOIN public.role ON public.role.role_id = user_role.role_id
+	WHERE public.user.user_id = ANY ($1);`
+
+	rows, err = r.db.Query(ctx, q, userIds)
+
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+	defer rows.Close()
+
+	rolesMap := make(map[int]model.UserRole)
+	var rolesOrder []int
+	usersMap := make(map[int]*model.User)
+
+	for rows.Next() {
+		role := model.UserRole{}
+		user := model.User{}
+
+		err := rows.Scan(&user.Id, &user.Email, &user.PasswordHash, &user.Patronymic, &user.FirstName, &user.LastName,
+			&role.Title, &role.Id, &user.IsActivated, &user.Gender, &user.AvatarPath, &role.UserId, &role.UserRoleId)
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+
+		_, ok := usersMap[user.Id]
+		if !ok {
+			usersMap[user.Id] = &user
+		}
+
+		if role.Id != nil && role.UserId != nil && role.UserRoleId != nil {
+			_, ok := rolesMap[*role.UserRoleId]
+			if !ok {
+				rolesMap[*role.UserRoleId] = role
+				rolesOrder = append(rolesOrder, *role.UserRoleId)
+			}
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	for _, key := range rolesOrder {
+		r := rolesMap[key]
+		u := usersMap[*r.UserId]
+		u.Roles = append(u.Roles, r)
+	}
+
+	result := make([]*model.User, 0, len(usersMap))
+
+	for _, key := range userIds {
+		u := usersMap[key]
+		result = append(result, u)
+	}
+
+	return &model.GetAllUsersResponse{
+		Users: result,
+		Total: total,
+	}, nil
+
 }

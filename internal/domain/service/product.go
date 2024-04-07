@@ -39,6 +39,7 @@ type productRepository interface {
 	GetViewHistory(ctx context.Context, userId int, modelId int) ([]*model.CatalogProductModel, fall.Error)
 	AddToViewHistory(ctx context.Context, userId int, modelId int) fall.Error
 	GetPopularProducts(ctx context.Context, slug string) ([]*model.CatalogProductModel, fall.Error)
+	Search(ctx context.Context, term string) ([]model.SearchProductModel, fall.Error)
 }
 
 type productCategoryService interface {
@@ -63,6 +64,10 @@ func NewProductService(repo productRepository, brandService productBrandService,
 		brandService:    brandService,
 		categoryService: categoryService,
 	}
+}
+
+func (s *ProductService) Search(ctx context.Context, term string) ([]model.SearchProductModel, fall.Error) {
+	return s.repo.Search(ctx, term)
 }
 
 func (s *ProductService) GetPopularProducts(ctx context.Context, slug string) ([]*model.CatalogProductModel, fall.Error) {

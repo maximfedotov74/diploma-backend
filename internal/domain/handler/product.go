@@ -39,6 +39,7 @@ type productService interface {
 	GetViewHistory(ctx context.Context, userId int, modelId int) ([]*model.CatalogProductModel, fall.Error)
 	AddToViewHistory(ctx context.Context, userId int, modelId int) fall.Error
 	GetPopularProducts(ctx context.Context, slug string) ([]*model.CatalogProductModel, fall.Error)
+	Search(ctx context.Context, term string) ([]model.SearchProductModel, fall.Error)
 }
 
 type ProductHandler struct {
@@ -84,11 +85,41 @@ func (h *ProductHandler) InitRoutes() {
 		productRouter.Get("/model/options/:id", h.getModelOptions)
 		productRouter.Get("/model/similar-models/:id", h.getSimilarModels)
 		productRouter.Get("/model/search-by-article", h.searchByArticle)
+		productRouter.Get("/model/search", h.search)
 		productRouter.Get("/model/popular/:categorySlug", h.getPopular)
 		productRouter.Get("/model/by-id/:id", h.getModelById)
 		productRouter.Get("/model/by-slug/:slug", h.getModelBySlug)
 		productRouter.Get("/:id", h.getProductById)
 	}
+}
+
+// @Summary Search
+// @Security BearerToken
+// @Description Search
+// @Tags product
+// @Accept json
+// @Produce json
+// @Param searchTerm query string true "search term"
+// @Router /api/product/model/search [get]
+// @Success 200 {array} model.SearchProductModel
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ProductHandler) search(ctx *fiber.Ctx) error {
+
+	searchTerm := ctx.Query("searchTerm")
+
+	if len(searchTerm) == 0 {
+		appErr := fall.NewErr("Пустое значение поиска!", fall.STATUS_BAD_REQUEST)
+		return ctx.Status(appErr.Status()).JSON(appErr)
+	}
+
+	models, ex := h.service.Search(ctx.Context(), searchTerm)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(models)
 }
 
 // @Summary Get model by id
@@ -438,9 +469,9 @@ func (h *ProductHandler) getCatalogModels(ctx *fiber.Ctx) error {
 	return ctx.Status(fall.STATUS_OK).JSON(res)
 }
 
-// @Summary Get product models
+// @Summary Search product models by article
 // @Security BearerToken
-// @Description Get product models
+// @Description Search product model by article
 // @Tags product
 // @Accept json
 // @Produce json

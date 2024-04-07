@@ -20,6 +20,7 @@ type orderService interface {
 	CancelOrder(ctx context.Context, orderId string, userId int) fall.Error
 	ChangeStatus(ctx context.Context, orderId string, status model.OrderStatusEnum) fall.Error
 	ChangeDeliveryDate(ctx context.Context, orderId string, date time.Time) fall.Error
+	ConfirmPayment(ctx context.Context, id string) fall.Error
 }
 
 type OrderHandler struct {
@@ -38,14 +39,44 @@ func (h *OrderHandler) InitRoutes() {
 	orderRouter := h.router.Group("order")
 	{
 		orderRouter.Post("/", h.authMiddleware, h.create)
-		orderRouter.Get("/confirm-online-payment/:orderId", h.confirm)
-		orderRouter.Get("/all", h.getAllOrders)
+		orderRouter.Get("/confirm-online-payment/:orderId", h.confirmPayment)
+		orderRouter.Get("/admin/all", h.getAllOrders)
+		orderRouter.Get("/admin/user/:userId", h.getAdminUserOrders)
+
 		orderRouter.Patch("/cancel/:orderId", h.authMiddleware, h.cancel)
 		orderRouter.Get("/my", h.authMiddleware, h.getUserOrders)
 		orderRouter.Get("/:orderId", h.getOrder)
 		orderRouter.Patch("/change-status/:orderId", h.changeStatus)
 		orderRouter.Patch("/change-delivery-date/:orderId", h.changeDeliveryDate)
 	}
+}
+
+// @Summary Get admin user orders
+// @Security BearerToken
+// @Description Get admin user orders
+// @Tags order
+// @Accept json
+// @Produce json
+// @Param userId path int true "User id"
+// @Router /api/order/admin/user/{userId} [get]
+// @Success 200 {array} model.Order
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *OrderHandler) getAdminUserOrders(ctx *fiber.Ctx) error {
+
+	userId, err := ctx.ParamsInt("userId")
+
+	if err != nil {
+		ex := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	orders, ex := h.service.GetUserOrders(context.Background(), userId)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+	return ctx.Status(fall.STATUS_OK).JSON(orders)
 }
 
 // @Summary Change order delivery date
@@ -146,7 +177,7 @@ func (h *OrderHandler) changeStatus(ctx *fiber.Ctx) error {
 // @Tags order
 // @Accept json
 // @Produce json
-// @Router /api/order/all [get]
+// @Router /api/order/admin/all [get]
 // @Param fromDate query string false "from date"
 // @Param toDate query string false "to date"
 // @Param page query int false "pagination page"
@@ -219,7 +250,24 @@ func (h *OrderHandler) cancel(ctx *fiber.Ctx) error {
 	return ctx.Status(ok.Status()).JSON(ok)
 }
 
-func (h *OrderHandler) confirm(ctx *fiber.Ctx) error {
+// @Summary Confirm online payment
+// @Description Confirm online payment
+// @Tags order
+// @Accept json
+// @Produce json
+// @Param orderId path string true "Order id"
+// @Router /api/order/confirm-online-payment/{orderId} [patch]
+// @Success 200 {object} fall.AppErr
+// @Failure 401 {object} fall.AppErr
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *OrderHandler) confirmPayment(ctx *fiber.Ctx) error {
+
+	orderId := ctx.Params("orderId")
+
+	h.service.ConfirmPayment(ctx.Context(), orderId)
+
 	return ctx.Redirect(h.clientUrl, fall.STATUS_REDIRECT_PERM)
 }
 
@@ -300,6 +348,7 @@ func (h *OrderHandler) create(ctx *fiber.Ctx) error {
 
 	validate.RegisterValidation("paymentMethodEnumValidation", model.PaymentMethodEnumValidation)
 	validate.RegisterValidation("orderConditionsEnumValidation", model.OrderConditionsEnumValidation)
+	validate.RegisterValidation("phoneValidation", model.PhoneValidation)
 
 	err = validate.Struct(&dto)
 

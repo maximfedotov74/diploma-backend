@@ -34,6 +34,7 @@ type userRepository interface {
 	FindChangePasswordCode(ctx context.Context, userId int, code string) (*model.ChangePasswordCode, fall.Error)
 	RemoveChangePasswordCode(ctx context.Context, userId int, tx db.Transaction) error
 	ChangePassword(ctx context.Context, userId int, newPassword string) fall.Error
+	GetAll(ctx context.Context, page int) (*model.GetAllUsersResponse, fall.Error)
 }
 
 type UserService struct {
@@ -45,6 +46,10 @@ type UserService struct {
 func NewUserService(repo userRepository, sessionService userSessionServie,
 	mailService userMailService) *UserService {
 	return &UserService{repo: repo, sessionService: sessionService, mailService: mailService}
+}
+
+func (s *UserService) GetAll(ctx context.Context, page int) (*model.GetAllUsersResponse, fall.Error) {
+	return s.repo.GetAll(ctx, page)
 }
 
 func (s *UserService) RemoveAllSessions(ctx context.Context, userId int) fall.Error {

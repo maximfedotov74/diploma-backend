@@ -1,9 +1,11 @@
 package model
 
 import (
+	"regexp"
 	"time"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/maximfedotov74/diploma-backend/internal/shared/fall"
 )
 
 type AllOrdersResponse struct {
@@ -133,13 +135,23 @@ func ConvertFittingToBool(f OrderConditions) bool {
 	return f == WithFitting
 }
 
+func PhoneValidation(fl validator.FieldLevel) bool {
+	value := fl.Field().String()
+
+	matched, err := regexp.MatchString(fall.VALID_PHONE, value)
+	if err != nil {
+		return false
+	}
+	return matched
+}
+
 type CreateOrderDto struct {
 	PaymentMethod      PaymentMethodEnum `json:"payment_method" validate:"required,paymentMethodEnumValidation"`
 	DeliveryPointId    int               `json:"delivery_point_id" validate:"required,min=1"`
 	Conditions         OrderConditions   `json:"order_conditions" validate:"required,orderConditionsEnumValidation"`
 	RecipientFirstname string            `json:"recipient_firstname" validate:"required,min=2"`
 	RecipientLastname  string            `json:"recipient_lastname" validate:"required,min=2"`
-	RecipientPhone     string            `json:"recipient_phone" validate:"required,e164"`
+	RecipientPhone     string            `json:"recipient_phone" validate:"required,phoneValidation"`
 	ModelSizeIds       []int             `json:"model_size_ids" validate:"required,dive,min=1"`
 }
 

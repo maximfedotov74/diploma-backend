@@ -76,6 +76,7 @@ func (r *OrderRepository) Create(ctx context.Context, input model.CreateOrderInp
 		if ex != nil {
 			return nil, ex
 		}
+
 	}
 
 	ex = r.AddDeliveryPoint(ctx, tx, orderId, input.DeliveryPointId)
@@ -94,6 +95,13 @@ func (r *OrderRepository) Create(ctx context.Context, input model.CreateOrderInp
 			cartIds = append(cartIds, item.CartItemId)
 		}
 		ex = r.wishRepository.RemoveSeveralItems(ctx, tx, cartIds)
+		if ex != nil {
+			return nil, ex
+		}
+	}
+
+	for _, v := range input.CartItems {
+		ex = r.productRepository.ReduceQuantityInStock(ctx, v.ModelSizeId, v.Quantity, tx)
 		if ex != nil {
 			return nil, ex
 		}
@@ -583,24 +591,89 @@ func (or *OrderRepository) SendNewActivationLink(ctx context.Context, orderId st
 }
 
 func (r *OrderRepository) CancelOrder(ctx context.Context, orderId string, userId int) fall.Error {
-	q := "UPDATE public.order SET order_status = 'canceled' WHERE order_id = $1 AND user_id = $2;"
 
-	_, err := r.db.Exec(ctx, q, orderId, userId)
+	var ex fall.Error = nil
+
+	tx, err := r.db.Begin(ctx)
 
 	if err != nil {
-		return fall.ServerError(msg.OrderErrorWhenCancel)
+		ex = fall.ServerError(err.Error())
+		return ex
+	}
+
+	defer func() {
+		if ex != nil {
+			tx.Rollback(ctx)
+		} else {
+			tx.Commit(ctx)
+		}
+	}()
+
+	order, ex := r.GetOrder(ctx, orderId)
+
+	if ex != nil {
+		return ex
+	}
+
+	q := "UPDATE public.order SET order_status = 'canceled' WHERE order_id = $1 AND user_id = $2;"
+
+	_, err = tx.Exec(ctx, q, orderId, userId)
+
+	if err != nil {
+		ex = fall.ServerError(msg.OrderErrorWhenCancel)
+		return ex
+	}
+
+	for _, v := range order.Models {
+		ex = r.productRepository.ReturnQuantityInStock(ctx, v.Size.SizeModelId, v.Quantity, tx)
+		if ex != nil {
+			return ex
+		}
 	}
 
 	return nil
 }
 
 func (r *OrderRepository) ChangeStatus(ctx context.Context, orderId string, status model.OrderStatusEnum) fall.Error {
-	q := "UPDATE public.order SET order_status = $1 WHERE order_id = $2;"
 
-	_, err := r.db.Exec(ctx, q, status, orderId)
+	var ex fall.Error = nil
+
+	tx, err := r.db.Begin(ctx)
 
 	if err != nil {
-		return fall.ServerError(msg.OrderErrorWhenChangeStatus)
+		ex = fall.ServerError(err.Error())
+		return ex
+	}
+
+	defer func() {
+		if ex != nil {
+			tx.Rollback(ctx)
+		} else {
+			tx.Commit(ctx)
+		}
+	}()
+
+	order, ex := r.GetOrder(ctx, orderId)
+
+	if ex != nil {
+		return ex
+	}
+
+	q := "UPDATE public.order SET order_status = $1 WHERE order_id = $2;"
+
+	_, err = tx.Exec(ctx, q, status, orderId)
+
+	if err != nil {
+		ex = fall.ServerError(msg.OrderErrorWhenChangeStatus)
+		return ex
+	}
+	if status == model.Canceled {
+		for _, v := range order.Models {
+			ex = r.productRepository.ReturnQuantityInStock(ctx, v.Size.SizeModelId, v.Quantity, tx)
+			if ex != nil {
+				return ex
+			}
+		}
 	}
 
 	return nil
@@ -620,4 +693,16 @@ func (r *OrderRepository) ChangeDeliveryDate(ctx context.Context, orderId string
 
 	return nil
 
+}
+
+func (r *OrderRepository) SetPaymentId(ctx context.Context, paymentId string, orderId string) fall.Error {
+	q := "UPDATE public.order SET payment_id = $1 WHERE order_id = $2;"
+
+	_, err := r.db.Exec(ctx, q, paymentId, orderId)
+
+	if err != nil {
+		return fall.ServerError(msg.OrderErrorWhenSetPaymentID)
+	}
+
+	return nil
 }

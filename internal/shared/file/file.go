@@ -66,28 +66,22 @@ func (c *FileClient) Upload(ctx context.Context, h *multipart.FileHeader) (*mode
 		return nil, fmt.Errorf("error when open file, cause: %s", err.Error())
 	}
 	defer file.Close()
-
 	contentType := h.Header.Get("Content-type")
 	fileBytes, err := io.ReadAll(file)
-
 	if err != nil {
 		return nil, fmt.Errorf("error when get file bytes with io: %s", err.Error())
 	}
-
 	splittedContentType := strings.Split(contentType, "/")
 	fileType := splittedContentType[0]
 	extType := splittedContentType[1]
 	ext := strings.TrimPrefix(filepath.Ext(h.Filename), filepath.Base(h.Filename))
-
 	fileName := uuid.New().String()
-
 	if fileType == "image" && extType != "svg+xml" {
 		compressOptions := bimg.Options{Quality: 50, Type: bimg.WEBP}
 		webpBytes, err := bimg.Resize(fileBytes, compressOptions)
 		if err != nil {
 			return nil, fmt.Errorf("error when compressing image, cause: %s", err.Error())
 		}
-
 		newType := http.DetectContentType(webpBytes)
 		newName := fileName + ".webp"
 		reader := bytes.NewReader(webpBytes)
@@ -98,10 +92,8 @@ func (c *FileClient) Upload(ctx context.Context, h *multipart.FileHeader) (*mode
 		if err != nil {
 			return nil, fmt.Errorf("error when uploading file, cause: %s", err.Error())
 		}
-
 		return &model.UploadResponse{Path: path.Join("/", "storage", c.mainBucket, newName)}, nil
 	}
-
 	reader := bytes.NewReader(fileBytes)
 	newName := fileName + ext
 	_, err = c.minio.PutObject(ctx, c.mainBucket, newName, reader, reader.Size(), minio.PutObjectOptions{
@@ -111,7 +103,5 @@ func (c *FileClient) Upload(ctx context.Context, h *multipart.FileHeader) (*mode
 	if err != nil {
 		return nil, fmt.Errorf("error when uploading file, cause: %s", err.Error())
 	}
-
 	return &model.UploadResponse{Path: path.Join("/", "storage", c.mainBucket, newName)}, nil
-
 }

@@ -7,9 +7,12 @@ import (
 	"time"
 
 	"github.com/maximfedotov74/diploma-backend/internal/domain/model"
+	"github.com/maximfedotov74/diploma-backend/internal/domain/msg"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/fall"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/payment"
 )
+
+// TODO: Add return money when cancel order
 
 type orderRepository interface {
 	Create(ctx context.Context, input model.CreateOrderInput, userId int) (*model.CreateOrderResponse, fall.Error)
@@ -19,6 +22,7 @@ type orderRepository interface {
 	CancelOrder(ctx context.Context, orderId string, userId int) fall.Error
 	ChangeStatus(ctx context.Context, orderId string, status model.OrderStatusEnum) fall.Error
 	ChangeDeliveryDate(ctx context.Context, orderId string, date time.Time) fall.Error
+	SetPaymentId(ctx context.Context, paymentId string, orderId string) fall.Error
 }
 
 type orderUserService interface {
@@ -145,8 +149,15 @@ func (s *OrderService) Create(ctx context.Context, dto model.CreateOrderDto, use
 	if dto.PaymentMethod == model.Online {
 		p, err := s.paymentService.CreatePayment(resp.Id, resp.Total)
 		if err != nil {
-			return nil, fall.ServerError("Ошибка при обработки платежа №" + resp.Id)
+			return nil, fall.ServerError("Ошибка при обработки платежа заказа №" + resp.Id)
 		}
+
+		ex := s.repo.SetPaymentId(ctx, p.ID, resp.Id)
+
+		if ex != nil {
+			return nil, ex
+		}
+
 		return &p.Confirmation.ConfirmationURL, nil
 	}
 
@@ -155,4 +166,20 @@ func (s *OrderService) Create(ctx context.Context, dto model.CreateOrderDto, use
 
 	return nil, nil
 
+}
+
+func (s *OrderService) ConfirmPayment(ctx context.Context, id string) fall.Error {
+	order, ex := s.repo.GetOrder(ctx, id)
+	if ex != nil {
+		return ex
+	}
+	if order.Status != model.Paid {
+		ex := s.repo.ChangeStatus(ctx, order.Id, model.Paid)
+		if ex != nil {
+			return ex
+		}
+		return nil
+	} else {
+		return fall.NewErr(msg.OrderAlreadyPaid, fall.STATUS_BAD_REQUEST)
+	}
 }

@@ -18,6 +18,11 @@ func UserGenderEnumValidation(fl validator.FieldLevel) bool {
 	return false
 }
 
+type GetAllUsersResponse struct {
+	Users []*User `json:"users" validate:"required"`
+	Total int     `json:"total" validate:"required"`
+}
+
 type User struct {
 	Id           int         `json:"id" example:"1" validate:"required"`
 	Email        string      `json:"email" example:"makc-dgek@mail.ru" validate:"required"`
@@ -32,8 +37,10 @@ type User struct {
 }
 
 type UserRole struct {
-	Id    int    `json:"id" example:"1" validate:"required"`
-	Title string `json:"title" example:"User" validate:"required"`
+	Id         *int    `json:"id" example:"1" validate:"required"`
+	Title      *string `json:"title" example:"User" validate:"required"`
+	UserId     *int    `json:"-"`
+	UserRoleId *int    `json:"-"`
 }
 
 type CreatedUserResponse struct {

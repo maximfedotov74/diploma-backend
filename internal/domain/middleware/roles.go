@@ -23,7 +23,7 @@ func CreateRoleMiddleware() RoleMiddleware {
 
 			for _, role := range roles {
 				for _, userRole := range contextData.Roles {
-					if strings.ToUpper(userRole.Title) == strings.ToUpper(role) {
+					if strings.EqualFold(*userRole.Title, role) {
 						rolesFound++
 						break
 					}

@@ -14,9 +14,10 @@ type roleService interface {
 	AddRoleToUser(ctx context.Context, title string, userId int) fall.Error
 	Create(ctx context.Context, dto model.CreateRoleDto) (*model.Role, fall.Error)
 	RemoveRoleFromUser(ctx context.Context, title string, userId int) fall.Error
-	Find(ctx context.Context) ([]model.Role, fall.Error)
+	FindWithUsers(ctx context.Context) ([]model.Role, fall.Error)
 	FindRoleByTitle(ctx context.Context, title string) (*model.Role, fall.Error)
 	RemoveRole(ctx context.Context, roleId int) fall.Error
+	GetAll(ctx context.Context) ([]model.UserRole, fall.Error)
 }
 
 type RoleHandler struct {
@@ -40,7 +41,8 @@ func NewRoleHandler(service roleService, router fiber.Router, authMiddleware mid
 func (rh *RoleHandler) InitRoutes() {
 	roleRouter := rh.router.Group("/role")
 	{
-		roleRouter.Get("/", rh.findAll)
+		roleRouter.Get("/", rh.getAll)
+		roleRouter.Get("/with-users", rh.findAllWithRelations)
 		roleRouter.Get("/:title", rh.findByTitle)
 		roleRouter.Post("/", rh.createRole)
 		roleRouter.Post("/add-to-user", rh.addRoleToUser)
@@ -55,9 +57,9 @@ func (rh *RoleHandler) InitRoutes() {
 // @Tags roles
 // @Accept json
 // @Produce json
-// @Param id path string true "role id"
+// @Param id path int true "role id"
 // @Router /api/role/{id} [delete]
-// @Success 201
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -75,7 +77,9 @@ func (h *RoleHandler) removeRole(ctx *fiber.Ctx) error {
 		return ctx.Status(removeErr.Status()).JSON(removeErr)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	ok := fall.GetOk()
+
+	return ctx.Status(ok.Status()).JSON(ok)
 
 }
 
@@ -86,18 +90,39 @@ func (h *RoleHandler) removeRole(ctx *fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Router /api/role/ [get]
-// @Success 200 {array} model.Role
+// @Success 200 {array} model.UserRole
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
-func (h *RoleHandler) findAll(ctx *fiber.Ctx) error {
+func (h *RoleHandler) getAll(ctx *fiber.Ctx) error {
 
-	roles, err := h.service.Find(ctx.Context())
+	roles, err := h.service.GetAll(ctx.Context())
 
 	if err != nil {
 		return ctx.Status(err.Status()).JSON(err)
 	}
 
-	return ctx.Status(fall.STATUS_CREATED).JSON(roles)
+	return ctx.Status(fall.STATUS_OK).JSON(roles)
+}
+
+// @Summary Find all roles with users
+// @Security BearerToken
+// @Description Find all roles with users
+// @Tags roles
+// @Accept json
+// @Produce json
+// @Router /api/role/with-uesers [get]
+// @Success 200 {array} model.Role
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *RoleHandler) findAllWithRelations(ctx *fiber.Ctx) error {
+
+	roles, err := h.service.FindWithUsers(ctx.Context())
+
+	if err != nil {
+		return ctx.Status(err.Status()).JSON(err)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(roles)
 }
 
 // @Summary Find one role by title
@@ -163,7 +188,7 @@ func (h *RoleHandler) createRole(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param dto body model.AddRoleToUserDto true "add role to user with body dto"
 // @Router /api/role/add-to-user [post]
-// @Success 201
+// @Success 201 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -194,7 +219,9 @@ func (h *RoleHandler) addRoleToUser(ctx *fiber.Ctx) error {
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
-	return ctx.SendStatus(fall.STATUS_CREATED)
+	created := fall.GetCreated()
+
+	return ctx.Status(created.Status()).JSON(created)
 }
 
 // @Summary Remove role from user
@@ -205,7 +232,7 @@ func (h *RoleHandler) addRoleToUser(ctx *fiber.Ctx) error {
 // @Produce json
 // @Param dto body model.AddRoleToUserDto true "Remove role from user with body dto"
 // @Router /api/role/remove-from-user [delete]
-// @Success 201
+// @Success 200 {object} fall.AppErr
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
@@ -236,6 +263,8 @@ func (h *RoleHandler) removeRoleFromUser(ctx *fiber.Ctx) error {
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
 
-	return ctx.SendStatus(fall.STATUS_OK)
+	ok := fall.GetOk()
+
+	return ctx.Status(ok.Status()).JSON(ok)
 
 }

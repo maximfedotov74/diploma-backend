@@ -35,6 +35,35 @@ func (r *RoleRepository) Create(ctx context.Context, dto model.CreateRoleDto) (*
 	return &role, nil
 }
 
+func (r *RoleRepository) GetAll(ctx context.Context) ([]model.UserRole, fall.Error) {
+	q := "SELECT role_id, title FROM public.role;"
+
+	rows, err := r.db.Query(ctx, q)
+
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	var roles []model.UserRole
+
+	for rows.Next() {
+		r := model.UserRole{}
+
+		err := rows.Scan(&r.Id, &r.Title)
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+		roles = append(roles, r)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	return roles, nil
+
+}
+
 func (r *RoleRepository) FindRoleByTitle(ctx context.Context, title string) (*model.Role, fall.Error) {
 	query := `
 	SELECT r.role_id, r.title, u.user_id, u.email FROM public.role as r
@@ -80,7 +109,7 @@ func (r *RoleRepository) FindRoleByTitle(ctx context.Context, title string) (*mo
 
 }
 
-func (r *RoleRepository) Find(ctx context.Context) ([]model.Role, fall.Error) {
+func (r *RoleRepository) FindWithUsers(ctx context.Context) ([]model.Role, fall.Error) {
 
 	query := `
 	SELECT r.role_id, r.title,  u.user_id, u.email, ur.user_role_id, ur.role_id as ur_role_id FROM public.role as r

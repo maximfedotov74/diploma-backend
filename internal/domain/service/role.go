@@ -15,8 +15,9 @@ type roleRepository interface {
 	FindRoleByTitle(ctx context.Context, title string) (*model.Role, fall.Error)
 	AddRoleToUser(ctx context.Context, roleId int, userId int, tx db.Transaction) fall.Error
 	RemoveRoleFromUser(ctx context.Context, roleId int, userId int) fall.Error
-	Find(ctx context.Context) ([]model.Role, fall.Error)
+	FindWithUsers(ctx context.Context) ([]model.Role, fall.Error)
 	RemoveRole(ctx context.Context, roleId int) fall.Error
+	GetAll(ctx context.Context) ([]model.UserRole, fall.Error)
 }
 
 type RoleService struct {
@@ -25,6 +26,10 @@ type RoleService struct {
 
 func NewRoleService(repo roleRepository) *RoleService {
 	return &RoleService{repo: repo}
+}
+
+func (s *RoleService) GetAll(ctx context.Context) ([]model.UserRole, fall.Error) {
+	return s.repo.GetAll(ctx)
 }
 
 func (s *RoleService) Create(ctx context.Context, dto model.CreateRoleDto) (*model.Role, fall.Error) {
@@ -56,8 +61,8 @@ func (s *RoleService) FindRoleByTitle(ctx context.Context, title string) (*model
 	return role, nil
 }
 
-func (s *RoleService) Find(ctx context.Context) ([]model.Role, fall.Error) {
-	return s.repo.Find(ctx)
+func (s *RoleService) FindWithUsers(ctx context.Context) ([]model.Role, fall.Error) {
+	return s.repo.FindWithUsers(ctx)
 }
 
 func (s *RoleService) RemoveRoleFromUser(ctx context.Context, title string, userId int) fall.Error {

@@ -43,8 +43,36 @@ func (fh *FeedbackHandler) InitRoutes() {
 		feedbackRouter.Patch("/:id", fh.toggleHidden)
 		feedbackRouter.Get("/model/:modelId", fh.getModelFeedback)
 		feedbackRouter.Get("/my", fh.authMiddleware, fh.getMyFeedback)
-		feedbackRouter.Get("/", fh.getAll)
+		feedbackRouter.Get("/admin/all", fh.getAll)
+		feedbackRouter.Get("/admin/user/:userId", fh.getAdminUserFeedback)
 	}
+}
+
+// @Summary Get admin user feedback
+// @Description Get admin user feedback
+// @Tags feedback
+// @Accept json
+// @Produce json
+// @Param userId path int true "User id"
+// @Router /api/feedback/admin/user/{userId} [get]
+// @Success 200 {array} model.UserFeedback
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (fh *FeedbackHandler) getAdminUserFeedback(ctx *fiber.Ctx) error {
+
+	userId, err := ctx.ParamsInt("userId")
+
+	if err != nil {
+		ex := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+	feedback, ex := fh.service.GetMyFeedback(ctx.Context(), userId)
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(feedback)
 }
 
 // @Summary Get my feedback
@@ -107,7 +135,7 @@ func (fh *FeedbackHandler) toggleHidden(ctx *fiber.Ctx) error {
 // @Tags feedback
 // @Accept json
 // @Produce json
-// @Router /api/feedback [get]
+// @Router /api/feedback/admin/all [get]
 // @Param order query string false "Order [ASC | DESC]"
 // @Param page query int false "Page"
 // @Param filter query string false "Filter"

@@ -740,6 +740,43 @@ func (r *ProductRepository) GetModelOptions(ctx context.Context, modelId int) ([
 	return options, nil
 }
 
+func (r *ProductRepository) Search(ctx context.Context, term string) ([]model.SearchProductModel, fall.Error) {
+	q := `
+	SELECT p.product_id as p_id, p.title as p_title,
+	b.brand_id as b_id, b.title as b_title, b.slug as b_slug, ct.category_id as ct_id, ct.title as ct_title, ct.slug as ct_slug,
+	pm.product_model_id as m_id, pm.slug as m_slug, pm.article as m_article, pm.price as m_price, pm.discount as m_discount,
+	pm.main_image_path as m_main_img
+	FROM product p INNER JOIN category ct ON p.category_id = ct.category_id 
+	INNER JOIN brand b on p.brand_id = b.brand_id
+	INNER JOIN product_model pm ON pm.product_id = p.product_id
+	WHERE b.title ILIKE $1 OR ct.title ILIKE $1 OR p.title ILIKE $1;
+	`
+	rows, err := r.db.Query(ctx, q, "%"+term+"%")
+	if err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+	defer rows.Close()
+
+	var models []model.SearchProductModel
+
+	for rows.Next() {
+		m := model.SearchProductModel{}
+		err := rows.Scan(&m.ProductId, &m.Title, &m.Brand.Id, &m.Brand.Title, &m.Brand.Slug, &m.Category.Id,
+			&m.Category.Title, &m.Category.Slug, &m.ModelId, &m.Slug, &m.Article, &m.Price, &m.Discount, &m.MainImagePath)
+
+		if err != nil {
+			return nil, fall.ServerError(err.Error())
+		}
+		models = append(models, m)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fall.ServerError(err.Error())
+	}
+
+	return models, nil
+}
+
 func (r *ProductRepository) SearchByArticle(ctx context.Context, article string) ([]model.SearchProductModel, fall.Error) {
 
 	q := `

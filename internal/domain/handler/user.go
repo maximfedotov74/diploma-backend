@@ -20,6 +20,7 @@ type userService interface {
 	ConfirmChangePassword(ctx context.Context, code string, userId int) fall.Error
 	ChangePassword(ctx context.Context, dto model.ChangePasswordDto, localSession model.LocalSession) (*jwt.Tokens, fall.Error)
 	GetUserSessions(ctx context.Context, userId int, agent string) (*model.UserSessionsResponse, fall.Error)
+	GetAll(ctx context.Context, page int) (*model.GetAllUsersResponse, fall.Error)
 
 	RemoveAllSessions(ctx context.Context, userId int) fall.Error
 	RemoveSession(ctx context.Context, userId int, sessionId int) fall.Error
@@ -42,6 +43,7 @@ func NewUserHandler(service userService, router fiber.Router, authMiddleware mid
 func (h *UserHandler) InitRoutes() {
 	userRouter := h.router.Group("/user")
 	{
+		userRouter.Get("/all", h.getAll)
 		userRouter.Get("/session", h.authMiddleware, h.getSession)
 		userRouter.Get("/session/all", h.authMiddleware, h.getSessions)
 		userRouter.Get("/profile", h.authMiddleware, h.getProfile)
@@ -54,6 +56,30 @@ func (h *UserHandler) InitRoutes() {
 		userRouter.Delete("/session/except-current/:sessionId", h.authMiddleware, h.removeExceptCurrentSession)
 		userRouter.Delete("/session/:sessionId", h.authMiddleware, h.removeSession)
 	}
+}
+
+// @Summary Get all users
+// @Security BearerToken
+// @Description Get all users
+// @Tags user
+// @Accept json
+// @Produce json
+// @Router /api/user/all [get]
+// @Param page query int false "Page"
+// @Success 200 {object} model.GetAllUsersResponse
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *UserHandler) getAll(ctx *fiber.Ctx) error {
+
+	page := ctx.QueryInt("page", 1)
+
+	users, err := h.service.GetAll(ctx.Context(), page)
+	if err != nil {
+		return ctx.Status(err.Status()).JSON(err)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(users)
 }
 
 // @Summary Remove all user sessions

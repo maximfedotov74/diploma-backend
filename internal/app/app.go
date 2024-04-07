@@ -137,10 +137,6 @@ func initDeps(router fiber.Router, postgresClient db.PostgresClient,
 	fileHandler := handler.NewFileHandler(fileClient, router, authMiddleware)
 	actionHandler := handler.NewActionHandler(actionService, router, authMiddleware)
 
-	// TODO: add popular products handler
-	// TODO: add last views products
-	// TODO: add similar products
-
 	actionScheduler := scheduler.NewActionScheduler(cron, postgresClient)
 	actionScheduler.Start()
 

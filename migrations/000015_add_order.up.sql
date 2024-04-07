@@ -7,10 +7,13 @@ CREATE TYPE order_payment_method_enum AS enum ('upon_receipt', 'online');
 DROP TYPE IF EXISTS order_conditions_enum;
 CREATE TYPE order_conditions_enum AS enum ('with_fitting', 'without_fitting');
 
+
+
 CREATE TABLE IF NOT EXISTS public.order (
   order_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   created_at timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  payment_id UUID UNIQUE,
   delivery_date timestamp(3),
   is_activated bool DEFAULT false,
   order_status order_status_enum NOT NULL DEFAULT 'waiting_for_activation',
