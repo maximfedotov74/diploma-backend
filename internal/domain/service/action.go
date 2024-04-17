@@ -32,6 +32,10 @@ func NewActionService(repo actionRepository, productService actionProductService
 	return &ActionService{repo: repo, productService: productService}
 }
 
+func (s *ActionService) FindById(ctx context.Context, id string) (*model.Action, fall.Error) {
+	return s.repo.FindById(ctx, id)
+}
+
 func (s *ActionService) GetActionsByGender(ctx context.Context, gender model.ActionGender) ([]model.Action, fall.Error) {
 	return s.repo.GetActionsByGender(ctx, gender)
 }

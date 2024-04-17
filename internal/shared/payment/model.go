@@ -85,10 +85,16 @@ type RefundDto struct {
 	PaymentId string `json:"payment_id"`
 }
 
-type RefundRespomse struct {
-	Id        string    `json:"id"`
-	Status    string    `json:"status"`
-	Amount    Amount    `json:"amount"`
-	CreatedAt time.Time `json:"created_at"`
-	PaymentId string    `json:"payment_id"`
+type RefundDetails struct {
+	Party  string `json:"party"`
+	Reason string `json:"reason"`
+}
+
+type RefundResponse struct {
+	Id            string         `json:"id"`
+	Status        string         `json:"status"`
+	Amount        Amount         `json:"amount"`
+	CreatedAt     time.Time      `json:"created_at"`
+	PaymentId     string         `json:"payment_id"`
+	RefundDetails *RefundDetails `json:"cancellation_details"`
 }

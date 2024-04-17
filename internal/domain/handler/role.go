@@ -8,6 +8,7 @@ import (
 	"github.com/maximfedotov74/diploma-backend/internal/domain/middleware"
 	"github.com/maximfedotov74/diploma-backend/internal/domain/model"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/fall"
+	"github.com/maximfedotov74/diploma-backend/internal/shared/keys"
 )
 
 type roleService interface {
@@ -43,12 +44,31 @@ func (rh *RoleHandler) InitRoutes() {
 	{
 		roleRouter.Get("/", rh.getAll)
 		roleRouter.Get("/with-users", rh.findAllWithRelations)
+		roleRouter.Get("/check-for-admin", rh.authMiddleware, rh.roleMiddleware(keys.ADMIN_ROLE), rh.checkForAdmin)
 		roleRouter.Get("/:title", rh.findByTitle)
 		roleRouter.Post("/", rh.createRole)
 		roleRouter.Post("/add-to-user", rh.addRoleToUser)
 		roleRouter.Delete("/remove-from-user", rh.removeRoleFromUser)
 		roleRouter.Delete("/:id", rh.removeRole)
 	}
+}
+
+// @Summary Check for admin
+// @Security BearerToken
+// @Description Check for admin
+// @Tags roles
+// @Accept json
+// @Produce json
+// @Router /api/role/check-for-admin [get]
+// @Success 200 {object} fall.AppErr
+// @Failure 401 {object} fall.AppErr
+// @Failure 403 {object} fall.AppErr
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *RoleHandler) checkForAdmin(ctx *fiber.Ctx) error {
+
+	ex := fall.GetOk()
+	return ctx.Status(ex.Status()).JSON(ex)
 }
 
 // @Summary Remove role

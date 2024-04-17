@@ -11,6 +11,7 @@ import (
 	"github.com/maximfedotov74/diploma-backend/internal/domain/msg"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/db"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/fall"
+	"github.com/maximfedotov74/diploma-backend/internal/shared/payment"
 )
 
 type orderProductRepository interface {
@@ -26,11 +27,12 @@ type OrderRepository struct {
 	db                db.PostgresClient
 	wishRepository    orderWishRepository
 	productRepository orderProductRepository
+	paymentService    *payment.PaymentService
 }
 
 func NewOrderRepository(db db.PostgresClient, wishRepository orderWishRepository,
-	productRepository orderProductRepository) *OrderRepository {
-	return &OrderRepository{db: db, wishRepository: wishRepository, productRepository: productRepository}
+	productRepository orderProductRepository, paymentService *payment.PaymentService) *OrderRepository {
+	return &OrderRepository{db: db, wishRepository: wishRepository, productRepository: productRepository, paymentService: paymentService}
 }
 
 func (r *OrderRepository) Create(ctx context.Context, input model.CreateOrderInput, userId int) (*model.CreateOrderResponse, fall.Error) {
@@ -315,7 +317,7 @@ func (or *OrderRepository) GetUserOrders(ctx context.Context, userId int) ([]*mo
 func (or *OrderRepository) GetOrder(ctx context.Context, id string) (*model.Order, fall.Error) {
 
 	query := `
-	SELECT o.order_id as o_id, o.created_at as o_created_at, o.updated_at as o_updated_at,
+	SELECT o.order_id as o_id, o.payment_id as o_payment_id, o.created_at as o_created_at, o.updated_at as o_updated_at,
 	o.delivery_date as o_delivery_date, o.is_activated as o_is_activated,
 	o.order_status as o_order_status, o.order_payment_method as o_payment_method,
 	o.conditions as o_conditions, o.products_price as o_products_price,
@@ -360,7 +362,7 @@ func (or *OrderRepository) GetOrder(ctx context.Context, id string) (*model.Orde
 
 	for rows.Next() {
 		m := model.OrderModel{}
-		err := rows.Scan(&o.Id, &o.CreatedAt, &o.UpdatedAt, &o.DeliveryDate, &o.IsActivated, &o.Status, &o.PaymentMethod, &o.Conditions,
+		err := rows.Scan(&o.Id, &o.PaymentId, &o.CreatedAt, &o.UpdatedAt, &o.DeliveryDate, &o.IsActivated, &o.Status, &o.PaymentMethod, &o.Conditions,
 			&o.ProductsPrice, &o.TotalPrice, &o.TotalDiscount, &o.PromoDiscount, &o.DeliveryPrice, &o.User.FirstName, &o.User.LastName,
 			&o.User.Phone, &o.User.Id, &o.User.Email, &m.OrderModelId, &m.Quantity, &m.Price, &m.Discount, &m.Size.SizeModelId, &m.Size.ModelId, &m.Size.SizeId, &m.Size.Literal, &m.Size.Value, &m.Size.InStock, &m.MainImagePath, &m.Product.ProductId, &m.Product.Title, &m.Slug, &m.Article,
 			&m.Product.Category.Id, &m.Product.Category.Title, &m.Product.Category.Slug,
@@ -631,6 +633,21 @@ func (r *OrderRepository) CancelOrder(ctx context.Context, orderId string, userI
 		}
 	}
 
+	if order.PaymentMethod == model.Online && order.PaymentId != nil {
+		refund, err := r.paymentService.RefundPayment(*order.PaymentId, order.TotalPrice)
+		if err != nil {
+			ex = fall.ServerError(err.Error())
+			return ex
+		}
+		if refund.Status == "canceled" {
+			if refund.RefundDetails != nil {
+				ex = fall.ServerError(fmt.Sprintf("Party: %s;Reason: %s.", refund.RefundDetails.Party, refund.RefundDetails.Reason))
+				return ex
+			}
+			ex = fall.ServerError("Ошибка при возврате средств. Попробуйте позже.")
+			return ex
+		}
+	}
 	return nil
 }
 
@@ -674,6 +691,19 @@ func (r *OrderRepository) ChangeStatus(ctx context.Context, orderId string, stat
 				return ex
 			}
 		}
+		// refund, err := r.paymentService.RefundPayment(order.Id, order.TotalPrice)
+		// if err != nil {
+		// 	ex = fall.ServerError(err.Error())
+		// 	return ex
+		// }
+		// if refund.Status == "canceled" {
+		// 	if refund.RefundDetails != nil {
+		// 		ex = fall.ServerError(fmt.Sprintf("Party: %s;Reason: %s.", refund.RefundDetails.Party, refund.RefundDetails.Reason))
+		// 		return ex
+		// 	}
+		// 	ex = fall.ServerError("Ошибка при возврате средств. Попробуйте позже.")
+		// 	return ex
+		// }
 	}
 
 	return nil

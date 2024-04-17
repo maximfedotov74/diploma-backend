@@ -67,6 +67,7 @@ type OrderUser struct {
 
 type Order struct {
 	Id            string            `json:"order_id" validate:"required"`
+	PaymentId     *string           `json:"-"`
 	User          OrderUser         `json:"user" validate:"required"`
 	CreatedAt     time.Time         `json:"created_at" validate:"required"`
 	UpdatedAt     time.Time         `json:"updated_at" validate:"required"`

@@ -105,7 +105,7 @@ func initDeps(router fiber.Router, postgresClient db.PostgresClient,
 	productRepo := repository.NewProductRepository(postgresClient)
 	feedbackRepo := repository.NewFeedbackRepository(postgresClient)
 	wishRepo := repository.NewWishRepository(postgresClient)
-	orderRepo := repository.NewOrderRepository(postgresClient, wishRepo, productRepo)
+	orderRepo := repository.NewOrderRepository(postgresClient, wishRepo, productRepo, paymentService)
 	actionRepo := repository.NewActionRepository(postgresClient)
 
 	roleService := service.NewRoleService(roleRepo)
@@ -139,6 +139,8 @@ func initDeps(router fiber.Router, postgresClient db.PostgresClient,
 
 	actionScheduler := scheduler.NewActionScheduler(cron, postgresClient)
 	actionScheduler.Start()
+	orderScheduler := scheduler.NewOrderScheduler(cron, postgresClient, paymentService)
+	orderScheduler.Start()
 
 	roleHandler.InitRoutes()
 	userHandler.InitRoutes()

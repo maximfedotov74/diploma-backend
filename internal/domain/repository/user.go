@@ -9,9 +9,8 @@ import (
 	"github.com/maximfedotov74/diploma-backend/internal/domain/msg"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/db"
 	"github.com/maximfedotov74/diploma-backend/internal/shared/fall"
+	"github.com/maximfedotov74/diploma-backend/internal/shared/keys"
 )
-
-const USER_ROLE = "USER"
 
 type userRoleRepository interface {
 	FindRoleByTitle(ctx context.Context, title string) (*model.Role, fall.Error)
@@ -59,7 +58,7 @@ func (r *UserRepository) Create(ctx context.Context, dto model.CreateUserDto) (*
 		return nil, ex
 	}
 
-	role, ex := r.roleRepo.FindRoleByTitle(ctx, USER_ROLE)
+	role, ex := r.roleRepo.FindRoleByTitle(ctx, keys.USER_ROLE)
 
 	if ex != nil {
 		return nil, ex

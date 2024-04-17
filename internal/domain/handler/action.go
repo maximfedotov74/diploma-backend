@@ -19,6 +19,7 @@ type actionService interface {
 	DeleteActionModel(ctx context.Context, actionModelId int) fall.Error
 	DeleteAction(ctx context.Context, id string) fall.Error
 	GetActionsByGender(ctx context.Context, gender model.ActionGender) ([]model.Action, fall.Error)
+	FindById(ctx context.Context, id string) (*model.Action, fall.Error)
 }
 
 type ActionHandler struct {
@@ -37,12 +38,44 @@ func (h *ActionHandler) InitRoutes() {
 		actionRouter.Post("/", h.create)
 		actionRouter.Post("/model", h.addModelToAction)
 		actionRouter.Get("/", h.getAll)
-		actionRouter.Get("/:gender", h.getByGender)
+		actionRouter.Get("/by-id/:id", h.getById)
+		actionRouter.Get("/by-gender/:gender", h.getByGender)
 		actionRouter.Get("/model/:id", h.getActionModels)
 		actionRouter.Patch("/:id", h.update)
 		actionRouter.Delete("/model/:actionModelId", h.deleteActionModel)
 		actionRouter.Delete("/:id", h.deleteAction)
 	}
+}
+
+// @Summary Get action by id
+// @Description Get action by id
+// @Tags action
+// @Accept json
+// @Produce json
+// @Param id path string true "action id"
+// @Router /api/action/by-id/{id} [get]
+// @Success 200 {object} model.Action
+// @Failure 400 {object} fall.ValidationError
+// @Failure 404 {object} fall.AppErr
+// @Failure 500 {object} fall.AppErr
+func (h *ActionHandler) getById(ctx *fiber.Ctx) error {
+
+	id := ctx.Params("id")
+
+	if id == "" {
+		ex := fall.NewErr(fall.VALIDATION_ID, fall.STATUS_BAD_REQUEST)
+		return ctx.Status(ex.Status()).JSON(ex)
+
+	}
+
+	action, ex := h.service.FindById(ctx.Context(), id)
+
+	if ex != nil {
+		return ctx.Status(ex.Status()).JSON(ex)
+	}
+
+	return ctx.Status(fall.STATUS_OK).JSON(action)
+
 }
 
 // @Summary Get actions by gender
@@ -51,7 +84,7 @@ func (h *ActionHandler) InitRoutes() {
 // @Accept json
 // @Produce json
 // @Param gender path string true "action gender"
-// @Router /api/action/{gender} [get]
+// @Router /api/action/by-gender/{gender} [get]
 // @Success 200 {array} model.Action
 // @Failure 400 {object} fall.ValidationError
 // @Failure 404 {object} fall.AppErr

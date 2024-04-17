@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -23,17 +24,18 @@ type PaymentService struct {
 	httpClient *http.Client
 }
 
-const baseUrl = "https://api.yookassa.ru/v3/payments"
+const paymentUrl = "https://api.yookassa.ru/v3/payments"
+const refundUrl = "https://api.yookassa.ru/v3/refunds"
 
 func NewPaymentService(shopId string, secretKey string, appLink string) *PaymentService {
 	return &PaymentService{shopId: shopId, secretKey: secretKey, appLink: appLink, httpClient: &http.Client{}}
 }
 
-func (ps *PaymentService) CheckPayment(paymentId string) {
+func (ps *PaymentService) CheckPayment(paymentId string) (*OrderPayment, error) {
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", baseUrl, paymentId), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", paymentUrl, paymentId), nil)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	authString := fmt.Sprintf("%s:%s", ps.shopId, ps.secretKey)
@@ -42,28 +44,29 @@ func (ps *PaymentService) CheckPayment(paymentId string) {
 
 	response, err := ps.httpClient.Do(req)
 	if err != nil {
-		return
+		return nil, err
 	}
 	defer response.Body.Close()
 
 	bytes, err := io.ReadAll(response.Body)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if response.StatusCode != 200 {
-		return
+		return nil, fmt.Errorf("ошибка при получении платежа, http код: %d", response.StatusCode)
 	}
 
 	var p OrderPayment
 	err = json.Unmarshal(bytes, &p)
 	if err != nil {
-		return
+		return nil, err
 	}
+	return &p, nil
 }
 
 // TODO: implement this feature inside front-end
-func (ps *PaymentService) RefundPayment(paymentId string, totalPrice float64) (*RefundRespomse, error) {
+func (ps *PaymentService) RefundPayment(paymentId string, totalPrice float64) (*RefundResponse, error) {
 
 	dto := RefundDto{
 		Amount:    Amount{Value: fmt.Sprintf("%.2f", totalPrice), Currency: "RUB"},
@@ -75,7 +78,7 @@ func (ps *PaymentService) RefundPayment(paymentId string, totalPrice float64) (*
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", baseUrl, bytes.NewReader(dtoBytes))
+	req, err := http.NewRequest("POST", refundUrl, bytes.NewReader(dtoBytes))
 	if err != nil {
 		return nil, err
 	}
@@ -97,15 +100,18 @@ func (ps *PaymentService) RefundPayment(paymentId string, totalPrice float64) (*
 		return nil, err
 	}
 
+	log.Println(response.StatusCode)
+
 	if response.StatusCode != fall.STATUS_OK {
-		return nil, errors.New("ошибка при обработке оформлении возврата")
+		return nil, errors.New("ошибка при оформлении возврата")
 	}
 
-	var p RefundRespomse
+	var p RefundResponse
 	err = json.Unmarshal(bytes, &p)
 	if err != nil {
 		return nil, err
 	}
+	log.Println(p)
 	return &p, nil
 }
 
@@ -123,7 +129,7 @@ func (ps *PaymentService) CreatePayment(orderId string, totalPrice float64) (*Pa
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("POST", baseUrl, bytes.NewReader(dtoBytes))
+	req, err := http.NewRequest("POST", paymentUrl, bytes.NewReader(dtoBytes))
 	if err != nil {
 		return nil, err
 	}
