@@ -6,7 +6,6 @@ import (
 )
 
 func SetCookies(tokens jwt.Tokens) (*fiber.Cookie, *fiber.Cookie) {
-
 	access_cookie := new(fiber.Cookie)
 	access_cookie.Name = "access_token"
 	access_cookie.Value = tokens.AccessToken
@@ -16,7 +15,6 @@ func SetCookies(tokens jwt.Tokens) (*fiber.Cookie, *fiber.Cookie) {
 	refresh_cookie.Value = tokens.RefreshToken
 	refresh_cookie.Expires = tokens.RefreshExpTime
 	refresh_cookie.HTTPOnly = true
-
 	return access_cookie, refresh_cookie
 }
 

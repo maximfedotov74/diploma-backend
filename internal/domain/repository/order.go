@@ -691,19 +691,22 @@ func (r *OrderRepository) ChangeStatus(ctx context.Context, orderId string, stat
 				return ex
 			}
 		}
-		// refund, err := r.paymentService.RefundPayment(order.Id, order.TotalPrice)
-		// if err != nil {
-		// 	ex = fall.ServerError(err.Error())
-		// 	return ex
-		// }
-		// if refund.Status == "canceled" {
-		// 	if refund.RefundDetails != nil {
-		// 		ex = fall.ServerError(fmt.Sprintf("Party: %s;Reason: %s.", refund.RefundDetails.Party, refund.RefundDetails.Reason))
-		// 		return ex
-		// 	}
-		// 	ex = fall.ServerError("Ошибка при возврате средств. Попробуйте позже.")
-		// 	return ex
-		// }
+
+		if order.PaymentId != nil {
+			refund, err := r.paymentService.RefundPayment(*order.PaymentId, order.TotalPrice)
+			if err != nil {
+				ex = fall.ServerError(err.Error())
+				return ex
+			}
+			if refund.Status == "canceled" {
+				if refund.RefundDetails != nil {
+					ex = fall.ServerError(fmt.Sprintf("Party: %s;Reason: %s.", refund.RefundDetails.Party, refund.RefundDetails.Reason))
+					return ex
+				}
+				ex = fall.ServerError("Ошибка при возврате средств. Попробуйте позже.")
+				return ex
+			}
+		}
 	}
 
 	return nil

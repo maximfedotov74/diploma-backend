@@ -12,8 +12,6 @@ import (
 	"github.com/maximfedotov74/diploma-backend/internal/shared/payment"
 )
 
-// TODO: Add return money when cancel order
-
 type orderRepository interface {
 	Create(ctx context.Context, input model.CreateOrderInput, userId int) (*model.CreateOrderResponse, fall.Error)
 	GetAdminOrders(ctx context.Context, page int, fromDate *string, toDate *string) (*model.AllOrdersResponse, fall.Error)

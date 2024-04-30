@@ -30,8 +30,6 @@ func (s *OrderScheduler) Start() {
 
 }
 
-//TODO: implement
-
 type OP struct {
 	OrderId   string
 	PaymentId string

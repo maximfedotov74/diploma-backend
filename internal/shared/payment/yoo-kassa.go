@@ -15,8 +15,6 @@ import (
 	"github.com/maximfedotov74/diploma-backend/internal/shared/fall"
 )
 
-//TODO: implement check payment
-
 type PaymentService struct {
 	shopId     string
 	secretKey  string
@@ -65,7 +63,6 @@ func (ps *PaymentService) CheckPayment(paymentId string) (*OrderPayment, error) 
 	return &p, nil
 }
 
-// TODO: implement this feature inside front-end
 func (ps *PaymentService) RefundPayment(paymentId string, totalPrice float64) (*RefundResponse, error) {
 
 	dto := RefundDto{

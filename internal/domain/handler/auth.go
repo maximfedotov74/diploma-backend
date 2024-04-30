@@ -98,41 +98,29 @@ func (ah *AuthHandler) registration(ctx *fiber.Ctx) error {
 // @Failure 404 {object} fall.AppErr
 // @Failure 500 {object} fall.AppErr
 func (ah *AuthHandler) login(ctx *fiber.Ctx) error {
-
 	var dto model.LoginDto
-
 	err := ctx.BodyParser(&dto)
 	if err != nil {
 		ex := fall.NewErr(fall.INVALID_BODY, fall.STATUS_BAD_REQUEST)
 		return ctx.Status(ex.Status()).JSON(ex)
 	}
-
 	validate := validator.New()
-
 	err = validate.Struct(&dto)
-
 	if err != nil {
 		error_messages := err.(validator.ValidationErrors)
 		items := fall.ValidationMessages(error_messages)
 		validError := fall.NewValidErr(items)
-
 		return ctx.Status(validError.Status).JSON(validError)
 	}
-
 	userAgent := ctx.Get("User-Agent")
 	resp, appErr := ah.service.Login(ctx.Context(), dto, userAgent)
-
 	if appErr != nil {
 		return ctx.Status(appErr.Status()).JSON(appErr)
 	}
-
 	access_cookie, refresh_cookie := utils.SetCookies(resp.Tokens)
-
 	ctx.Cookie(access_cookie)
 	ctx.Cookie(refresh_cookie)
-
 	return ctx.Status(fall.STATUS_CREATED).JSON(resp)
-
 }
 
 // @Summary Logout
