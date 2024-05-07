@@ -7,14 +7,12 @@ import (
 	"io"
 	"log"
 	"mime/multipart"
-	"net/http"
 	"path"
 	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/h2non/bimg"
 	"github.com/maximfedotov74/diploma-backend/internal/domain/model"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -71,29 +69,29 @@ func (c *FileClient) Upload(ctx context.Context, h *multipart.FileHeader) (*mode
 	if err != nil {
 		return nil, fmt.Errorf("error when get file bytes with io: %s", err.Error())
 	}
-	splittedContentType := strings.Split(contentType, "/")
-	fileType := splittedContentType[0]
-	extType := splittedContentType[1]
+	//splittedContentType := strings.Split(contentType, "/")
+	// fileType := splittedContentType[0]
+	// extType := splittedContentType[1]
 	ext := strings.TrimPrefix(filepath.Ext(h.Filename), filepath.Base(h.Filename))
 	fileName := uuid.New().String()
-	if fileType == "image" && extType != "svg+xml" {
-		compressOptions := bimg.Options{Quality: 50, Type: bimg.WEBP}
-		webpBytes, err := bimg.Resize(fileBytes, compressOptions)
-		if err != nil {
-			return nil, fmt.Errorf("error when compressing image, cause: %s", err.Error())
-		}
-		newType := http.DetectContentType(webpBytes)
-		newName := fileName + ".webp"
-		reader := bytes.NewReader(webpBytes)
-		_, err = c.minio.PutObject(ctx, c.mainBucket, newName, reader, reader.Size(), minio.PutObjectOptions{
-			ContentType:  newType,
-			UserMetadata: map[string]string{"x-amz-acl": "public-read"},
-		})
-		if err != nil {
-			return nil, fmt.Errorf("error when uploading file, cause: %s", err.Error())
-		}
-		return &model.UploadResponse{Path: path.Join("/", "storage", c.mainBucket, newName)}, nil
-	}
+	// if fileType == "image" && extType != "svg+xml" {
+	// 	compressOptions := bimg.Options{Quality: 50, Type: bimg.WEBP}
+	// 	webpBytes, err := bimg.Resize(fileBytes, compressOptions)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("error when compressing image, cause: %s", err.Error())
+	// 	}
+	// 	newType := http.DetectContentType(webpBytes)
+	// 	newName := fileName + ".webp"
+	// 	reader := bytes.NewReader(webpBytes)
+	// 	_, err = c.minio.PutObject(ctx, c.mainBucket, newName, reader, reader.Size(), minio.PutObjectOptions{
+	// 		ContentType:  newType,
+	// 		UserMetadata: map[string]string{"x-amz-acl": "public-read"},
+	// 	})
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("error when uploading file, cause: %s", err.Error())
+	// 	}
+	// 	return &model.UploadResponse{Path: path.Join("/", "storage", c.mainBucket, newName)}, nil
+	// }
 	reader := bytes.NewReader(fileBytes)
 	newName := fileName + ext
 	_, err = c.minio.PutObject(ctx, c.mainBucket, newName, reader, reader.Size(), minio.PutObjectOptions{
