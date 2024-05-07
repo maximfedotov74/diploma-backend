@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/maximfedotov74/diploma-backend/internal/domain/model"
 	"github.com/maximfedotov74/diploma-backend/internal/domain/msg"
@@ -91,9 +90,10 @@ func (as *AuthService) Registration(ctx context.Context, dto model.CreateUserDto
 		return nil, appErr
 	}
 
-	link := fmt.Sprintf("/api/user/activate/%s", response.Link)
+	//TODO: REMOVED Email registration
+	//link := fmt.Sprintf("/api/user/activate/%s", response.Link)
 
-	go as.mailService.SendActivationEmail(response.Email, "Активация аккаутна", link)
+	//go as.mailService.SendActivationEmail(response.Email, "Активация аккаутна", link)
 
 	return &response.Id, nil
 
