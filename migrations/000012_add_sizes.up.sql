@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS model_sizes (
 
 -- INSERT INTO brand (title, slug) values ('Adidas', 'adidas'); -- 1
 -- INSERT INTO brand (title, slug) values ('Ostin', 'ostin'); -- 2
--- INSERT INTO brand (title, slug) values ('PUMA', 'puma'); -- 3
+-- INSERT INTO brand (title, slug) values ('Puma', 'puma'); -- 3
 
 
 -- INSERT INTO product (title, slug, category_id, brand_id) values ('Теплный бомбер', 'tepliy-bobmer', 6, 1);
